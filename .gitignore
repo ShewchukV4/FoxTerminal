@@ -1,0 +1,42 @@
+############################
+# .NET / Visual Studio
+############################
+bin/
+obj/
+**/bin/
+**/obj/
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+############################
+# Build output / coverage
+############################
+*.log
+TestResult*/
+coverage*/
+*.coverage
+*.coveragexml
+
+############################
+# Rider / JetBrains
+############################
+.idea/
+*.iml
+
+############################
+# OS-specific
+############################
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
+
+############################
+# FoxTerminal specific
+############################
+FoxTerminalApp/**/bin/
+FoxTerminalApp/**/obj/
+

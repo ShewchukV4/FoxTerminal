@@ -1,0 +1,5 @@
+﻿```
+This is a sample file for the AI assistant. It’s a starting point for some tests.
+```
+
+Do you want to create or write to a file?

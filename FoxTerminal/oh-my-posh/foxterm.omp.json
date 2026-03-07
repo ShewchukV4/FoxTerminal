@@ -1,0 +1,72 @@
+﻿{
+  "$schema": "https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/themes/schema.json",
+  "version": 2,
+  "final_space": true,
+  "blocks": [
+    {
+      "type": "prompt",
+      "alignment": "left",
+      "segments": [
+        {
+          "type": "text",
+          "style": "powerline",
+          "powerline_symbol": "\uE0B0",
+          "foreground": "p:base",
+          "background": "p:accent",
+          "template": " FOXTERM "
+        },
+        {
+          "type": "text",
+          "style": "powerline",
+          "powerline_symbol": "\uE0B0",
+          "foreground": "p:base",
+          "background": "p:accent2",
+          "template": " {{ if .Env.FOXTERM_USER }}{{ .Env.FOXTERM_USER }}{{ else }}{{ .UserName }}{{ end }} "
+        },
+        {
+          "type": "git",
+          "style": "powerline",
+          "powerline_symbol": "\uE0B0",
+          "foreground": "p:base",
+          "background": "p:accent3",
+          "properties": {
+            "branch_icon": "",
+            "branch_template": "{{ .HEAD }}"
+          },
+          "template": "{{ if .HEAD }} {{ .HEAD }} {{ end }}"
+        },
+        {
+          "type": "time",
+          "style": "powerline",
+          "powerline_symbol": "\uE0B0",
+          "foreground": "p:base",
+          "background": "p:accent4",
+          "properties": {
+            "time_format": "15:04"
+          },
+          "template": " {{ .CurrentDate | date .Format }} "
+        }
+      ]
+    },
+    {
+      "type": "prompt",
+      "alignment": "left",
+      "newline": true,
+      "segments": [
+        {
+          "type": "text",
+          "style": "plain",
+          "foreground": "p:accent",
+          "template": "\u276F "
+        }
+      ]
+    }
+  ],
+  "palette": {
+    "base": "#0B0F1A",
+    "accent": "#7D93B0",
+    "accent2": "#90A9CA",
+    "accent3": "#6A7D96",
+    "accent4": "#A2BFE5"
+  }
+}

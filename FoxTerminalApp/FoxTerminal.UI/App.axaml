@@ -1,0 +1,40 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="FoxTerminal.UI.App"
+             RequestedThemeVariant="Default">
+             <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
+
+    <Application.Styles>
+        <FluentTheme />
+        <Style Selector="TabControl">
+            <Setter Property="Background" Value="#0B0F1A"/>
+        </Style>
+        <Style Selector="TabItem">
+            <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="Margin" Value="4,4,0,0"/>
+            <Setter Property="Background" Value="#111827"/>
+            <Setter Property="BorderBrush" Value="#1F2937"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="6,6,0,0"/>
+            <Setter Property="Foreground" Value="#E6E6E6"/>
+        </Style>
+        <Style Selector="TabItem:selected">
+            <Setter Property="Background" Value="#0B0F1A"/>
+            <Setter Property="BorderBrush" Value="#3B4261"/>
+        </Style>
+        <Style Selector="Button.header">
+            <Setter Property="Background" Value="#1F2937"/>
+            <Setter Property="BorderBrush" Value="#3B4261"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Foreground" Value="#E6E6E6"/>
+            <Setter Property="Padding" Value="6,2"/>
+        </Style>
+        <Style Selector="Button.tabclose">
+            <Setter Property="Background" Value="#0B0F1A"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="#9CA3AF"/>
+            <Setter Property="Padding" Value="4,0"/>
+        </Style>
+    </Application.Styles>
+</Application>

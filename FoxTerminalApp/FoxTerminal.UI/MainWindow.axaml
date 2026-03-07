@@ -1,0 +1,18 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="600"
+        x:Class="FoxTerminal.UI.MainWindow"
+        Title="FoxTerminal">
+    <DockPanel>
+        <Border DockPanel.Dock="Top" Background="#0F172A" Height="36">
+            <Grid ColumnDefinitions="*,Auto,Auto" VerticalAlignment="Center" Margin="10,0,10,0">
+                <TextBlock Text="FoxTerminal" VerticalAlignment="Center" Foreground="#E6E6E6" FontSize="13"/>
+                <Button x:Name="NewTabButton" Grid.Column="1" Classes="header" Content="+" Width="28" Height="24" Margin="0,0,6,0"/>
+                <Button x:Name="CloseTabButton" Grid.Column="2" Classes="header" Content="x" Width="28" Height="24"/>
+            </Grid>
+        </Border>
+        <TabControl x:Name="Tabs" TabStripPlacement="Top" />
+    </DockPanel>
+</Window>
