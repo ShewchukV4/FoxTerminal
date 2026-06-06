@@ -24,7 +24,7 @@ $openTriggers = @(
     @{ patterns = @("open youtube music", "youtube music", "ytm"); script = "ytm"; args = @() },
     @{ patterns = @("open youtube music ui", "youtube music ui", "open ytm ui", "ytm ui", "ytm-ui", "open ytm-ui"); script = "ytm-ui"; args = @() },
     @{ patterns = @("open telegram", "telegram", "tg"); script = "tg"; args = @() },
-    @{ patterns = @("open notes", "notes", "note"); script = "note"; args = @() },
+    @{ patterns = @("open notes", "notes", "note", "wai"); script = "wai"; args = @() },
 
     # Quick utilities
     @{ patterns = @("open weather", "weather"); script = "weather"; args = @() },
@@ -134,7 +134,7 @@ function Try-RouteCommandByKeywords([string]$userInput) {
 
     # Route decisions (prefer the most specific)
     if ($isHelp -and ($openIntent -or $tokens.Count -le 3)) { return @{ script = "foxhelp"; args = @() } }
-    if ($isNotes -and ($openIntent -or $tokens.Count -le 3)) { return @{ script = "note"; args = @() } }
+    if ($isNotes -and ($openIntent -or $tokens.Count -le 3)) { return @{ script = "wai"; args = @() } }
     if ($isTelegram -and ($openIntent -or $tokens.Count -le 3)) {
         return @{ script = "tg"; args = if ([string]::IsNullOrWhiteSpace($query)) { @() } else { @($query) } }
     }
@@ -260,7 +260,7 @@ FoxTerminal command map (high-level):
 - sp / sp-ui: Spotify open / DJ controls UI
 - ytm / ytm-ui: YouTube Music open / DJ controls UI
 - tg / tgub / tglist: Telegram open + bindings
-- note: notes manager
+- wai / go / nfile / edit / fdel: notes files (no note command; use wai to see folder)
 - weather / ip / wifi / fday: quick status
 
 Writing to Notes (files in FoxTerminal notes folder):
@@ -718,7 +718,7 @@ function Show-CommandsOverview {
     Write-Host "  sp | sp-ui            Spotify open / DJ controls UI" -ForegroundColor DarkGray
     Write-Host "  ytm | ytm-ui          YouTube Music open / DJ controls UI" -ForegroundColor DarkGray
     Write-Host "  tg | tgub | tglist    Telegram open + bindings" -ForegroundColor DarkGray
-    Write-Host "  note                  notes manager" -ForegroundColor DarkGray
+    Write-Host "  wai | go | nfile      notes files (see foxhelp)" -ForegroundColor DarkGray
     Write-Host "  weather | ip | wifi   quick status" -ForegroundColor DarkGray
     Write-Host "  fday                  time + weather + wifi + ip" -ForegroundColor DarkGray
     Write-Host ""

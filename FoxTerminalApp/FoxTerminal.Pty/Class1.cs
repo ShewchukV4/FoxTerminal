@@ -151,17 +151,76 @@ public sealed class BasicProcessPty : IPty
 
 public static class PtyFactory
 {
-    public static IPty CreateDefault()
+    public static IPty CreateDefault(PtyLaunchOptions? options = null)
     {
+        options ??= PtyLaunchOptions.Default;
+
+        if (!string.IsNullOrWhiteSpace(options.ShellPath))
+        {
+            return new BasicProcessPty(
+                options.ShellPath,
+                options.ShellArguments,
+                options.WorkingDirectory ?? Environment.CurrentDirectory);
+        }
+
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
+            if (string.Equals(options.ShellBackend, "mintty", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(options.ShellBackend, "bash", StringComparison.OrdinalIgnoreCase))
+            {
+                if (TryResolveMinttyCompatibleBash(out var bashPath))
+                {
+                    return new BasicProcessPty(
+                        bashPath,
+                        "--login -i",
+                        options.WorkingDirectory ?? Environment.CurrentDirectory);
+                }
+
+                throw new InvalidOperationException(
+                    "mintty backend requested, but no compatible bash.exe was found. " +
+                    "Install MSYS2/Git Bash or set shellPath in config.");
+            }
+
             var shell = Environment.GetEnvironmentVariable("COMSPEC") ?? "cmd.exe";
             var cmdPath = @"C:\Users\dmytr\Desktop\FireFoxBot\cmd";
             var args = $"/Q /K \"chcp 65001 >nul & set PATH={cmdPath};%PATH%\"";
-            return new BasicProcessPty(shell, args, Environment.CurrentDirectory);
+            return new BasicProcessPty(shell, args, options.WorkingDirectory ?? Environment.CurrentDirectory);
         }
 
         var unixShell = Environment.GetEnvironmentVariable("SHELL") ?? "/bin/bash";
-        return new BasicProcessPty(unixShell, null, Environment.CurrentDirectory);
+        return new BasicProcessPty(unixShell, null, options.WorkingDirectory ?? Environment.CurrentDirectory);
     }
+
+    private static bool TryResolveMinttyCompatibleBash(out string bashPath)
+    {
+        var candidates = new[]
+        {
+            Environment.GetEnvironmentVariable("MSYS2_BASH"),
+            @"C:\msys64\usr\bin\bash.exe",
+            @"C:\Program Files\Git\bin\bash.exe",
+            @"C:\Program Files\Git\usr\bin\bash.exe"
+        };
+
+        foreach (var candidate in candidates)
+        {
+            if (!string.IsNullOrWhiteSpace(candidate) && File.Exists(candidate))
+            {
+                bashPath = candidate;
+                return true;
+            }
+        }
+
+        bashPath = string.Empty;
+        return false;
+    }
+}
+
+public sealed class PtyLaunchOptions
+{
+    public string ShellBackend { get; init; } = "auto";
+    public string? ShellPath { get; init; }
+    public string? ShellArguments { get; init; }
+    public string? WorkingDirectory { get; init; }
+
+    public static PtyLaunchOptions Default => new();
 }

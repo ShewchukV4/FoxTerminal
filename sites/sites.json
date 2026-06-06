@@ -1,0 +1,50 @@
+﻿[
+    {
+        "id":  "typewriter",
+        "name":  "Type Writer",
+        "url":  "./typewriter/index.html",
+        "description":  "Typing practice website (local)"
+    },
+    {
+        "id":  "snake",
+        "name":  "Fox Snake",
+        "url":  "./snake/index.html",
+        "description":  "Customizable Snake game with multiple modes (local)"
+    },
+    {
+        "id":  "invoker",
+        "name":  "Invoker Forge",
+        "url":  "./invoker/index.html",
+        "description":  "Invoker combo trainer with local skill icons (local)"
+    },
+    {
+        "id":  "techies-sweeper",
+        "name":  "Techies Minefield",
+        "url":  "./techies-sweeper/index.html",
+        "description":  "Dota-styled Minesweeper with Techies proximity mines (local)"
+    },
+    {
+        "id":  "dice-forge",
+        "name":  "Dice Forge",
+        "url":  "./dice-forge/index.html",
+        "description":  "Animated 3D dice roller with Default, DND, and Dota themes (local)"
+    },
+    {
+        "id":  "dota-items-randomizer",
+        "name":  "Dota Items Randomizer",
+        "url":  "./dota-items-randomizer/index.html",
+        "description":  "Dota 2 item randomizer with mutually exclusive Ukrainian sections (local)"
+    },
+    {
+        "id":  "web-ui-guide",
+        "name":  "Web UI Guide",
+        "url":  "./web-ui-guide/index.html",
+        "description":  "Multi-page Ukrainian UI guide with examples, cursor effects, reusable sections, and HTML/CSS/JS documentation (local)"
+    },
+    {
+        "id":  "OnePageStore",
+        "name":  "Onepagestore",
+        "url":  "./OnePageStore/index.html",
+        "description":  "Onepagestore (local)"
+    }
+]

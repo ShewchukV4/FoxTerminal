@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Web UI Guide - навігація</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./assets/css/style.css">
+</head>
+<body data-cursor="glow">
+<div class="noise"></div>
+<div class="cursor-glow" id="cursor-glow"></div>
+
+<header class="topbar">
+  <a class="brand" href="./index.html"><span class="brand-mark">WG</span><span>Web UI Guide</span></a>
+  <nav class="nav">
+    <a href="./examples.html">Приклади</a>
+    <a href="./navigation.html">Навігація</a>
+    <a href="./patterns.html">Секції</a>
+    <a href="./placeholders.html">Заглушки</a>
+    <a href="./cursors.html">Курсори</a>
+    <a href="./docs.html">Документація</a>
+  </nav>
+  <button class="theme-toggle" id="theme-toggle" type="button">Light</button>
+</header>
+
+<main>
+  <section class="section hero reveal">
+    <div>
+      <p class="eyebrow">Navigation lab</p>
+      <h1>Куча варіантів навігації для будь-якого сайту.</h1>
+      <p class="hero-text">Topbar, sidebar, mega menu, mobile drawer, pill tabs, breadcrumbs, pagination, dock, stepper, anchor list, footer nav. Кожен зразок має код.</p>
+    </div>
+    <div class="quick-map example-index">
+      <a href="#headers">Хедери</a>
+      <a href="#sidebars">Сайдбари</a>
+      <a href="#tabs-nav">Tabs і chips</a>
+      <a href="#mobile-nav">Мобільна</a>
+      <a href="#path-nav">Шлях і кроки</a>
+      <a href="#extra-nav">Спецменю</a>
+    </div>
+  </section>
+
+  <section class="section reveal" id="headers">
+    <div class="section-head">
+      <div><p class="eyebrow">01 / headers</p><h2>Топ-навігація</h2></div>
+      <p>Найчастіший варіант: логотип ліворуч, посилання посередині, дія праворуч.</p>
+    </div>
+    <div class="examples-grid nav-grid">
+      <article class="example-card">
+        <div class="example-demo nav-demo">
+          <div class="nav-mini topbar-mini">
+            <span class="nav-logo">FOX</span>
+            <ul><li>Home</li><li>Docs</li><li>Pricing</li></ul>
+            <button>Sign in</button>
+          </div>
+        </div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>&lt;header class="topbar"&gt;
+  &lt;a class="brand"&gt;FOX&lt;/a&gt;
+  &lt;nav&gt;
+    &lt;a href="#"&gt;Home&lt;/a&gt;
+    &lt;a href="#"&gt;Docs&lt;/a&gt;
+    &lt;a href="#"&gt;Pricing&lt;/a&gt;
+  &lt;/nav&gt;
+  &lt;button&gt;Sign in&lt;/button&gt;
+&lt;/header&gt;</code></pre>
+      </article>
+
+      <article class="example-card">
+        <div class="example-demo nav-demo">
+          <div class="nav-mini topbar-mini centered">
+            <ul><li>Work</li><li class="nav-logo">FOX</li><li>About</li></ul>
+          </div>
+        </div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>.topbar.centered {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+}
+.topbar.centered .brand {
+  justify-self: center;
+}</code></pre>
+      </article>
+
+      <article class="example-card">
+        <div class="example-demo nav-demo">
+          <div class="nav-mini topbar-mini split">
+            <span class="nav-logo">FOX</span>
+            <ul><li>Features</li><li>Use cases</li><li>Blog</li></ul>
+            <span class="nav-pill">Beta</span>
+          </div>
+        </div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>&lt;span class="nav-pill"&gt;Beta&lt;/span&gt;
+
+.nav-pill {
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(36,214,200,.18);
+  color: #24d6c8;
+}</code></pre>
+      </article>
+
+      <article class="example-card">
+        <div class="example-demo nav-demo">
+          <div class="mega-menu">
+            <span class="nav-logo">FOX</span>
+            <ul class="mega-list">
+              <li><b>Product</b><span>Editor</span><span>API</span><span>CLI</span></li>
+              <li><b>Resources</b><span>Docs</span><span>Blog</span><span>Examples</span></li>
+              <li><b>Company</b><span>About</span><span>Careers</span><span>Press</span></li>
+            </ul>
+          </div>
+        </div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>.mega-list {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+.mega-list b {
+  display: block;
+  margin-bottom: 8px;
+}</code></pre>
+      </article>
+    </div>
+  </section>
+
+  <section class="section reveal" id="sidebars">
+    <div class="section-head">
+      <div><p class="eyebrow">02 / sidebars</p><h2>Сайдбари і вертикальні меню</h2></div>
+      <p>Підходять для dashboard, docs, ide-подібних інтерфейсів.</p>
+    </div>
+    <div class="examples-grid nav-grid">
+      <article class="example-card">
+        <div class="example-demo nav-demo">
+          <aside class="sidebar-mini">
+            <b>Workspace</b>
+            <ul>
+              <li class="active">Home</li>
+              <li>Projects</li>
+              <li>Reports</li>
+              <li>Settings</li>
+            </ul>
+          </aside>
+        </div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>&lt;aside class="sidebar"&gt;
+  &lt;b&gt;Workspace&lt;/b&gt;
+  &lt;ul&gt;
+    &lt;li class="active"&gt;Home&lt;/li&gt;
+    &lt;li&gt;Projects&lt;/li&gt;
+    &lt;li&gt;Reports&lt;/li&gt;
+    &lt;li&gt;Settings&lt;/li&gt;
+  &lt;/ul&gt;
+&lt;/aside&gt;</code></pre>
+      </article>
+
+      <article class="example-card">
+        <div class="example-demo nav-demo">
+          <aside class="sidebar-mini icon-rail">
+            <span>H</span>
+            <span class="active">P</span>
+            <span>R</span>
+            <span>S</span>
+          </aside>
+        </div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>.icon-rail {
+  display: grid;
+  gap: 12px;
+  width: 64px;
+}
+.icon-rail span {
+  display: grid;
+  height: 48px;
+  place-items: center;
+  border-radius: 14px;
+}</code></pre>
+      </article>
+
+      <article class="example-card">
+        <div class="example-demo nav-demo">
+          <aside class="sidebar-mini grouped">
+            <b>Docs</b>
+            <span>Intro</span>
+            <span>Setup</span>
+            <b>Components</b>
+            <span>Buttons</span>
+            <span class="active">Inputs</span>
+            <span>Cards</span>
+          </aside>
+        </div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>.sidebar.grouped b {
+  margin-top: 16px;
+  color: #aab4cf;
+  font-size: .85rem;
+  text-transform: uppercase;
+}</code></pre>
+      </article>
+
+      <article class="example-card">
+        <div class="example-demo nav-demo">
+          <aside class="sidebar-mini collapsible">
+            <header><b>Menu</b><i>›</i></header>
+            <ul>
+              <li>Profile</li>
+              <li>Billing</li>
+              <li>Logout</li>
+            </ul>
+          </aside>
+        </div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>.sidebar.collapsible header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.sidebar.collapsible i {
+  transition: transform .2s ease;
+}
+.sidebar.collapsible.open i {
+  transform: rotate(90deg);
+}</code></pre>
+      </article>
+    </div>
+  </section>
+
+  <section class="section reveal" id="tabs-nav">
+    <div class="section-head">
+      <div><p class="eyebrow">03 / tabs &amp; chips</p><h2>Перемикачі контенту</h2></div>
+      <p>Tabs, pill switcher, segmented control, filter chips, badge tabs.</p>
+    </div>
+    <div class="examples-grid nav-grid">
+      <article class="example-card">
+        <div class="example-demo nav-demo">
+          <div class="pill-tabs">
+            <button class="active" type="button">Overview</button>
+            <button type="button">Reviews</button>
+            <button type="button">FAQ</button>
+          </div>
+        </div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>&lt;div class="pill-tabs"&gt;
+  &lt;button class="active"&gt;Overview&lt;/button&gt;
+  &lt;button&gt;Reviews&lt;/button&gt;
+  &lt;button&gt;FAQ&lt;/button&gt;
+&lt;/div&gt;
+
+.pill-tabs button.active {
+  background: linear-gradient(135deg, #7c5cff, #5d9dff);
+  color: white;
+}</code></pre>
+      </article>
+
+      <article class="example-card">
+        <div class="example-demo nav-demo">
+          <div class="segmented">
+            <button type="button" class="active">Day</button>
+            <button type="button">Week</button>
+            <button type="button">Month</button>
+          </div>
+        </div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>.segmented {
+  display: inline-flex;
+  border-radius: 14px;
+  background: rgba(255,255,255,.08);
+  padding: 4px;
+}
+.segmented button.active {
+  background: white;
+  color: #101526;
+}</code></pre>
+      </article>
+
+      <article class="example-card">
+        <div class="example-demo nav-demo">
+          <div class="filter-chips">
+            <span class="active">Все</span>
+            <span>HTML</span>
+            <span>CSS</span>
+            <span>JS</span>
+            <span>Effects</span>
+          </div>
+        </div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>.filter-chips span {
+  padding: 9px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.14);
+  cursor: pointer;
+}
+.filter-chips span.active {
+  border-color: #24d6c8;
+  background: rgba(36,214,200,.16);
+}</code></pre>
+      </article>
+
+      <article class="example-card">
+        <div class="example-demo nav-demo">
+          <div class="badge-tabs">
+            <button class="active" type="button">Inbox <i>12</i></button>
+            <button type="button">Spam <i>3</i></button>
+            <button type="button">Sent</button>
+          </div>
+        </div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>.badge-tabs i {
+  margin-left: 6px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.14);
+  font-style: normal;
+}</code></pre>
+      </article>
+    </div>
+  </section>
+
+  <section class="section reveal" id="mobile-nav">
+    <div class="section-head">
+      <div><p class="eyebrow">04 / mobile</p><h2>Мобільне і док-меню</h2></div>
+      <p>Bottom bar, dock, drawer, FAB - те, без чого не обходиться додаток на телефоні.</p>
+    </div>
+    <div class="examples-grid nav-grid">
+      <article class="example-card">
+        <div class="example-demo nav-demo">
+          <div class="bottom-bar">
+            <span class="active">Home</span>
+            <span>Search</span>
+            <span>Cart</span>
+            <span>Me</span>
+          </div>
+        </div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>.bottom-bar {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border-radius: 26px;
+  background: rgba(255,255,255,.08);
+}
+.bottom-bar span.active {
+  color: #24d6c8;
+}</code></pre>
+      </article>
+
+      <article class="example-card">
+        <div class="example-demo nav-demo">
+          <div class="dock">
+            <span></span><span></span><span class="big"></span><span></span><span></span>
+          </div>
+        </div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>.dock {
+  display: flex;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 22px;
+  backdrop-filter: blur(18px);
+}
+.dock span:hover {
+  transform: translateY(-6px) scale(1.1);
+}</code></pre>
+      </article>
+
+      <article class="example-card">
+        <div class="example-demo nav-demo">
+          <div class="drawer-stub">
+            <header><b>Menu</b><i>×</i></header>
+            <ul><li>Home</li><li>Inbox</li><li>Settings</li></ul>
+          </div>
+        </div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>.drawer {
+  position: fixed;
+  inset: 0 30% 0 0;
+  transform: translateX(-100%);
+  transition: transform .3s ease;
+}
+.drawer.open {
+  transform: translateX(0);
+}</code></pre>
+      </article>
+
+      <article class="example-card">
+        <div class="example-demo nav-demo">
+          <div class="fab-stub">
+            <span>+</span>
+          </div>
+        </div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>.fab {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #7c5cff, #24d6c8);
+}</code></pre>
+      </article>
+    </div>
+  </section>
+
+  <section class="section reveal" id="path-nav">
+    <div class="section-head">
+      <div><p class="eyebrow">05 / path</p><h2>Шлях, кроки і пагінація</h2></div>
+      <p>Допомагають користувачу зрозуміти, де він і скільки ще лишилось.</p>
+    </div>
+    <div class="examples-grid nav-grid">
+      <article class="example-card">
+        <div class="example-demo nav-demo">
+          <nav class="breadcrumbs">
+            <span>Home</span>
+            <i>›</i>
+            <span>Docs</span>
+            <i>›</i>
+            <span class="active">Buttons</span>
+          </nav>
+        </div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>&lt;nav class="breadcrumbs"&gt;
+  &lt;a&gt;Home&lt;/a&gt; / &lt;a&gt;Docs&lt;/a&gt; / &lt;span&gt;Buttons&lt;/span&gt;
+&lt;/nav&gt;
+
+.breadcrumbs {
+  display: flex;
+  gap: 8px;
+  color: #aab4cf;
+}</code></pre>
+      </article>
+
+      <article class="example-card">
+        <div class="example-demo nav-demo">
+          <div class="stepper-nav">
+            <span class="done">1</span>
+            <i></i>
+            <span class="done">2</span>
+            <i></i>
+            <span class="active">3</span>
+            <i></i>
+            <span>4</span>
+          </div>
+        </div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>.stepper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.stepper span.done { background: #24d6c8; color: #02110f; }
+.stepper span.active { background: #7c5cff; color: white; }</code></pre>
+      </article>
+
+      <article class="example-card">
+        <div class="example-demo nav-demo">
+          <div class="pagination">
+            <button type="button">‹</button>
+            <button type="button">1</button>
+            <button type="button" class="active">2</button>
+            <button type="button">3</button>
+            <span>...</span>
+            <button type="button">12</button>
+            <button type="button">›</button>
+          </div>
+        </div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>.pagination button {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+}
+.pagination button.active {
+  background: #7c5cff;
+  color: white;
+}</code></pre>
+      </article>
+
+      <article class="example-card">
+        <div class="example-demo nav-demo">
+          <ol class="anchor-nav">
+            <li class="active">Intro</li>
+            <li>Install</li>
+            <li>API</li>
+            <li>Examples</li>
+            <li>FAQ</li>
+          </ol>
+        </div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>.anchor-nav li {
+  border-left: 2px solid transparent;
+  padding: 8px 12px;
+}
+.anchor-nav li.active {
+  border-color: #24d6c8;
+  color: white;
+}</code></pre>
+      </article>
+    </div>
+  </section>
+
+  <section class="section reveal" id="extra-nav">
+    <div class="section-head">
+      <div><p class="eyebrow">06 / extras</p><h2>Більш фантазійні меню</h2></div>
+      <p>Command palette, context menu, dropdown, footer sitemap.</p>
+    </div>
+    <div class="examples-grid nav-grid">
+      <article class="example-card">
+        <div class="example-demo nav-demo">
+          <div class="command-palette">
+            <input type="search" placeholder="Type a command..." readonly>
+            <ul>
+              <li>New file <span>Ctrl N</span></li>
+              <li>Open settings <span>Ctrl ,</span></li>
+              <li>Toggle theme <span>Ctrl T</span></li>
+            </ul>
+          </div>
+        </div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>.command-palette {
+  border-radius: 18px;
+  padding: 12px;
+  background: #050814;
+}
+.command-palette li span {
+  color: #aab4cf;
+}</code></pre>
+      </article>
+
+      <article class="example-card">
+        <div class="example-demo nav-demo">
+          <div class="context-menu">
+            <span>Copy</span>
+            <span>Paste</span>
+            <span>Rename</span>
+            <hr>
+            <span class="danger">Delete</span>
+          </div>
+        </div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>.context-menu {
+  display: grid;
+  border-radius: 16px;
+  padding: 6px;
+  background: rgba(0,0,0,.7);
+}
+.context-menu .danger {
+  color: #ff4d6d;
+}</code></pre>
+      </article>
+
+      <article class="example-card">
+        <div class="example-demo nav-demo">
+          <div class="dropdown-stub">
+            <button type="button">Account ▾</button>
+            <div>
+              <span>Profile</span>
+              <span>Billing</span>
+              <span>Logout</span>
+            </div>
+          </div>
+        </div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>.dropdown {
+  position: relative;
+}
+.dropdown div {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  display: none;
+}
+.dropdown.open div {
+  display: grid;
+}</code></pre>
+      </article>
+
+      <article class="example-card">
+        <div class="example-demo nav-demo">
+          <div class="footer-sitemap">
+            <div>
+              <b>Product</b>
+              <span>Editor</span>
+              <span>API</span>
+            </div>
+            <div>
+              <b>Company</b>
+              <span>About</span>
+              <span>Press</span>
+            </div>
+            <div>
+              <b>Legal</b>
+              <span>Terms</span>
+              <span>Privacy</span>
+            </div>
+          </div>
+        </div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>.footer-sitemap {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+.footer-sitemap b {
+  display: block;
+  margin-bottom: 8px;
+}</code></pre>
+      </article>
+    </div>
+  </section>
+
+  <section class="section reveal">
+    <div class="section-head">
+      <div><p class="eyebrow">07 / tips</p><h2>Як обрати правильну навігацію</h2></div>
+    </div>
+    <div class="recipe-list">
+      <article><h3>До 5 пунктів</h3><p>У головному меню тримай не більше 5-7 посилань. Інше ховай під "More" або в footer.</p></article>
+      <article><h3>Стан "де я"</h3><p>Активний пункт має виділятися кольором, лінією або фоном.</p></article>
+      <article><h3>Мобільна логіка</h3><p>На телефоні bottom bar з 3-5 іконок зручніше за випадаюче меню.</p></article>
+      <article><h3>Клавіатура</h3><p>Усе меню має працювати з Tab, Enter і Esc, особливо командне.</p></article>
+    </div>
+  </section>
+</main>
+
+<div class="toast" id="toast">Готово.</div>
+<footer class="footer"><p><a href="./index.html">На головну</a> · Navigation lab</p></footer>
+<script src="./assets/js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Web UI Guide - заглушки</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./assets/css/style.css">
+</head>
+<body data-cursor="glow">
+<div class="noise"></div>
+<div class="cursor-glow" id="cursor-glow"></div>
+
+<header class="topbar">
+  <a class="brand" href="./index.html"><span class="brand-mark">WG</span><span>Web UI Guide</span></a>
+  <nav class="nav">
+    <a href="./examples.html">Приклади</a>
+    <a href="./navigation.html">Навігація</a>
+    <a href="./patterns.html">Секції</a>
+    <a href="./placeholders.html">Заглушки</a>
+    <a href="./cursors.html">Курсори</a>
+    <a href="./docs.html">Документація</a>
+  </nav>
+  <button class="theme-toggle" id="theme-toggle" type="button">Light</button>
+</header>
+
+<main>
+  <section class="section hero reveal">
+    <div>
+      <p class="eyebrow">Placeholders</p>
+      <h1>Заглушки на той випадок, коли контенту ще немає.</h1>
+      <p class="hero-text">Skeleton screens, empty states, error states, image stubs, lorem cards, спінери, бан-блоки, "soon", "404", "no results". Усе з прикладами коду, які можна копіювати.</p>
+    </div>
+    <div class="quick-map example-index">
+      <a href="#skeletons">Skeleton</a>
+      <a href="#empty">Empty</a>
+      <a href="#errors">Errors</a>
+      <a href="#images">Images</a>
+      <a href="#lorem">Lorem</a>
+      <a href="#stubs">Stubs</a>
+    </div>
+  </section>
+
+  <section class="section reveal" id="skeletons">
+    <div class="section-head">
+      <div><p class="eyebrow">01 / skeleton</p><h2>Skeleton screens</h2></div>
+      <p>Показуй приблизну форму контенту, поки дані ще завантажуються. Так сторінка не "стрибає" і виглядає швидшою.</p>
+    </div>
+    <div class="examples-grid">
+      <article class="example-card">
+        <div class="example-demo">
+          <div class="skeleton-card">
+            <div class="skeleton-row"></div>
+            <div class="skeleton-row short"></div>
+            <div class="skeleton-row mid"></div>
+          </div>
+        </div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>&lt;div class="skeleton-card"&gt;
+  &lt;div class="skeleton-row"&gt;&lt;/div&gt;
+  &lt;div class="skeleton-row short"&gt;&lt;/div&gt;
+  &lt;div class="skeleton-row mid"&gt;&lt;/div&gt;
+&lt;/div&gt;
+
+.skeleton-row {
+  height: 18px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #1c2336, #2c3550, #1c2336);
+  background-size: 220%;
+  animation: loading 1.2s infinite;
+}</code></pre>
+      </article>
+
+      <article class="example-card">
+        <div class="example-demo">
+          <div class="skeleton-list">
+            <span class="skeleton-avatar"></span>
+            <div>
+              <div class="skeleton-row"></div>
+              <div class="skeleton-row short"></div>
+            </div>
+          </div>
+        </div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>.skeleton-list {
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  gap: 14px;
+  align-items: center;
+}
+.skeleton-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #1c2336;
+  animation: loading 1.2s infinite;
+}</code></pre>
+      </article>
+
+      <article class="example-card">
+        <div class="example-demo">
+          <div class="skeleton-thumb">
+            <div class="skeleton-image"></div>
+            <div class="skeleton-row short"></div>
+            <div class="skeleton-row"></div>
+          </div>
+        </div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>.skeleton-image {
+  width: 100%;
+  height: 120px;
+  border-radius: 18px;
+  background: #1c2336;
+  animation: loading 1.2s infinite;
+}</code></pre>
+      </article>
+
+      <article class="example-card">
+        <div class="example-demo">
+          <div class="skeleton-table">
+            <span></span><span></span><span></span>
+            <span></span><span></span><span></span>
+            <span></span><span></span><span></span>
+          </div>
+        </div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>.skeleton-table {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.skeleton-table span {
+  height: 24px;
+  border-radius: 8px;
+  background: #1c2336;
+  animation: loading 1.2s infinite;
+}</code></pre>
+      </article>
+    </div>
+  </section>
+
+  <section class="section reveal" id="empty">
+    <div class="section-head">
+      <div><p class="eyebrow">02 / empty states</p><h2>Empty states</h2></div>
+      <p>Коли немає даних, не лишай порожньо. Скажи людині, що сталось і що зробити далі.</p>
+    </div>
+    <div class="examples-grid">
+      <article class="example-card">
+        <div class="example-demo">
+          <div class="empty-state">
+            <div class="empty-icon">!</div>
+            <h3>Тут поки порожньо</h3>
+            <p>Додай перший проєкт, щоб побачити список.</p>
+            <button class="btn btn-primary" type="button">Створити</button>
+          </div>
+        </div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>&lt;div class="empty-state"&gt;
+  &lt;div class="empty-icon"&gt;!&lt;/div&gt;
+  &lt;h3&gt;Тут поки порожньо&lt;/h3&gt;
+  &lt;p&gt;Додай перший проєкт.&lt;/p&gt;
+  &lt;button&gt;Створити&lt;/button&gt;
+&lt;/div&gt;</code></pre>
+      </article>
+
+      <article class="example-card">
+        <div class="example-demo">
+          <div class="empty-state">
+            <div class="empty-icon">?</div>
+            <h3>Нічого не знайшли</h3>
+            <p>Спробуй інше слово або очисти фільтри.</p>
+          </div>
+        </div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>.empty-icon {
+  display: grid;
+  width: 64px;
+  height: 64px;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(36,214,200,.16);
+  font-size: 1.6rem;
+  font-weight: 900;
+}</code></pre>
+      </article>
+
+      <article class="example-card">
+        <div class="example-demo">
+          <div class="empty-state">
+            <div class="empty-icon soon">⏳</div>
+            <h3>Скоро з'явиться</h3>
+            <p>Цей розділ ще в розробці.</p>
+          </div>
+        </div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>.empty-state.soon .empty-icon {
+  background: rgba(255,186,74,.16);
+  color: #ffba4a;
+}</code></pre>
+      </article>
+
+      <article class="example-card">
+        <div class="example-demo">
+          <div class="empty-state offline">
+            <div class="empty-icon">⌧</div>
+            <h3>Немає інтернету</h3>
+            <p>Перевір з'єднання і спробуй ще раз.</p>
+            <button class="btn btn-soft" type="button">Повторити</button>
+          </div>
+        </div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>.empty-state.offline .empty-icon {
+  background: rgba(255,77,109,.16);
+  color: #ff4d6d;
+}</code></pre>
+      </article>
+    </div>
+  </section>
+
+  <section class="section reveal" id="errors">
+    <div class="section-head">
+      <div><p class="eyebrow">03 / errors</p><h2>Сторінки і блоки помилок</h2></div>
+      <p>404, 500, banned, no access. Завжди давай користувачу шлях назад.</p>
+    </div>
+    <div class="examples-grid">
+      <article class="example-card">
+        <div class="example-demo">
+          <div class="error-stub">
+            <span class="error-code">404</span>
+            <h3>Сторінку не знайдено</h3>
+            <p>Адреса змінилась або була видалена.</p>
+          </div>
+        </div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>&lt;div class="error-stub"&gt;
+  &lt;span class="error-code"&gt;404&lt;/span&gt;
+  &lt;h3&gt;Не знайдено&lt;/h3&gt;
+&lt;/div&gt;
+
+.error-code {
+  font-size: 4rem;
+  font-weight: 900;
+  background: linear-gradient(135deg, #ff4d6d, #ffba4a);
+  -webkit-background-clip: text;
+  color: transparent;
+}</code></pre>
+      </article>
+
+      <article class="example-card">
+        <div class="example-demo">
+          <div class="error-stub server">
+            <span class="error-code">500</span>
+            <h3>Сервер не відповідає</h3>
+            <p>Ми вже працюємо над цим.</p>
+          </div>
+        </div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>.error-stub.server .error-code {
+  background: linear-gradient(135deg, #7c5cff, #24d6c8);
+  -webkit-background-clip: text;
+  color: transparent;
+}</code></pre>
+      </article>
+
+      <article class="example-card">
+        <div class="example-demo">
+          <div class="error-stub">
+            <span class="error-code">403</span>
+            <h3>Доступ заборонений</h3>
+            <p>Увійди в інший акаунт або попроси доступ.</p>
+          </div>
+        </div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>.error-stub {
+  display: grid;
+  text-align: center;
+  gap: 6px;
+}</code></pre>
+      </article>
+
+      <article class="example-card">
+        <div class="example-demo">
+          <div class="alert-stub">
+            <b>Помилка</b>
+            <p>Щось пішло не так. Спробуй ще раз.</p>
+          </div>
+        </div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>.alert-stub {
+  border-left: 4px solid #ff4d6d;
+  border-radius: 14px;
+  padding: 14px 16px;
+  background: rgba(255,77,109,.12);
+}</code></pre>
+      </article>
+    </div>
+  </section>
+
+  <section class="section reveal" id="images">
+    <div class="section-head">
+      <div><p class="eyebrow">04 / images</p><h2>Заглушки замість зображень</h2></div>
+      <p>Поки немає реального арту - постав placeholder з відомою пропорцією, щоб layout не стрибав.</p>
+    </div>
+    <div class="examples-grid">
+      <article class="example-card">
+        <div class="example-demo">
+          <div class="image-stub aspect-16x9"><span>16x9</span></div>
+        </div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>.image-stub {
+  display: grid;
+  place-items: center;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #1c2336, #2c3550);
+  color: #aab4cf;
+}
+.aspect-16x9 { aspect-ratio: 16 / 9; }</code></pre>
+      </article>
+
+      <article class="example-card">
+        <div class="example-demo">
+          <div class="image-stub aspect-1x1"><span>1x1</span></div>
+        </div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>.aspect-1x1 { aspect-ratio: 1 / 1; }</code></pre>
+      </article>
+
+      <article class="example-card">
+        <div class="example-demo">
+          <div class="image-stub diagonal"><span>diagonal</span></div>
+        </div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>.image-stub.diagonal {
+  background:
+    repeating-linear-gradient(45deg,
+      rgba(255,255,255,.05) 0 12px,
+      rgba(255,255,255,.12) 12px 24px);
+}</code></pre>
+      </article>
+
+      <article class="example-card">
+        <div class="example-demo">
+          <div class="image-stub avatar-stub"><span>FM</span></div>
+        </div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>.avatar-stub {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #7c5cff, #24d6c8);
+  color: white;
+  font-weight: 900;
+}</code></pre>
+      </article>
+    </div>
+  </section>
+
+  <section class="section reveal" id="lorem">
+    <div class="section-head">
+      <div><p class="eyebrow">05 / lorem</p><h2>Текстові заглушки</h2></div>
+      <p>Готові короткі тексти, щоб бачити, як виглядає блок з реальним наповненням.</p>
+    </div>
+    <div class="examples-grid">
+      <article class="example-card">
+        <div class="example-demo lorem-block">
+          <h3>Lorem заголовок</h3>
+          <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Тут буде нормальний опис продукту або статті.</p>
+        </div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>&lt;article class="lorem-block"&gt;
+  &lt;h3&gt;Lorem заголовок&lt;/h3&gt;
+  &lt;p&gt;Lorem ipsum dolor sit amet, consectetur adipiscing elit.&lt;/p&gt;
+&lt;/article&gt;</code></pre>
+      </article>
+
+      <article class="example-card">
+        <div class="example-demo lorem-block">
+          <h3>Заголовок українською</h3>
+          <p>Тут має бути коротка історія користувача. Поки текст-заглушка, бо контент ще пишеться.</p>
+        </div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>&lt;article class="lorem-block"&gt;
+  &lt;h3&gt;Заголовок українською&lt;/h3&gt;
+  &lt;p&gt;Тут має бути історія користувача.&lt;/p&gt;
+&lt;/article&gt;</code></pre>
+      </article>
+
+      <article class="example-card">
+        <div class="example-demo lorem-block">
+          <span class="meta-stub">Категорія · 3 хв</span>
+          <h3>Стаття-заглушка</h3>
+          <p>Короткий тизер для блогу. Уже видно, як буде виглядати картка статті.</p>
+        </div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>.meta-stub {
+  display: inline-block;
+  margin-bottom: 8px;
+  color: #aab4cf;
+  font-family: "JetBrains Mono", monospace;
+  font-size: .8rem;
+}</code></pre>
+      </article>
+
+      <article class="example-card">
+        <div class="example-demo lorem-block">
+          <h3>Quote-заглушка</h3>
+          <blockquote>"Це тимчасова цитата. Замінити, коли буде справжній відгук від користувача."</blockquote>
+        </div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>blockquote {
+  margin: 12px 0 0;
+  padding-left: 14px;
+  border-left: 3px solid #24d6c8;
+  color: #f6f7ff;
+  font-style: italic;
+}</code></pre>
+      </article>
+    </div>
+  </section>
+
+  <section class="section reveal" id="stubs">
+    <div class="section-head">
+      <div><p class="eyebrow">06 / stubs</p><h2>Сторінкові заглушки і ще трохи</h2></div>
+      <p>Maintenance, coming soon, beta access, paywall, login wall.</p>
+    </div>
+    <div class="examples-grid">
+      <article class="example-card">
+        <div class="example-demo">
+          <div class="page-stub maintenance">
+            <span>0001</span>
+            <h3>Технічні роботи</h3>
+            <p>Сайт буде доступний через ~30 хвилин.</p>
+          </div>
+        </div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>.page-stub {
+  display: grid;
+  gap: 8px;
+  text-align: center;
+  border-radius: 22px;
+  padding: 30px;
+}
+.page-stub.maintenance {
+  background: rgba(255,186,74,.12);
+}</code></pre>
+      </article>
+
+      <article class="example-card">
+        <div class="example-demo">
+          <div class="page-stub coming">
+            <span>SOON</span>
+            <h3>Готуємо новий розділ</h3>
+            <p>Підпишись, щоб отримати інвайт.</p>
+            <form class="mini-form"><input placeholder="Email"><button class="btn btn-primary" type="button">Notify me</button></form>
+          </div>
+        </div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>.page-stub.coming {
+  background: rgba(124,92,255,.16);
+}</code></pre>
+      </article>
+
+      <article class="example-card">
+        <div class="example-demo">
+          <div class="page-stub beta">
+            <span>BETA</span>
+            <h3>Закритий доступ</h3>
+            <p>Введи інвайт-код, щоб увійти.</p>
+            <form class="mini-form"><input placeholder="invite code"><button class="btn btn-soft" type="button">Унлокнути</button></form>
+          </div>
+        </div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>.page-stub.beta {
+  background: rgba(36,214,200,.14);
+}</code></pre>
+      </article>
+
+      <article class="example-card">
+        <div class="example-demo">
+          <div class="paywall-stub">
+            <div class="paywall-shadow">
+              <p>Текст статті, який бачить користувач без підписки. Через декілька рядків текст плавно зникає...</p>
+            </div>
+            <button class="btn btn-primary" type="button">Підписатись, щоб читати</button>
+          </div>
+        </div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>.paywall-shadow {
+  position: relative;
+  max-height: 90px;
+  overflow: hidden;
+  mask-image: linear-gradient(180deg, black 30%, transparent);
+}</code></pre>
+      </article>
+    </div>
+  </section>
+
+  <section class="section reveal">
+    <div class="section-head">
+      <div><p class="eyebrow">07 / правила</p><h2>Як писати тексти заглушок</h2></div>
+    </div>
+    <div class="recipe-list">
+      <article><h3>Скажи, що сталось</h3><p>Не залишай користувача в порожнечі. Поясни просто й без техмови.</p></article>
+      <article><h3>Дай дію</h3><p>Кнопка "Створити", "Повторити", "Перевірити інтернет". Без неї заглушка глуха.</p></article>
+      <article><h3>Не лякай</h3><p>"Помилка системи №54f-7" - погано. "Щось пішло не так, спробуй ще раз" - значно краще.</p></article>
+      <article><h3>Тримай тон</h3><p>Якщо сайт грайливий, не пиши строго. Якщо корпоративний - не жартуй.</p></article>
+    </div>
+  </section>
+</main>
+
+<div class="toast" id="toast">Готово.</div>
+<footer class="footer"><p><a href="./index.html">На головну</a> · Placeholders</p></footer>
+<script src="./assets/js/main.js"></script>
+</body>
+</html>

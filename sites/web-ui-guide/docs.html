@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Web UI Guide - документація</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./assets/css/style.css">
+</head>
+<body data-cursor="glow">
+<div class="noise"></div>
+<div class="cursor-glow" id="cursor-glow"></div>
+
+<header class="topbar">
+  <a class="brand" href="./index.html"><span class="brand-mark">WG</span><span>Web UI Guide</span></a>
+  <nav class="nav">
+    <a href="./examples.html">Приклади</a>
+    <a href="./navigation.html">Навігація</a>
+    <a href="./patterns.html">Секції</a>
+    <a href="./placeholders.html">Заглушки</a>
+    <a href="./cursors.html">Курсори</a>
+    <a href="./docs.html">Документація</a>
+  </nav>
+  <button class="theme-toggle" id="theme-toggle" type="button">Light</button>
+</header>
+
+<main>
+  <section class="section hero reveal">
+    <div>
+      <p class="eyebrow">Велика документація</p>
+      <h1>HTML, CSS і JavaScript для створення сайтів.</h1>
+      <p class="hero-text">Це не просто 3 короткі підказки. Тут є структура сторінок, семантика, доступність, layout, адаптивність, анімації, DOM, події, компоненти, чеклісти і готові рецепти.</p>
+    </div>
+    <div class="doc-toc">
+      <a href="#html">HTML</a>
+      <a href="#css">CSS</a>
+      <a href="#js">JavaScript</a>
+      <a href="#accessibility">Доступність</a>
+      <a href="#responsive">Адаптивність</a>
+      <a href="#recipes">Рецепти</a>
+    </div>
+  </section>
+
+  <section class="section reveal" id="html">
+    <div class="section-head">
+      <div><p class="eyebrow">01 / HTML</p><h2>HTML: структура, зміст і семантика</h2></div>
+      <p>HTML відповідає не за красу, а за сенс. Якщо структура правильна, CSS і JS підключати набагато легше.</p>
+    </div>
+    <div class="doc-long-grid">
+      <article class="doc-block">
+        <h3>Базова сторінка</h3>
+        <p>Мінімальна сторінка має doctype, мову, charset, viewport, title, CSS і основний контент у body.</p>
+        <ul>
+          <li><code>&lt;!DOCTYPE html&gt;</code> вмикає сучасний режим браузера.</li>
+          <li><code>lang="uk"</code> допомагає перекладачам, screen reader і пошуку.</li>
+          <li><code>viewport</code> потрібен для нормальної мобільної адаптації.</li>
+          <li><code>title</code> видно у вкладці браузера.</li>
+        </ul>
+      </article>
+      <article class="code-card">
+        <button class="copy-btn" type="button">Copy</button>
+        <pre><code>&lt;!DOCTYPE html&gt;
+&lt;html lang="uk"&gt;
+&lt;head&gt;
+  &lt;meta charset="UTF-8"&gt;
+  &lt;meta name="viewport" content="width=device-width, initial-scale=1.0"&gt;
+  &lt;title&gt;Мій сайт&lt;/title&gt;
+  &lt;link rel="stylesheet" href="./style.css"&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;main&gt;Контент сторінки&lt;/main&gt;
+&lt;/body&gt;
+&lt;/html&gt;</code></pre>
+      </article>
+      <article class="doc-block">
+        <h3>Семантичні теги</h3>
+        <p>Семантика означає, що тег описує роль контенту. Це краще, ніж все робити через div.</p>
+        <ul>
+          <li><code>&lt;header&gt;</code> - верх сторінки або секції.</li>
+          <li><code>&lt;nav&gt;</code> - головна навігація.</li>
+          <li><code>&lt;main&gt;</code> - унікальний основний контент сторінки.</li>
+          <li><code>&lt;section&gt;</code> - великий тематичний блок.</li>
+          <li><code>&lt;article&gt;</code> - самостійна картка, пост, новина, товар.</li>
+          <li><code>&lt;footer&gt;</code> - низ сторінки або секції.</li>
+        </ul>
+      </article>
+      <article class="doc-block">
+        <h3>Правильні кнопки і посилання</h3>
+        <p>Якщо елемент переходить на іншу сторінку - це <code>a</code>. Якщо виконує дію на цій сторінці - це <code>button</code>.</p>
+        <ul>
+          <li><code>&lt;a href="./docs.html"&gt;</code> - перехід.</li>
+          <li><code>&lt;button type="button"&gt;</code> - дія.</li>
+          <li>Не роби div-кнопки, якщо можна використати справжній button.</li>
+        </ul>
+      </article>
+      <article class="doc-block">
+        <h3>Форми</h3>
+        <p>У кожного input має бути label. Placeholder не замінює label, бо він зникає під час вводу.</p>
+        <ul>
+          <li><code>label</code> пояснює поле.</li>
+          <li><code>name</code> потрібен для відправки форми.</li>
+          <li><code>required</code> вмикає просту браузерну перевірку.</li>
+          <li><code>type="email"</code>, <code>type="password"</code>, <code>type="search"</code> дають правильну клавіатуру на телефоні.</li>
+        </ul>
+      </article>
+      <article class="code-card">
+        <button class="copy-btn" type="button">Copy</button>
+        <pre><code>&lt;form class="contact-form"&gt;
+  &lt;label&gt;
+    &lt;span&gt;Email&lt;/span&gt;
+    &lt;input name="email" type="email" required&gt;
+  &lt;/label&gt;
+
+  &lt;label&gt;
+    &lt;span&gt;Повідомлення&lt;/span&gt;
+    &lt;textarea name="message" rows="5"&gt;&lt;/textarea&gt;
+  &lt;/label&gt;
+
+  &lt;button type="submit"&gt;Надіслати&lt;/button&gt;
+&lt;/form&gt;</code></pre>
+      </article>
+    </div>
+  </section>
+
+  <section class="section reveal" id="css">
+    <div class="section-head">
+      <div><p class="eyebrow">02 / CSS</p><h2>CSS: стиль, layout, адаптивність і анімація</h2></div>
+      <p>CSS краще будувати від системи: змінні, базові класи, layout, компоненти, states.</p>
+    </div>
+    <div class="doc-long-grid">
+      <article class="doc-block">
+        <h3>CSS-змінні</h3>
+        <p>Змінні дають швидко змінювати тему сайту. Кольори, радіуси, тіні і відступи краще тримати в <code>:root</code>.</p>
+        <ul>
+          <li><code>--bg</code> - фон.</li>
+          <li><code>--text</code> - основний текст.</li>
+          <li><code>--accent</code> - головний акцент.</li>
+          <li><code>--radius</code> - стандартне округлення.</li>
+        </ul>
+      </article>
+      <article class="code-card">
+        <button class="copy-btn" type="button">Copy</button>
+        <pre><code>:root {
+  --bg: #080b13;
+  --panel: rgba(18, 25, 43, .76);
+  --text: #f6f7ff;
+  --muted: #aab4cf;
+  --accent: #7c5cff;
+  --radius: 24px;
+}</code></pre>
+      </article>
+      <article class="doc-block">
+        <h3>Grid vs Flex</h3>
+        <p>Flex зручний для одного ряду або колонки. Grid краще підходить для сіток, карток, layout сторінки.</p>
+        <ul>
+          <li><code>display: flex</code> - кнопки, nav, chips, toolbar.</li>
+          <li><code>display: grid</code> - галереї, dashboard, сторінкові макети.</li>
+          <li><code>gap</code> краще, ніж margin між дітьми.</li>
+          <li><code>minmax(0, 1fr)</code> допомагає уникати переповнення.</li>
+        </ul>
+      </article>
+      <article class="code-card">
+        <button class="copy-btn" type="button">Copy</button>
+        <pre><code>.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 18px;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}</code></pre>
+      </article>
+      <article class="doc-block">
+        <h3>Hover, focus, active</h3>
+        <p>Інтерактивний елемент має реагувати. Hover - для мишки, focus - для клавіатури, active - під час натискання.</p>
+        <ul>
+          <li><code>:hover</code> показує, що елемент живий.</li>
+          <li><code>:focus-visible</code> важливий для доступності.</li>
+          <li><code>:active</code> дає відчуття кліку.</li>
+          <li><code>transition</code> робить зміну плавною.</li>
+        </ul>
+      </article>
+      <article class="code-card">
+        <button class="copy-btn" type="button">Copy</button>
+        <pre><code>.button {
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+.button:hover {
+  transform: translateY(-3px);
+}
+.button:focus-visible {
+  outline: 3px solid #24d6c8;
+  outline-offset: 4px;
+}
+.button:active {
+  transform: translateY(1px);
+}</code></pre>
+      </article>
+    </div>
+  </section>
+
+  <section class="section reveal" id="js">
+    <div class="section-head">
+      <div><p class="eyebrow">03 / JavaScript</p><h2>JS: поведінка, DOM і компоненти</h2></div>
+      <p>JavaScript оживляє сторінку: tabs, sliders, modals, copy buttons, themes, cursor effects.</p>
+    </div>
+    <div class="doc-long-grid">
+      <article class="doc-block">
+        <h3>Пошук елементів</h3>
+        <p>Найчастіше використовуються <code>querySelector</code> і <code>querySelectorAll</code>. Перший повертає один елемент, другий - список.</p>
+        <ul>
+          <li><code>document.querySelector(".btn")</code> - перший збіг.</li>
+          <li><code>document.querySelectorAll(".tab")</code> - всі збіги.</li>
+          <li><code>closest()</code> шукає батьківський елемент.</li>
+          <li><code>dataset</code> читає data-атрибути.</li>
+        </ul>
+      </article>
+      <article class="code-card">
+        <button class="copy-btn" type="button">Copy</button>
+        <pre><code>const buttons = document.querySelectorAll("[data-tab]");
+
+buttons.forEach((button) =&gt; {
+  button.addEventListener("click", () =&gt; {
+    console.log(button.dataset.tab);
+  });
+});</code></pre>
+      </article>
+      <article class="doc-block">
+        <h3>Класи як стан</h3>
+        <p>Не міняй стилі напряму в JS без потреби. Часто краще додавати клас, а вигляд описувати в CSS.</p>
+        <ul>
+          <li><code>classList.add</code> додає клас.</li>
+          <li><code>classList.remove</code> прибирає клас.</li>
+          <li><code>classList.toggle</code> перемикає клас.</li>
+          <li><code>classList.contains</code> перевіряє клас.</li>
+        </ul>
+      </article>
+      <article class="code-card">
+        <button class="copy-btn" type="button">Copy</button>
+        <pre><code>const modal = document.querySelector(".modal");
+const openButton = document.querySelector("[data-open-modal]");
+const closeButton = document.querySelector("[data-close-modal]");
+
+openButton.addEventListener("click", () =&gt; modal.classList.add("show"));
+closeButton.addEventListener("click", () =&gt; modal.classList.remove("show"));</code></pre>
+      </article>
+      <article class="doc-block">
+        <h3>LocalStorage</h3>
+        <p>LocalStorage зберігає дані в браузері. Добре підходить для теми, налаштувань, маленьких локальних станів.</p>
+        <ul>
+          <li><code>localStorage.setItem("theme", "dark")</code> записує.</li>
+          <li><code>localStorage.getItem("theme")</code> читає.</li>
+          <li>Зберігай прості строки або JSON.</li>
+        </ul>
+      </article>
+      <article class="code-card">
+        <button class="copy-btn" type="button">Copy</button>
+        <pre><code>const savedTheme = localStorage.getItem("theme");
+if (savedTheme) {
+  document.body.dataset.theme = savedTheme;
+}
+
+function setTheme(theme) {
+  document.body.dataset.theme = theme;
+  localStorage.setItem("theme", theme);
+}</code></pre>
+      </article>
+    </div>
+  </section>
+
+  <section class="section reveal" id="accessibility">
+    <div class="section-head">
+      <div><p class="eyebrow">04 / accessibility</p><h2>Доступність: щоб сайтом було реально користуватися</h2></div>
+      <p>Доступність - це не тільки для screen reader. Це ще клавіатура, контраст, focus, зрозумілі labels і нормальні кнопки.</p>
+    </div>
+    <div class="recipe-list">
+      <article><h3>Контраст</h3><p>Текст має читатися на фоні. Не став світло-сірий текст на білий фон або темно-сірий на чорний.</p></article>
+      <article><h3>Focus</h3><p>Користувач клавіатури має бачити, де він зараз. Не прибирай outline без заміни.</p></article>
+      <article><h3>Alt</h3><p>Зображення, які несуть зміст, мають мати описовий alt. Декоративні можуть мати порожній alt.</p></article>
+      <article><h3>ARIA</h3><p>ARIA допомагає, але не замінює правильний HTML. Спочатку використовуй семантичні теги.</p></article>
+    </div>
+  </section>
+
+  <section class="section reveal" id="responsive">
+    <div class="section-head">
+      <div><p class="eyebrow">05 / responsive</p><h2>Адаптивність</h2></div>
+      <p>Сайт має нормально виглядати на телефоні, планшеті і великому моніторі.</p>
+    </div>
+    <div class="doc-long-grid">
+      <article class="doc-block">
+        <h3>Mobile-first підхід</h3>
+        <p>Спочатку зроби просту мобільну версію, потім додавай ширші layout через media queries.</p>
+        <ul>
+          <li>Не став фіксовану ширину для всього.</li>
+          <li>Використовуй <code>max-width</code> і <code>width: min(...)</code>.</li>
+          <li>Картинки роби <code>max-width: 100%</code>.</li>
+          <li>Для сіток використовуй <code>auto-fit</code>.</li>
+        </ul>
+      </article>
+      <article class="code-card">
+        <button class="copy-btn" type="button">Copy</button>
+        <pre><code>.page {
+  width: min(1180px, calc(100% - 32px));
+  margin: 0 auto;
+}
+
+@media (max-width: 700px) {
+  .cards {
+    grid-template-columns: 1fr;
+  }
+}</code></pre>
+      </article>
+    </div>
+  </section>
+
+  <section class="section reveal" id="recipes">
+    <div class="section-head">
+      <div><p class="eyebrow">06 / recipes</p><h2>Рецепти сторінок</h2></div>
+      <p>Ось як збирати різні типи сайтів із блоків.</p>
+    </div>
+    <div class="recipe-list">
+      <article><h3>Landing page</h3><p>Hero, benefits, social proof, feature cards, slider, pricing, FAQ, CTA, footer.</p></article>
+      <article><h3>Portfolio</h3><p>Intro, skills chips, project cards, case studies, timeline, testimonials, contact form.</p></article>
+      <article><h3>Dashboard</h3><p>Sidebar, topbar, stats, chart cards, table, notifications, settings panel.</p></article>
+      <article><h3>Ecommerce</h3><p>Header, category filters, product grid, product card, cart drawer, checkout form.</p></article>
+      <article><h3>Game UI</h3><p>Big artwork, mode cards, inventory, progress bars, leaderboard, keybinds, patch notes.</p></article>
+      <article><h3>Docs site</h3><p>Sidebar, search, content sections, code blocks, examples, anchors, next/prev links.</p></article>
+      <article><h3>Blog</h3><p>Featured post, categories, article cards, author block, newsletter form, archive.</p></article>
+      <article><h3>Tool page</h3><p>Input area, controls, preview, output, history, export/copy buttons.</p></article>
+    </div>
+  </section>
+</main>
+
+<div class="toast" id="toast">Готово.</div>
+<footer class="footer"><p><a href="./index.html">На головну</a> · Велика документація Web UI Guide</p></footer>
+<script src="./assets/js/main.js"></script>
+</body>
+</html>

@@ -1,35 +1,21 @@
 param(
     [Parameter(ValueFromRemainingArguments = $true)]
-    [string[]]$Args
+    [string[]]$CmdArgs
 )
 
 Set-StrictMode -Version Latest
 
-$query = if ($Args.Count -gt 0) { ($Args -join " ").Trim() } else { "" }
+$query = if ($CmdArgs -and $CmdArgs.Count -gt 0) { ($CmdArgs -join " ").Trim() } else { "" }
 
 function Resolve-YtmBrowser {
-    # If you have YouTube Music installed as a PWA/app, deep links may open Home only.
-    # To force deep links (playlist/search), we launch a real browser exe when available.
-    try {
-        $custom = [string]$env:FOXTERM_YTM_BROWSER
-        if (-not [string]::IsNullOrWhiteSpace($custom) -and (Test-Path $custom)) { return $custom }
-    } catch { }
-
-    $pf = [string]$env:ProgramFiles
-    $pfx86 = ""
-    try { $pfx86 = [string]${env:ProgramFiles(x86)} } catch { $pfx86 = "" }
-    $local = [string]$env:LOCALAPPDATA
-
+    $pf    = [string]$env:ProgramFiles
+    $pfx86 = try { [string]${env:ProgramFiles(x86)} } catch { "" }
     $candidates = @(
-        (Join-Path $pfx86 "Microsoft\Edge\Application\msedge.exe"),
-        (Join-Path $pf "Microsoft\Edge\Application\msedge.exe"),
-        (Join-Path $pf "Google\Chrome\Application\chrome.exe"),
-        (Join-Path $pfx86 "Google\Chrome\Application\chrome.exe"),
-        (Join-Path $pf "Mozilla Firefox\firefox.exe"),
+        (Join-Path $pf    "Mozilla Firefox\firefox.exe"),
         (Join-Path $pfx86 "Mozilla Firefox\firefox.exe")
     )
     foreach ($c in $candidates) {
-        try { if ($c -and (Test-Path $c)) { return $c } } catch { }
+        if ($c -and (Test-Path $c)) { return $c }
     }
     return $null
 }
@@ -58,19 +44,10 @@ function Normalize-YtmUrl([string]$url) {
 function Start-YtmUrl([string]$url) {
     if ([string]::IsNullOrWhiteSpace($url)) { return $false }
     $url = Normalize-YtmUrl $url
-    $browser = Resolve-YtmBrowser
+    $firefox = Resolve-YtmBrowser
     try {
-        if ($browser) {
-            $name = [System.IO.Path]::GetFileName($browser)
-            if ($name -match '(?i)^firefox') {
-                Start-Process -FilePath $browser -ArgumentList @("--new-tab", $url) | Out-Null
-            } elseif ($name -match '(?i)^(msedge|chrome)') {
-                # Force a new window to avoid PWA/app scope swallowing deep links.
-                # Also disable PWA link capturing in this process.
-                Start-Process -FilePath $browser -ArgumentList @("--disable-features=PwaLinkCapturing,DesktopPWAsLinkCapturing", "--new-window", $url) | Out-Null
-            } else {
-                Start-Process -FilePath $browser -ArgumentList @($url) | Out-Null
-            }
+        if ($firefox) {
+            Start-Process -FilePath $firefox -ArgumentList @("-new-tab", $url) | Out-Null
         } else {
             Start-Process $url | Out-Null
         }

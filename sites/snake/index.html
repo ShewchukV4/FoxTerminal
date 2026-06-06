@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FoxSnake – Змійка</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./assets/css/style.css">
+</head>
+<body>
+<canvas id="particle-canvas"></canvas>
+
+<div class="app">
+  <header>
+    <div class="logo">FOX<span>SNAKE</span></div>
+    <div class="tagline">КЛАСИЧНА ЗМІЙКА · БАГАТО РЕЖИМІВ · ПОВНЕ НАЛАШТУВАННЯ</div>
+  </header>
+
+  <!-- THEME SWITCHER -->
+  <div class="mode-switcher">
+    <button class="mode-btn active" onclick="setTheme('default',this)">⚡ CYBER</button>
+    <button class="mode-btn" onclick="setTheme('neon',this)">🌈 NEON</button>
+    <button class="mode-btn" onclick="setTheme('retro',this)">🕹️ RETRO</button>
+    <button class="mode-btn" onclick="setTheme('ocean',this)">🌊 OCEAN</button>
+    <button class="mode-btn" onclick="setTheme('espresso',this)">☕ ESPRESSO</button>
+    <button class="mode-btn" onclick="setTheme('midnight',this)">🌙 MIDNIGHT</button>
+    <button class="mode-btn" onclick="setTheme('forest',this)">🍀 FOREST</button>
+    <button class="mode-btn" onclick="setTheme('lava',this)">🔥 LAVA</button>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('game',this)">🐍 Гра</button>
+    <button class="tab" onclick="switchTab('settings',this)">⚙️ Налаштування</button>
+    <button class="tab" onclick="switchTab('stats',this)">📈 Статистика</button>
+    <button class="tab" onclick="switchTab('achievements',this)">🏆 Досягнення</button>
+  </div>
+
+  <!-- ===== GAME PANEL ===== -->
+  <div id="panel-game" class="panel active">
+
+    <!-- MODE CHIPS -->
+    <div class="section-title">Режими гри</div>
+    <div class="chips" id="mode-chips">
+      <div class="chip" id="chip-portal"    onclick="toggleChip('portal',this)"    title="Стіни — портали: змійка переходить крізь них">🌀 Portal</div>
+      <div class="chip" id="chip-ghost"     onclick="toggleChip('ghost',this)"     title="Можна проходити крізь власне тіло">👻 Ghost</div>
+      <div class="chip" id="chip-gravity"   onclick="toggleChip('gravity',this)"   title="Змійка постійно падає вниз">⬇️ Gravity</div>
+      <div class="chip" id="chip-multifood" onclick="toggleChip('multifood',this)" title="3 їжі одночасно на полі">🍎 Multi-Food</div>
+      <div class="chip" id="chip-shrink"    onclick="toggleChip('shrink',this)"    title="Тіло повільно зменшується — їж щоб вижити">📉 Shrink</div>
+      <div class="chip" id="chip-obstacles" onclick="toggleChip('obstacles',this)" title="Перешкоди з'являються після кожної 5-ї їжі">🧱 Obstacles</div>
+      <div class="chip" id="chip-speedup"   onclick="toggleChip('speedup',this)"   title="Кожна їжа = +швидкість">⚡ Speed Up</div>
+      <div class="chip" id="chip-invisible" onclick="toggleChip('invisible',this)" title="Тіло зникає через 2 секунди">🫥 Invisible</div>
+      <div class="chip" id="chip-zen"       onclick="toggleChip('zen',this)"       title="Без смерті — просто рости безкінечно">🧘 Zen</div>
+      <div class="chip" id="chip-dark"      onclick="toggleChip('dark',this)"      title="Бачиш лише зону навколо голови (ліхтарик)">🌑 Dark Zone</div>
+    </div>
+
+    <div class="game-layout">
+      <!-- CANVAS -->
+      <div class="canvas-wrap" id="canvas-wrap">
+        <canvas id="game-canvas" width="560" height="560"></canvas>
+
+        <!-- OVERLAY -->
+        <div class="game-overlay show" id="game-overlay">
+          <div class="overlay-title" id="overlay-title">FOX SNAKE</div>
+          <div class="overlay-stats" id="overlay-stats" style="display:none">
+            <div>
+              <div class="ov-stat-val" id="ov-score">0</div>
+              <div class="ov-stat-lbl">ОЧКИ</div>
+            </div>
+            <div>
+              <div class="ov-stat-val" id="ov-length">1</div>
+              <div class="ov-stat-lbl">ДОВЖИНА</div>
+            </div>
+            <div>
+              <div class="ov-stat-val" id="ov-time">0s</div>
+              <div class="ov-stat-lbl">ЧАС</div>
+            </div>
+            <div>
+              <div class="ov-stat-val" id="ov-hs" style="color:var(--accent3)"></div>
+              <div class="ov-stat-lbl" id="ov-hs-lbl"></div>
+            </div>
+          </div>
+          <div class="overlay-btns" id="overlay-btns">
+            <button class="overlay-btn primary" onclick="startGame()">▶ СТАРТ</button>
+            <button class="overlay-btn" onclick="switchTab('settings',document.querySelectorAll('.tab')[1])">⚙️ НАЛАШТ.</button>
+          </div>
+          <div class="overlay-hint">WASD / СТРІЛКИ · P = ПАУЗА · ПРОБІЛ = СТАРТ</div>
+        </div>
+      </div>
+
+      <!-- SIDEBAR -->
+      <div class="sidebar">
+        <div class="score-card">
+          <div class="score-val" id="score-display">0</div>
+          <div class="score-lbl">ОЧКИ</div>
+        </div>
+        <div class="score-card">
+          <div class="score-val" id="hs-display" style="color:var(--accent2)">0</div>
+          <div class="score-lbl">РЕКОРД</div>
+        </div>
+        <div class="score-card">
+          <div class="score-val" id="length-display">3</div>
+          <div class="score-lbl">ДОВЖИНА</div>
+        </div>
+        <div class="score-card">
+          <div class="score-val" id="level-display">1</div>
+          <div class="score-lbl">РІВЕНЬ</div>
+          <div class="level-bar-wrap">
+            <div class="level-bar" id="level-bar" style="width:0%"></div>
+          </div>
+        </div>
+        <div class="score-card">
+          <div class="score-val" id="time-display" style="font-size:1.2rem">0:00</div>
+          <div class="score-lbl">ЧАС</div>
+        </div>
+        <button class="btn primary" id="start-btn" onclick="startGame()">▶ СТАРТ</button>
+        <button class="btn" id="pause-btn" onclick="pauseGame()" style="display:none">⏸ ПАУЗА</button>
+        <button class="btn danger" id="stop-btn" onclick="stopGame()" style="display:none">■ СТОП</button>
+      </div>
+    </div>
+
+    <!-- TOUCH CONTROLS -->
+    <div class="touch-controls">
+      <button class="tc-btn tc-up"    onclick="setDir(0,-1)">▲</button>
+      <button class="tc-btn tc-left"  onclick="setDir(-1,0)">◀</button>
+      <button class="tc-btn tc-down"  onclick="setDir(0,1)">▼</button>
+      <button class="tc-btn tc-right" onclick="setDir(1,0)">▶</button>
+    </div>
+
+    <!-- ACTIVE MODES -->
+    <div class="active-modes-badge" id="active-modes-badge"></div>
+  </div>
+
+  <!-- ===== SETTINGS PANEL ===== -->
+  <div id="panel-settings" class="panel">
+
+    <div class="section-title">Швидкість та поле</div>
+    <div class="settings-grid">
+      <div class="setting-group">
+        <div class="setting-label">ШВИДКІСТЬ</div>
+        <select id="set-speed" onchange="saveSetting('speed',this.value)">
+          <option value="slug">🐢 Черепаха (дуже повільно)</option>
+          <option value="slow">🐌 Повільно</option>
+          <option value="normal" selected>🚶 Нормально</option>
+          <option value="fast">🏃 Швидко</option>
+          <option value="insane">💀 БЕЗУМНО</option>
+        </select>
+      </div>
+      <div class="setting-group">
+        <div class="setting-label">РОЗМІР ПОЛЯ</div>
+        <select id="set-board" onchange="saveSetting('boardSize',this.value)">
+          <option value="tiny">🔬 Крихітне (15×15)</option>
+          <option value="small">📦 Мале (20×20)</option>
+          <option value="medium" selected>🗺️ Середнє (28×28)</option>
+          <option value="large">🌍 Велике (36×36)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="section-title">Стиль змійки</div>
+    <div class="chips">
+      <div class="chip active" id="style-block"    onclick="setSnakeStyle('block',this)">▪ Блок</div>
+      <div class="chip" id="style-rounded"  onclick="setSnakeStyle('rounded',this)">● Округлий</div>
+      <div class="chip" id="style-neon"     onclick="setSnakeStyle('neon',this)">✦ Неон</div>
+      <div class="chip" id="style-gradient" onclick="setSnakeStyle('gradient',this)">🌈 Градієнт</div>
+      <div class="chip" id="style-dots"     onclick="setSnakeStyle('dots',this)">· Крапки</div>
+      <div class="chip" id="style-arrows"   onclick="setSnakeStyle('arrows',this)">→ Стрілки</div>
+    </div>
+
+    <div class="section-title">Скіни змійки</div>
+    <div class="chips">
+      <div class="chip active" id="skin-classic" onclick="setSnakeSkin('classic',this)">🐍 Classic</div>
+      <div class="chip" id="skin-dragon" onclick="setSnakeSkin('dragon',this)">🐲 Dragon</div>
+      <div class="chip" id="skin-lava" onclick="setSnakeSkin('lava',this)">🔥 Lava Core</div>
+      <div class="chip" id="skin-forest" onclick="setSnakeSkin('forest',this)">🍃 Forest Viper</div>
+      <div class="chip" id="skin-ice" onclick="setSnakeSkin('ice',this)">❄️ Ice</div>
+      <div class="chip" id="skin-cyber" onclick="setSnakeSkin('cyber',this)">🤖 Cyber</div>
+      <div class="chip" id="skin-gold" onclick="setSnakeSkin('gold',this)">👑 Gold</div>
+      <div class="chip" id="skin-shadow" onclick="setSnakeSkin('shadow',this)">🌑 Shadow</div>
+    </div>
+
+    <div class="section-title">Стиль їжі</div>
+    <div class="chips">
+      <div class="chip active" id="food-dot"     onclick="setFoodStyle('dot',this)">● Крапка</div>
+      <div class="chip" id="food-apple"   onclick="setFoodStyle('apple',this)">🍎 Яблуко</div>
+      <div class="chip" id="food-star"    onclick="setFoodStyle('star',this)">⭐ Зірка</div>
+      <div class="chip" id="food-diamond" onclick="setFoodStyle('diamond',this)">💎 Діамант</div>
+      <div class="chip" id="food-skull"   onclick="setFoodStyle('skull',this)">💀 Череп</div>
+    </div>
+
+    <div class="section-title">Графіка та ефекти</div>
+    <div class="settings-grid">
+      <div class="setting-group">
+        <div class="toggle-row">
+          <span>Сітка</span>
+          <div class="toggle on" id="tog-grid" onclick="toggleSetting('showGrid',this)"></div>
+        </div>
+        <div class="toggle-row">
+          <span>Частинки при їжі</span>
+          <div class="toggle on" id="tog-particles" onclick="toggleSetting('particles',this)"></div>
+        </div>
+        <div class="toggle-row">
+          <span>Очі змійки</span>
+          <div class="toggle on" id="tog-eyes" onclick="toggleSetting('showEyes',this)"></div>
+        </div>
+        <div class="toggle-row">
+          <span>Траса хвоста</span>
+          <div class="toggle" id="tog-trail" onclick="toggleSetting('trail',this)"></div>
+        </div>
+      </div>
+      <div class="setting-group">
+        <div class="toggle-row">
+          <span>Звукові ефекти</span>
+          <div class="toggle on" id="tog-sound" onclick="toggleSetting('sound',this)"></div>
+        </div>
+        <div class="toggle-row">
+          <span>Мерехтіння їжі</span>
+          <div class="toggle on" id="tog-foodpulse" onclick="toggleSetting('foodPulse',this)"></div>
+        </div>
+        <div class="toggle-row">
+          <span>Рахунок на полі</span>
+          <div class="toggle" id="tog-onscore" onclick="toggleSetting('scoreOnCanvas',this)"></div>
+        </div>
+        <div class="toggle-row">
+          <span>Фонові частинки</span>
+          <div class="toggle on" id="tog-bgpart" onclick="toggleSetting('bgParticles',this)"></div>
+        </div>
+        <div class="toggle-row">
+          <span>Тематичні декорації</span>
+          <div class="toggle on" id="tog-themedecor" onclick="toggleSetting('themeDecor',this)"></div>
+        </div>
+        <div class="toggle-row">
+          <span>Векторні деталі поля</span>
+          <div class="toggle on" id="tog-vectordecor" onclick="toggleSetting('vectorDecor',this)"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-title">Інтенсивність декору</div>
+    <div class="settings-grid">
+      <div class="setting-group">
+        <div class="setting-label">ЯКІСТЬ CANVAS / ПІКСЕЛІ</div>
+        <select id="set-render-scale" onchange="saveSetting('renderScale',this.value)">
+          <option value="pixel">🧱 Pixel x1 (швидше)</option>
+          <option value="hd" selected>💎 HD x2</option>
+          <option value="ultra">🔮 Ultra x3</option>
+        </select>
+      </div>
+      <div class="setting-group">
+        <div class="setting-label">ЩІЛЬНІСТЬ ТЕМАТИЧНИХ ДЕТАЛЕЙ</div>
+        <select id="set-decor-density" onchange="saveSetting('decorDensity',this.value)">
+          <option value="low">🪶 Мінімум</option>
+          <option value="normal" selected>🎨 Нормально</option>
+          <option value="high">🌋 Багато</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="section-title">Акцент-колір</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
+      <div class="color-swatch" style="background:#00f5d4" onclick="setAccent('#00f5d4',this)" title="Cyber Teal"></div>
+      <div class="color-swatch" style="background:#ff00ff" onclick="setAccent('#ff00ff',this)" title="Magenta"></div>
+      <div class="color-swatch" style="background:#00cfff" onclick="setAccent('#00cfff',this)" title="Ice Blue"></div>
+      <div class="color-swatch" style="background:#4ade80" onclick="setAccent('#4ade80',this)" title="Mint"></div>
+      <div class="color-swatch" style="background:#f5a623" onclick="setAccent('#f5a623',this)" title="Amber"></div>
+      <div class="color-swatch" style="background:#ff4d6d" onclick="setAccent('#ff4d6d',this)" title="Rose"></div>
+      <div class="color-swatch" style="background:#a78bfa" onclick="setAccent('#a78bfa',this)" title="Violet"></div>
+      <div class="color-swatch" style="background:#fbbf24" onclick="setAccent('#fbbf24',this)" title="Gold"></div>
+      <div class="color-swatch" style="background:#34d399" onclick="setAccent('#34d399',this)" title="Emerald"></div>
+      <div class="color-swatch" style="background:#ff4500" onclick="setAccent('#ff4500',this)" title="Lava"></div>
+      <div style="display:flex;align-items:center;gap:8px;font-size:0.75rem;color:var(--muted)">
+        Свій: <input type="color" id="custom-accent" value="#00f5d4" oninput="setAccent(this.value,null)" style="width:40px;height:30px;border:none;background:none;cursor:pointer;border-radius:4px">
+      </div>
+    </div>
+
+    <div style="text-align:center;margin-top:24px">
+      <button class="btn danger" onclick="resetAllData()" style="width:auto;padding:8px 24px">🗑️ Скинути всі дані</button>
+    </div>
+  </div>
+
+  <!-- ===== STATS PANEL ===== -->
+  <div id="panel-stats" class="panel">
+    <div class="section-title">Загальна статистика</div>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-card-val" id="st-games">0</div><div class="stat-card-lbl">ІГОР</div></div>
+      <div class="stat-card"><div class="stat-card-val" id="st-best">0</div><div class="stat-card-lbl">РЕКОРД</div></div>
+      <div class="stat-card"><div class="stat-card-val" id="st-food">0</div><div class="stat-card-lbl">ЇЖІ</div></div>
+      <div class="stat-card"><div class="stat-card-val" id="st-time">0m</div><div class="stat-card-lbl">ЧАС У ГРІ</div></div>
+      <div class="stat-card"><div class="stat-card-val" id="st-maxlen">3</div><div class="stat-card-lbl">МАКС ДОВЖИНА</div></div>
+      <div class="stat-card"><div class="stat-card-val" id="st-deaths">0</div><div class="stat-card-lbl">СМЕРТЕЙ</div></div>
+    </div>
+
+    <div class="section-title">Рекорди по режимах</div>
+    <div style="background:var(--surface);border:1px solid var(--surface2);border-radius:var(--radius);overflow:hidden;margin-bottom:16px">
+      <table class="hs-table">
+        <thead>
+          <tr>
+            <th>РЕЖИМ</th>
+            <th>РЕКОРД</th>
+            <th>ДОВЖИНА</th>
+            <th>ДАТА</th>
+          </tr>
+        </thead>
+        <tbody id="hs-table-body"></tbody>
+      </table>
+    </div>
+
+    <div class="section-title">Останні 20 ігор</div>
+    <div id="session-history"></div>
+  </div>
+
+  <!-- ===== ACHIEVEMENTS PANEL ===== -->
+  <div id="panel-achievements" class="panel">
+    <div style="background:var(--surface);border:1px solid var(--surface2);border-radius:var(--radius);padding:14px 18px;margin-bottom:14px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+      <div style="font-family:var(--font-display);font-size:0.6rem;color:var(--muted);letter-spacing:2px">РОЗБЛОКОВАНО</div>
+      <div style="font-family:var(--font-display);font-size:1.4rem;color:var(--accent2)" id="ach-count">0 / 0</div>
+      <div style="flex:1;height:5px;background:var(--surface2);border-radius:3px;overflow:hidden;min-width:80px">
+        <div id="ach-bar" style="height:100%;background:linear-gradient(90deg,var(--accent2),var(--accent));width:0%;border-radius:3px;transition:width 0.5s"></div>
+      </div>
+    </div>
+    <div class="ach-grid" id="ach-grid"></div>
+  </div>
+
+</div>
+
+<!-- ACHIEVEMENT TOAST -->
+<div id="ach-toast">
+  <div style="font-family:var(--font-display);font-size:0.58rem;color:var(--accent2);letter-spacing:2px;margin-bottom:8px">🏆 ДОСЯГНЕННЯ!</div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <span id="toast-icon" style="font-size:1.6rem"></span>
+    <div>
+      <div id="toast-name" style="font-size:0.85rem;color:var(--text);font-weight:600"></div>
+      <div id="toast-desc" style="font-size:0.72rem;color:var(--muted);margin-top:2px"></div>
+    </div>
+  </div>
+</div>
+
+<script src="./assets/js/main.js"></script>
+</body>
+</html>

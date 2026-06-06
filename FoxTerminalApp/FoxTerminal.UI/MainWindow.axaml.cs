@@ -38,7 +38,7 @@ public partial class MainWindow : Window
 
     private void AddNewTab()
     {
-        var session = new TerminalSession(100, 30);
+        var session = new TerminalSession(100, 30, _config);
         var control = new TerminalControl { Session = session };
         control.ApplyConfig(_config);
         var tab = new TabItem

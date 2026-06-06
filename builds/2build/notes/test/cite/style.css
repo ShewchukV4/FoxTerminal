@@ -1,0 +1,146 @@
+body{
+    background-color: #e7ebee;
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+h1{
+    font-family: "Arial Black", Gadget, sans-serif;
+}
+h2{
+    font-family: "Arial Black", Gadget, sans-serif;
+}
+h3{
+    font-family: "Arial Black", Gadget, sans-serif;
+}
+h4{
+    font-family: "Arial Black", Gadget, sans-serif;
+}
+p{
+    font-size: 16px;
+    line-height: 1.5;
+}
+.info{
+    padding-bottom: 10px;
+    padding-top: 10px;
+    transform: scale(1);
+    transition: 0.7s;
+    background-color: #f8f8f8;
+    text-align: center;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 70px;
+    box-shadow: 0 2px 4px rgba(109, 137, 168, 0.329);
+}
+.info h1{
+    transition: 0.7s;
+    font-size: 36px;
+    color: #333;
+}
+.info p{
+    transition: 0.7s;
+    font-size: 18px;
+    color: #666;
+}
+.info h1:hover{
+    transform: scale(1.2);
+    transition: 0.7s;
+
+}
+.info p:hover{
+    transform: scale(1.1);
+    transition: 0.7s;
+
+}
+.info:hover{
+    background-color: #e7e7e7;
+    transition: 0.7s;
+    box-shadow: 0 20px 40px rgba(109, 137, 168, 0.329);
+    transform: scale(1.01);
+}
+.Models-Box{
+    margin-bottom: 70px;
+    transition: 0.7s;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-around;
+    background-color: #f8f8f8;
+    box-shadow: 0 2px 4px rgba(109, 137, 168, 0.329);
+    text-align: center;
+    padding-left: 10%;
+    padding-right: 10%;
+}
+
+
+.Models-Box:hover{
+    background-color: #e7e7e7;
+    transition: 0.7s;
+    box-shadow: 0 20px 40px rgba(109, 137, 168, 0.329);
+    transform: scale(1.01);
+}
+
+header{
+    transition: 0.7s;
+
+    height: 70px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px;
+    background-color: #f8f8f8;
+    box-shadow: 0 2px 4px rgba(109, 137, 168, 0.329);
+    margin-bottom: 50px;
+}
+
+header:hover{
+    background-color: #e7e7e7;
+    transition: 0.7s;
+    box-shadow: 0 20px 40px rgba(109, 137, 168, 0.329);
+    transform: scale(1.01);
+}
+
+header ul{
+    list-style: none;
+    display: flex;
+    gap: 20px;
+    text-decoration: none;
+}
+header ul li a{
+    text-decoration: none;
+    color: #333;
+}
+footer{
+    text-align: center;
+    padding: 20px;
+    background-color: #f8f8f8;
+}
+
+.Information-Box{
+    text-align: center;
+    align-items: center;
+    transition: 0.7s;
+    display: flex;
+    gap: 20px;
+    background-color: #f8f8f8;
+    box-shadow: 0 2px 4px rgba(109, 137, 168, 0.329);
+    padding: 20px;
+}
+
+.Information-Box-Right{
+    padding-right: 200px;
+    padding-left: 100px;
+    text-align: center;
+}
+.Information-Box-Left{
+    padding-right: 100px;
+    padding-left: 200px;
+}
+
+.line{
+    border-left: black solid 5px;
+    height: 200px;
+    
+}
+
+
+
+

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Techies Minefield - Dota Sweeper</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&family=Exo+2:wght@300;400;600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./assets/css/style.css">
+</head>
+<body>
+  <main class="app">
+    <section class="hero panel">
+      <div class="hero-copy">
+        <div class="eyebrow">Goblin Techies Training Grounds</div>
+        <h1>Techies <span>Minefield</span></h1>
+        <p>Сапер, але ніби це Dota: під клітинками заховані Proximity Mines, прапорці це Sentry, а поле виглядає як небезпечний ліс біля руни.</p>
+      </div>
+      <img class="hero-img" src="./assets/img/techies.png" alt="Techies">
+    </section>
+
+    <section class="hud panel">
+      <div>
+        <span>Складність</span>
+        <strong id="difficultyLabel">Lane</strong>
+      </div>
+      <div>
+        <span>Режим</span>
+        <strong id="modeLabel">Classic</strong>
+      </div>
+      <div>
+        <span>Міни</span>
+        <strong id="mineCounter">10</strong>
+      </div>
+      <div>
+        <span>Час</span>
+        <strong id="timer">00:00</strong>
+      </div>
+      <div>
+        <span>Best</span>
+        <strong id="bestTime">--:--</strong>
+      </div>
+    </section>
+
+    <section class="controls panel">
+      <div class="difficulty-row" aria-label="Складність">
+        <button class="difficulty active" data-level="lane">Lane <small>9x9 · 10 мін</small></button>
+        <button class="difficulty" data-level="jungle">Jungle <small>12x12 · 24 міни</small></button>
+        <button class="difficulty" data-level="ancient">Ancient <small>16x16 · 45 мін</small></button>
+      </div>
+      <div class="mode-row" aria-label="Режим гри">
+        <button class="mode active" data-mode="classic">Classic <small>звичайний сапер</small></button>
+        <button class="mode" data-mode="turbo">Turbo <small>ліміт часу</small></button>
+        <button class="mode" data-mode="noSentry">No Sentry <small>без прапорців</small></button>
+      </div>
+      <button class="new-game" id="newGameBtn">Нова карта</button>
+    </section>
+
+    <section class="game-shell">
+      <aside class="panel briefing">
+        <div class="section-label">Брифінг</div>
+        <div class="mine-preview">
+          <img src="./assets/img/proximity_mines.png" alt="Proximity Mines">
+          <div>
+            <strong>Proximity Mines</strong>
+            <p>Не клікай по мінах Techies. Лівий клік відкриває клітинку, правий клік ставить Minefield Sign.</p>
+          </div>
+        </div>
+        <div class="legend">
+          <div><span class="legend-cell safe"></span> Відкрита земля</div>
+          <div><span class="legend-cell hidden"></span> Fog of War</div>
+          <div><span class="legend-cell ward"></span> Minefield Sign</div>
+          <div><span class="legend-cell danger"></span> Mine</div>
+        </div>
+        <p class="hint">Перший клік завжди безпечний. Якщо відкрив число, воно показує скільки мін навколо.</p>
+      </aside>
+
+      <section class="board-panel panel">
+        <div class="status-line" id="statusLine">Techies десь поруч. Обережно.</div>
+        <div class="board-wrap">
+          <div class="board" id="board" aria-label="Поле сапера"></div>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script src="./assets/js/main.js"></script>
+</body>
+</html>

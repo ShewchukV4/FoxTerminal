@@ -66,6 +66,7 @@ function Show-Commands {
         $known["dj"]       = @{ usage = "dj"; desc = "audio-level DJ visualizer (system audio peak)" }
 
         $known["ff"]       = @{ usage = "ff open [alias-or-url]"; desc = "open URL/alias in Firefox (default: youtube)" }
+        $known["sites"]    = @{ usage = "sites [-createn <name>] [-open <name>]"; desc = "browse saved sites; -createn: scaffold new site folder; -open: open site folder in VS Code" }
         $known["bbind"]    = @{ usage = "bbind"; desc = "create custom .bat command OR bind site alias for ff" }
         $known["blist"]    = @{ usage = "blist"; desc = "list site aliases (bindings.json)" }
         $known["bdel"]     = @{ usage = "bdel <alias>"; desc = "delete a site alias (bindings.json)" }
@@ -78,7 +79,16 @@ function Show-Commands {
         $known["tgub"]     = @{ usage = "tgub <@user|user|url> <alias> | tgub phone <num> <alias>"; desc = "bind telegram alias to username/phone" }
         $known["tglist"]   = @{ usage = "tglist"; desc = "list/edit telegram binds (tg_bindings.json)" }
 
-        $known["note"]     = @{ usage = "note [open]"; desc = "notes manager (exit/exitt, nfould, nfile, del, open)" }
+        $known["wai"]      = @{ usage = "wai"; desc = "where you are in notes + list files (default: notes/<user>/files)" }
+        $known["go"]       = @{ usage = "go <path>"; desc = "change notes folder (e.g. go files/important)" }
+        $known["up"]        = @{ usage = "up"; desc = "go up one folder inside notes" }
+        $known["nfile"]     = @{ usage = "nfile <name.ext>"; desc = "create file in current notes folder" }
+        $known["nfould"]    = @{ usage = "nfould <name>"; desc = "create folder in current notes location" }
+        $known["fdel"]      = @{ usage = "fdel <name.ext>"; desc = "delete file in notes (password)" }
+        $known["edit"]      = @{ usage = "edit <name.txt>"; desc = "edit .txt file in terminal" }
+        $known["hash"]     = @{ usage = "hash [fx1|md5|sha1|sha256|ntlm|b64] <text>"; desc = "hash text (digests print raw hex)" }
+        $known["unhash"]   = @{ usage = "unhash [-offline] [hash]"; desc = "crack: wordlist+rules, nitrxgen MD5 DB, brute; FX1 needs password" }
+        $known["build"]    = @{ usage = "build <name>|-list|-restore <n>|-delete <n>"; desc = "save/restore/list config snapshots (builds\ folder)" }
         $known["clear"]    = @{ usage = "clear"; desc = "clear screen" }
         $known["texit"]    = @{ usage = "texit"; desc = "force-exit current terminal process" }
 
@@ -91,8 +101,17 @@ function Show-Commands {
         $known["ftime"]    = @{ usage = "ftime"; desc = "time + date" }
         $known["fday"]     = @{ usage = "fday [location]"; desc = "daily summary: time + weather + wifi + ip" }
         $known["sw"]       = @{ usage = "sw [live] [color|mono] [imagePath]"; desc = "system info + theme switcher (arrows change theme, Ctrl+E exit)" }
+        $known["chek"]     = @{ usage = "chek"; desc = "show current terminal/shell backend (cmd, WT, Cygwin, MSYS, etc.)" }
+        $known["sixel"]    = @{ usage = "sixel"; desc = "check SIXEL readiness in mintty and suggest image tools" }
+        $known["interface-deps"] = @{ usage = "interface-deps [-Install|-Check]"; desc = "install/check required packages for interface mode (bash, mintty, tmux, dialog)" }
+        $known["interface"]= @{ usage = "interface [-TwoWindows] [-Terminal] [-Gui]"; desc = "default: tmux split UI in one mintty; -TwoWindows opens 2 mintty windows; -Terminal current-window mode; -Gui Windows GUI split" }
+        $known["term"]     = @{ usage = "term [-Set auto|windows|mintty|cygwin] [-Now] [-App mintty]"; desc = "switch backend via menu; -Now switches immediately, -App mintty opens real mintty window" }
 
-        $known["foxhelp"]  = @{ usage = "foxhelp"; desc = "this menu" }
+        $known["foxreset"]   = @{ usage = "foxreset [-Git] [-NoGit]"; desc = "hard reset caches + re-init prompt; -Git/-NoGit toggle git branch segment" }
+        $known["foxhelp"]    = @{ usage = "foxhelp"; desc = "this menu" }
+        $known["foxhotkeys"] = @{ usage = "foxhotkeys [-Stop] [-Restart] [-Status]"; desc = "global hotkey daemon (Shift+Alt/Ctrl combos for YouTube, Firefox, FoxTerminal)" }
+        $known["foxinfo"]    = @{ usage = "foxinfo"; desc = "hotkey binding manager: add open/close bindings, configure FoxTerminal path" }
+        $known["foxdeps"]    = @{ usage = "foxdeps [-Check] [-Install]"; desc = "check + auto-install all FoxTerminal dependencies (Firefox, OhMyPosh, AHK, .NET 9, FoxTerminalApp)" }
 
         # Auto-detect commands present in cmd\ (include .ps1 and .bat).
         # We de-duplicate by base name, prefer commands people can type (bat/ps1 wrappers).
@@ -107,7 +126,7 @@ function Show-Commands {
             $base = [System.IO.Path]::GetFileNameWithoutExtension($f.Name)
             if ([string]::IsNullOrWhiteSpace($base)) { continue }
             # Not meant to be executed directly by users:
-            if ($base -in @("foxauth", "sw-script")) { continue }
+            if ($base -in @("foxauth", "foxcodec", "foxhash-lookup", "note-lib", "sw-script", "hk_parse", "hk_lib")) { continue }
             $null = $names.Add($base)
         }
 
@@ -149,11 +168,14 @@ function Show-Commands {
     Write-CommandSection "Login / Users:" $inv @("l","nuser","uexit","users","who","passwd")
     Write-CommandSection "AI:" $inv @("ask","friend","sum")
     Write-CommandSection "Media:" $inv @("yt","ytm","ytm-ui","sp","sp-ui","dj")
-    Write-CommandSection "Firefox / aliases:" $inv @("ff","youtube","bbind","blist","bdel","ser","gask","ffbot")
+    Write-CommandSection "Firefox / aliases:" $inv @("ff","sites","youtube","bbind","blist","bdel","ser","gask","ffbot")
     Write-CommandSection "Telegram:" $inv @("tg","tgub","tglist")
-    Write-CommandSection "Notes:" $inv @("note")
-    Write-CommandSection "Network & system:" $inv @("wifi","reconnect","ip","weather","netping","disk","ftime","fday","sw","clear","texit")
-    Write-CommandSection "Help:" $inv @("foxhelp")
+    Write-CommandSection "Notes / files:" $inv @("wai","go","up","nfile","nfould","fdel","edit","hash","unhash")
+    Write-CommandSection "Builds / snapshots:" $inv @("build")
+    Write-CommandSection "Network & system:" $inv @("wifi","reconnect","ip","weather","netping","disk","ftime","fday","sw","chek","sixel","interface-deps","interface","term","clear","texit")
+    Write-CommandSection "Hotkeys / bindings:" $inv @("foxhotkeys","foxinfo")
+    Write-CommandSection "Setup / deps:" $inv @("foxdeps","interface-deps")
+    Write-CommandSection "Help:" $inv @("foxreset","foxhelp")
 
     # Commands that live outside cmd\ (in FoxTerminal folder).
     Write-Host (Color-Text $p.accent2 "Windows (run from FoxTerminal folder):")
@@ -284,26 +306,128 @@ function Show-Settings {
     Wait-Back
 }
 
+function Show-InterfaceDeps {
+    Clear-Host
+    $p = Get-ThemePalette
+    Write-Host (Color-Text $p.accent "Interface dependencies")
+    Write-Host ""
+    Write-Host "This helper installs/checks packages needed for interface mode:"
+    Write-Host "  bash, mintty, tmux, dialog"
+    Write-Host ""
+
+    $options = @(
+        "Install all dependencies",
+        "Check dependencies (and offer to install missing)",
+        "Back"
+    )
+    $choice = Select-Menu "Interface dependencies" $options
+    if ($choice -lt 0 -or $choice -eq 2) { return }
+
+    if ($choice -eq 0) {
+        & (Join-Path $PSScriptRoot "interface-deps.ps1") -Install
+        Wait-Back
+        return
+    }
+
+    & (Join-Path $PSScriptRoot "interface-deps.ps1") -Check
+    Wait-Back
+}
+
+function Show-SitesInfo {
+    Clear-Host
+    $p = Get-ThemePalette
+    Write-Host (Color-Text $p.accent "Sites / FoxType Master")
+    Write-Host ""
+    Write-Host (Color-Text $p.accent2 "Command:")
+    Write-Host "  sites"
+    Write-Host ""
+    Write-Host "Opens the local sites list from the sites\ folder."
+    Write-Host "Current bundled site: FoxType Master (local typing trainer)."
+    Write-Host ""
+    Write-Host (Color-Text $p.accent2 "FoxType Master features:")
+    Write-Host "  - Practice modes: free, time, words, punct, numbers, quote, code"
+    Write-Host "  - Persistent wrong-letter markers over the expected character"
+    Write-Host "  - Keyboard hint panel with target key and finger hint"
+    Write-Host "  - Theme switcher with visual styles (Cyber, Neon, Ocean, Forest, Lava)"
+    Write-Host "  - Extra tabs: Survival, Lessons, Stats, Achievements"
+    Write-Host "  - Local progress, XP, weak-key tracking, recent sessions"
+    Write-Host ""
+    Write-Host (Color-Text $p.accent2 "Files:")
+    Write-Host "  sites\sites.json"
+    Write-Host "  sites\typewriter\index.html"
+    Write-Host "  sites\typewriter\assets\css\style.css"
+    Write-Host "  sites\typewriter\assets\js\main.js"
+    Write-Host ""
+    Write-Host (Color-Text $p.dim "Tip: edit sites\sites.json to add more local or web sites.")
+    Wait-Back
+}
+
+function Show-BuildsInfo {
+    Clear-Host
+    $p = Get-ThemePalette
+    Write-Host (Color-Text $p.accent "Builds / Config snapshots")
+    Write-Host ""
+    Write-Host (Color-Text $p.accent2 "What are builds?")
+    Write-Host "  Builds let you snapshot your current FoxTerminal configuration"
+    Write-Host "  (binds, notes, theme, users) and restore them any time."
+    Write-Host "  All builds are saved in:  builds\  (next to cmd\)"
+    Write-Host ""
+    Write-Host (Color-Text $p.accent2 "Commands:")
+    Write-Host ("  {0,-40} {1}" -f "build <name>", "save current config as builds\<name>\")
+    Write-Host ("  {0,-40} {1}" -f "build -list", "list all saved builds")
+    Write-Host ("  {0,-40} {1}" -f "build -restore <name>", "overwrite current config with saved build")
+    Write-Host ("  {0,-40} {1}" -f "build -delete <name>", "delete a saved build")
+    Write-Host ""
+    Write-Host (Color-Text $p.accent2 "What gets saved:")
+    Write-Host "  bindings.json       site aliases (ff / bbind)"
+    Write-Host "  sp_bindings.json    Spotify aliases"
+    Write-Host "  tg_bindings.json    Telegram aliases"
+    Write-Host "  ytm_bindings.json   YouTube Music aliases"
+    Write-Host "  theme.txt           current color theme"
+    Write-Host "  notes\              all notes and folders"
+    Write-Host ""
+    Write-Host (Color-Text $p.accent2 "Special build:")
+    Write-Host "  builds\1firstbuild\install.ps1"
+    Write-Host "  Full FoxTerminal installer -- copies the whole base to any"
+    Write-Host "  folder you choose, with clean default settings (no users,"
+    Write-Host "  empty notes, no binds, orange theme)."
+    Write-Host ""
+    Write-Host (Color-Text $p.accent2 "Run the installer:")
+    $installPath = Join-Path (Split-Path $PSScriptRoot -Parent) "builds\1firstbuild\install.ps1"
+    $q = [char]34
+    Write-Host "  powershell -File $q$installPath$q"
+    Write-Host ""
+    $noteMsg = 'Note: the name 1firstbuild is reserved and cannot be used with build command.'
+    Write-Host (Color-Text $p.dim $noteMsg)
+    Wait-Back
+}
+
 while ($true) {
     $options = @(
-        "Commands (all)",
-        "Ollama & AI (ask, friend)",
-        "Windows (bloat / ads)",
-        "Install & config",
-        "Troubleshooting",
-        "Settings.json (WT)",
-        "Exit"
+        'Commands (all)',
+        'Sites / FoxType Master',
+        'Builds / snapshots',
+        'AI: Ollama  ask, friend',
+        'Interface deps',
+        'Windows: bloat / ads',
+        'Install + config',
+        'Troubleshooting',
+        'Settings.json (WT)',
+        'Exit'
     )
-    $choice = Select-Menu "FoxTerminal Help" $options
+    $choice = Select-Menu 'FoxTerminal Help' $options
     if ($choice -lt 0) { exit }
 
-    switch ($options[$choice]) {
-        "Commands (all)" { Show-Commands }
-        "Ollama & AI (ask, friend)" { Show-OllamaAI }
-        "Windows (bloat / ads)" { Show-WindowsBloatAds }
-        "Install & config" { Show-InstallConfig }
-        "Troubleshooting" { Show-Troubles }
-        "Settings.json (WT)" { Show-Settings }
-        "Exit" { exit }
+    switch ($choice) {
+        0 { Show-Commands }
+        1 { Show-SitesInfo }
+        2 { Show-BuildsInfo }
+        3 { Show-OllamaAI }
+        4 { Show-InterfaceDeps }
+        5 { Show-WindowsBloatAds }
+        6 { Show-InstallConfig }
+        7 { Show-Troubles }
+        8 { Show-Settings }
+        9 { exit }
     }
 }

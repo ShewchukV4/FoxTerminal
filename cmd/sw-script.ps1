@@ -3,7 +3,25 @@ param(
     [string[]]$Args
 )
 
+# Ensure correct encoding so banner renders properly in all terminals
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding = [System.Text.Encoding]::UTF8
+
 function Get-InstalledAppCount {
+    $cachePath = Join-Path $env:TEMP "foxterm-appcount-cache.json"
+    try {
+        if (Test-Path $cachePath) {
+            $cachedRaw = Get-Content -Path $cachePath -Raw -ErrorAction SilentlyContinue
+            if (-not [string]::IsNullOrWhiteSpace($cachedRaw)) {
+                $cached = $cachedRaw | ConvertFrom-Json
+                $ts = [datetime]$cached.timestamp
+                if (((Get-Date) - $ts).TotalMinutes -lt 30 -and $cached.count -ge 0) {
+                    return [int]$cached.count
+                }
+            }
+        }
+    } catch {}
+
     $paths = @(
         "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*",
         "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*",
@@ -15,6 +33,11 @@ function Get-InstalledAppCount {
             $count += (Get-ItemProperty $p -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName }).Count
         } catch {}
     }
+    try {
+        @{ timestamp = (Get-Date).ToString("o"); count = $count } |
+            ConvertTo-Json -Depth 3 |
+            Set-Content -Path $cachePath -Encoding UTF8
+    } catch {}
     return $count
 }
 
@@ -31,14 +54,10 @@ $cpu = Get-CimInstance Win32_Processor | Select-Object -First 1
 $gpu = Get-CimInstance Win32_VideoController | Select-Object -First 1
 $apps = Get-InstalledAppCount
 
-$res = $null
-try {
-    $vc = Get-CimInstance Win32_VideoController | Select-Object -First 1
-    if ($vc.CurrentHorizontalResolution -and $vc.CurrentVerticalResolution) {
-        $res = "$($vc.CurrentHorizontalResolution)x$($vc.CurrentVerticalResolution)"
-    }
-} catch {}
-if (-not $res) { $res = "N/A" }
+$res = "N/A"
+if ($gpu -and $gpu.CurrentHorizontalResolution -and $gpu.CurrentVerticalResolution) {
+    $res = "$($gpu.CurrentHorizontalResolution)x$($gpu.CurrentVerticalResolution)"
+}
 
 function Enable-VT {
     $sig = @"
@@ -64,6 +83,22 @@ public static class VT {
 }
 
 function Get-AsciiArtData([string]$path, [int]$targetWidth, [char]$esc, [double]$charAspect) {
+    $cachePath = $null
+    try {
+        $info = Get-Item -LiteralPath $path -ErrorAction Stop
+        $key = "$($info.FullName)|$($info.LastWriteTimeUtc.Ticks)|$targetWidth|$charAspect"
+        $sha = [System.Security.Cryptography.SHA1]::Create()
+        $bytes = [System.Text.Encoding]::UTF8.GetBytes($key)
+        $hash = -join ($sha.ComputeHash($bytes) | ForEach-Object { $_.ToString("x2") })
+        $cachePath = Join-Path $env:TEMP ("foxterm-art-" + $hash + ".clixml")
+        if (Test-Path $cachePath) {
+            $cached = Import-Clixml -Path $cachePath -ErrorAction SilentlyContinue
+            if ($cached -and $cached.Lines -and $cached.Colors) {
+                return $cached
+            }
+        }
+    } catch {}
+
     try {
         Add-Type -AssemblyName System.Drawing | Out-Null
     } catch {
@@ -106,7 +141,11 @@ function Get-AsciiArtData([string]$path, [int]$targetWidth, [char]$esc, [double]
             $lines.Add($line)
             $colors.Add($lineColors.ToArray())
         }
-        return @{ Lines = $lines.ToArray(); Colors = $colors.ToArray() }
+        $result = @{ Lines = $lines.ToArray(); Colors = $colors.ToArray() }
+        if ($cachePath) {
+            try { $result | Export-Clixml -Path $cachePath -Force } catch {}
+        }
+        return $result
     } finally {
         $img.Dispose()
     }
@@ -615,6 +654,90 @@ $global:FOXTERM_THEME = Load-Theme
 if (-not ($themes -contains $global:FOXTERM_THEME)) { $global:FOXTERM_THEME = "orange" }
 Apply-ThemeColors $global:FOXTERM_THEME
 
+# ── FOX TERM pixel banner (7-wide glyphs, codepoint-safe) ────
+function Build-FoxBannerLines {
+    $B = [string][char]0x2588   # █  full block
+    $D = [string][char]0x2500   # ─  thin horizontal
+
+    # Each glyph: exactly 7 chars wide, 5 rows tall
+    $g = @{
+        'F' = @("${B}${B}${B}${B}${B}${B}${B}",
+                "${B}${B}     ",
+                "${B}${B}${B}${B}${B}  ",
+                "${B}${B}     ",
+                "${B}${B}     ")
+        'O' = @(" ${B}${B}${B}${B}${B} ",
+                "${B}${B}   ${B}${B}",
+                "${B}${B}   ${B}${B}",
+                "${B}${B}   ${B}${B}",
+                " ${B}${B}${B}${B}${B} ")
+        'X' = @("${B}${B}   ${B}${B}",
+                " ${B}${B} ${B}${B} ",
+                "  ${B}${B}${B}  ",
+                " ${B}${B} ${B}${B} ",
+                "${B}${B}   ${B}${B}")
+        'T' = @("${B}${B}${B}${B}${B}${B}${B}",
+                "  ${B}${B}${B}  ",
+                "  ${B}${B}${B}  ",
+                "  ${B}${B}${B}  ",
+                "  ${B}${B}${B}  ")
+        'E' = @("${B}${B}${B}${B}${B}${B}${B}",
+                "${B}${B}     ",
+                "${B}${B}${B}${B}${B}  ",
+                "${B}${B}     ",
+                "${B}${B}${B}${B}${B}${B}${B}")
+        'R' = @("${B}${B}${B}${B}${B}${B} ",
+                "${B}${B}   ${B}${B}",
+                "${B}${B}${B}${B}${B}${B} ",
+                "${B}${B}${B}${B} ${B} ",
+                "${B}${B}   ${B}${B}")
+        'M' = @("${B}${B}   ${B}${B}",
+                "${B}${B}${B} ${B}${B}${B}",
+                "${B}${B} ${B} ${B}${B}",
+                "${B}${B}   ${B}${B}",
+                "${B}${B}   ${B}${B}")
+    }
+
+    $w1 = @('F','O','X')
+    $w2 = @('T','E','R','M')
+    # banner width: 3*(7+1) + 2 + 4*(7+1) - 1  = 24+2+31 = 57
+    $bannerW = 57
+    $result  = @()
+
+    for ($row = 0; $row -lt 5; $row++) {
+        $line = ''
+        foreach ($ch in $w1) { $line += $g[$ch][$row] + ' ' }
+        $line += ' '   # extra gap between FOX and TERM
+        foreach ($ch in $w2) { $line += $g[$ch][$row] + ' ' }
+        $result += $line.TrimEnd()
+    }
+
+    # thin decorative line + label
+    $result += ($D * $bannerW)
+    $tag = '  [ FoxTerminal ]  '
+    $tagPad = [Math]::Max(0, [int](($bannerW - $tag.Length) / 2))
+    $result += (' ' * $tagPad) + $tag
+
+    return $result
+}
+
+function Write-FoxBanner {
+    $lines = Build-FoxBannerLines
+    try { $w = $host.UI.RawUI.WindowSize.Width } catch { $w = 80 }
+    if ($w -le 0) { $w = 80 }
+    $bannerW = ($lines | ForEach-Object { $_.Length } | Measure-Object -Maximum).Maximum
+    foreach ($line in $lines) {
+        $pad = [Math]::Max(0, [int](($w - $bannerW) / 2))
+        $centered = (' ' * $pad) + $line
+        if ($useColorInfo) {
+            Write-Host (Colorize-LabelGradient $centered $esc)
+        } else {
+            Write-Host $centered
+        }
+    }
+    Write-Host ''
+}
+
 function Render-Info {
     $os = Get-CimInstance Win32_OperatingSystem
     $memTotal = [Math]::Round($os.TotalVisibleMemorySize / 1024)
@@ -645,6 +768,7 @@ function Render-Info {
     $info += (Make-Label "WiFi:")       + " " + $wifiText
 
     Clear-Host
+    Write-FoxBanner
     $lines = [Math]::Max($artRaw.Count, $info.Count)
     $infoStart = [Math]::Max(0, [int][Math]::Floor(($artRaw.Count - $info.Count) / 2))
     $wifiLineY = $null

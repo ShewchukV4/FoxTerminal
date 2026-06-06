@@ -6,6 +6,7 @@ using Avalonia.Threading;
 using FoxTerminal.Core;
 using FoxTerminal.Config;
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Globalization;
 
@@ -17,9 +18,25 @@ public sealed class TerminalControl : Control
     private Typeface _typeface = new("Cascadia Mono");
     private double _fontSize = 13;
     private Color _backgroundColor = Color.FromRgb(11, 15, 26);
+    private IBrush _backgroundBrush = new SolidColorBrush(Color.FromRgb(11, 15, 26)).ToImmutable();
+    private IBrush _cursorBrush = new SolidColorBrush(Color.FromRgb(230, 230, 230)).ToImmutable();
     private Size _cellSize = new(8, 16);
+    private bool _cellSizeDirty = true;
     private CancellationTokenSource _cts = new();
     private string _inputBuffer = string.Empty;
+
+    // Coalescing flag: 0 = no render queued, 1 = render queued.
+    // Many PTY chunks per frame collapse into a single redraw.
+    private int _renderQueued;
+
+    // Reusable buffer for run-length-style style segmentation in Render.
+    // Lives on the UI thread; reused across frames to avoid per-render
+    // allocations that previously triggered GC pressure / freezes.
+    private char[] _segmentBuffer = new char[256];
+
+    // Brush cache keyed by terminal color so we don't allocate a new
+    // SolidColorBrush per cell-segment per frame.
+    private readonly Dictionary<TerminalColor, IBrush> _brushCache = new();
 
     public TerminalSession? Session
     {
@@ -35,6 +52,7 @@ public sealed class TerminalControl : Control
             if (_session != null)
             {
                 _session.Updated += OnSessionUpdated;
+                ScheduleRender();
             }
         }
     }
@@ -42,11 +60,16 @@ public sealed class TerminalControl : Control
     public TerminalControl()
     {
         Focusable = true;
-        this.AttachedToVisualTree += OnAttached;
-        this.DetachedFromVisualTree += OnDetached;
-        this.AddHandler(PointerPressedEvent, OnPointerPressed, handledEventsToo: true);
-        this.AddHandler(TextInputEvent, OnTextInput, handledEventsToo: true);
-        this.AddHandler(KeyDownEvent, OnKeyDown, handledEventsToo: true);
+        ClipToBounds = true;
+        // Aliased edges keep the cell grid pixel-crisp and avoid sub-pixel
+        // shimmer that looks like flicker when redrawing rapidly.
+        RenderOptions.SetEdgeMode(this, EdgeMode.Aliased);
+        RenderOptions.SetTextRenderingMode(this, TextRenderingMode.Antialias);
+        AttachedToVisualTree += OnAttached;
+        DetachedFromVisualTree += OnDetached;
+        AddHandler(PointerPressedEvent, OnPointerPressed, handledEventsToo: true);
+        AddHandler(TextInputEvent, OnTextInput, handledEventsToo: true);
+        AddHandler(KeyDownEvent, OnKeyDown, handledEventsToo: true);
     }
 
     public void ApplyConfig(FoxTerminalConfig config)
@@ -54,82 +77,118 @@ public sealed class TerminalControl : Control
         _typeface = new Typeface(config.FontFamily);
         _fontSize = config.FontSize;
         _backgroundColor = ParseHex(config.Background, _backgroundColor);
+        _backgroundBrush = new SolidColorBrush(_backgroundColor).ToImmutable();
+        _brushCache.Clear();
+        _cellSizeDirty = true;
+        InvalidateMeasure();
         InvalidateVisual();
     }
 
     public override void Render(DrawingContext context)
     {
-        if (Session == null)
+        var session = _session;
+        if (session == null)
         {
             return;
         }
 
-        var buffer = Session.Buffer;
+        // Apply any pending PTY data on the UI thread, just before painting.
+        // This serialises buffer mutation with rendering and removes the
+        // background-thread race that previously caused visual corruption
+        // resembling flicker.
+        session.DrainPending();
+
+        var buffer = session.Buffer;
         var rows = buffer.VisibleRows;
+        var rowCount = rows.Count;
         var cellWidth = _cellSize.Width;
         var cellHeight = _cellSize.Height;
 
-        context.FillRectangle(new SolidColorBrush(_backgroundColor), new Rect(Bounds.Size));
+        context.FillRectangle(_backgroundBrush, new Rect(Bounds.Size));
 
-        for (var row = 0; row < rows.Count; row++)
+        for (var row = 0; row < rowCount; row++)
         {
             var cells = rows[row].Cells;
+            var cellCount = cells.Count;
+            if (cellCount == 0)
+            {
+                continue;
+            }
+
+            EnsureSegmentCapacity(cellCount);
+
             var x = 0.0;
             var col = 0;
+            var y = row * cellHeight;
 
-            while (col < cells.Count)
+            while (col < cellCount)
             {
                 var style = cells[col].Style;
-                var start = col;
-                var text = new char[cells.Count - col];
                 var len = 0;
-
-                while (col < cells.Count && cells[col].Style.Equals(style))
+                while (col < cellCount && cells[col].Style.Equals(style))
                 {
-                    text[len++] = cells[col].Rune;
+                    _segmentBuffer[len++] = cells[col].Rune;
                     col++;
                 }
 
-                var segment = new string(text, 0, len);
-                var rect = new Rect(x, row * cellHeight, len * cellWidth, cellHeight);
-                var background = new SolidColorBrush(ToColor(style.Background));
-                var foreground = new SolidColorBrush(ToColor(style.Foreground));
+                var segmentWidth = len * cellWidth;
+                var rect = new Rect(x, y, segmentWidth, cellHeight);
 
-                context.FillRectangle(background, rect);
-                var ft = new FormattedText(
-                    segment,
-                    CultureInfo.InvariantCulture,
-                    FlowDirection.LeftToRight,
-                    _typeface,
-                    _fontSize,
-                    foreground);
-                context.DrawText(ft, new Point(x, row * cellHeight));
+                // Skip drawing the background fill when the cells use the
+                // default background; the surface fill above already covers
+                // it. Saves a FillRectangle per default-styled run.
+                if (!style.Background.IsDefault)
+                {
+                    context.FillRectangle(GetBrush(style.Background), rect);
+                }
 
-                x += len * cellWidth;
+                // Skip emitting glyph runs that are entirely whitespace.
+                if (HasVisibleGlyph(_segmentBuffer, len))
+                {
+                    var segment = new string(_segmentBuffer, 0, len);
+                    var ft = new FormattedText(
+                        segment,
+                        CultureInfo.InvariantCulture,
+                        FlowDirection.LeftToRight,
+                        _typeface,
+                        _fontSize,
+                        GetBrush(style.Foreground));
+                    context.DrawText(ft, new Point(x, y));
+                }
+
+                x += segmentWidth;
             }
         }
 
-        // Cursor
         var cursor = buffer.Cursor;
-        var cursorRect = new Rect(cursor.Column * cellWidth, cursor.Row * cellHeight + cellHeight - 2, cellWidth, 2);
-        context.FillRectangle(new SolidColorBrush(Color.FromRgb(230, 230, 230)), cursorRect);
+        var cursorRect = new Rect(
+            cursor.Column * cellWidth,
+            cursor.Row * cellHeight + cellHeight - 2,
+            cellWidth,
+            2);
+        context.FillRectangle(_cursorBrush, cursorRect);
     }
 
     protected override Size MeasureOverride(Size availableSize)
     {
-        UpdateCellSize();
+        EnsureCellSize();
         return base.MeasureOverride(availableSize);
     }
 
     protected override Size ArrangeOverride(Size finalSize)
     {
-        UpdateCellSize();
+        EnsureCellSize();
         ResizePty(finalSize);
         return base.ArrangeOverride(finalSize);
     }
 
-    private void UpdateCellSize()
+    private void EnsureCellSize()
     {
+        if (!_cellSizeDirty)
+        {
+            return;
+        }
+
         var ft = new FormattedText(
             "W",
             CultureInfo.InvariantCulture,
@@ -137,30 +196,66 @@ public sealed class TerminalControl : Control
             _typeface,
             _fontSize,
             Brushes.White);
-        _cellSize = new Size(Math.Max(6, ft.WidthIncludingTrailingWhitespace), Math.Max(12, ft.Height));
+        _cellSize = new Size(
+            Math.Max(6, ft.WidthIncludingTrailingWhitespace),
+            Math.Max(12, ft.Height));
+        _cellSizeDirty = false;
     }
 
     private async void ResizePty(Size size)
     {
-        if (Session == null)
+        var session = _session;
+        if (session == null)
         {
             return;
         }
 
         var columns = Math.Max(1, (int)(size.Width / _cellSize.Width));
         var rows = Math.Max(1, (int)(size.Height / _cellSize.Height));
-        await Session.ResizeAsync(columns, rows, _cts.Token);
-        InvalidateVisual();
+        if (columns == session.Buffer.Columns && rows == session.Buffer.Rows)
+        {
+            return;
+        }
+
+        try
+        {
+            await session.ResizeAsync(columns, rows, _cts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        ScheduleRender();
     }
 
     private void OnSessionUpdated(object? sender, EventArgs e)
     {
-        Dispatcher.UIThread.Post(InvalidateVisual);
+        ScheduleRender();
+    }
+
+    /// <summary>
+    /// Coalesces redraw requests so that bursts of PTY data become at most
+    /// one render per UI frame rather than flooding the dispatcher.
+    /// </summary>
+    private void ScheduleRender()
+    {
+        if (Interlocked.Exchange(ref _renderQueued, 1) == 0)
+        {
+            Dispatcher.UIThread.Post(RunRender, DispatcherPriority.Render);
+        }
+    }
+
+    private void RunRender()
+    {
+        Volatile.Write(ref _renderQueued, 0);
+        InvalidateVisual();
     }
 
     private void OnTextInput(object? sender, TextInputEventArgs e)
     {
-        if (Session == null || string.IsNullOrEmpty(e.Text))
+        var session = _session;
+        if (session == null || string.IsNullOrEmpty(e.Text))
         {
             return;
         }
@@ -169,36 +264,32 @@ public sealed class TerminalControl : Control
         if (!char.IsControl(ch))
         {
             _inputBuffer += e.Text;
-            Session.FeedLocal(e.Text);
+            session.FeedLocal(e.Text);
         }
     }
 
     private async void OnKeyDown(object? sender, KeyEventArgs e)
     {
-        if (Session == null)
+        var session = _session;
+        if (session == null)
         {
             return;
         }
 
-        var seq = e.Key switch
-        {
-            Key.Enter => "\r\n",
-            Key.Back => "\b",
-            Key.Tab => "\t",
-            Key.Left => "\u001b[D",
-            Key.Right => "\u001b[C",
-            Key.Up => "\u001b[A",
-            Key.Down => "\u001b[B",
-            _ => string.Empty
-        };
-
         if (e.Key == Key.Enter)
         {
             e.Handled = true;
-            Session.FeedLocal("\r\n");
+            session.FeedLocal("\r\n");
             var line = _inputBuffer;
             _inputBuffer = string.Empty;
-            await Session.SendLineAsync(line, _cts.Token);
+            try
+            {
+                await session.SendLineAsync(line, _cts.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                // Control was detached; ignore.
+            }
             return;
         }
 
@@ -208,15 +299,25 @@ public sealed class TerminalControl : Control
             if (_inputBuffer.Length > 0)
             {
                 _inputBuffer = _inputBuffer[..^1];
-                Session.FeedLocal("\b \b");
+                session.FeedLocal("\b \b");
             }
             return;
         }
 
+        var seq = e.Key switch
+        {
+            Key.Tab => "\t",
+            Key.Left => "\u001b[D",
+            Key.Right => "\u001b[C",
+            Key.Up => "\u001b[A",
+            Key.Down => "\u001b[B",
+            _ => string.Empty
+        };
+
         if (!string.IsNullOrEmpty(seq))
         {
             e.Handled = true;
-            // Ignore cursor movement for now in line mode.
+            // Cursor movement is intentionally ignored in line mode for now.
         }
     }
 
@@ -236,9 +337,40 @@ public sealed class TerminalControl : Control
         e.Handled = true;
     }
 
-    private static Color ToColor(TerminalColor color)
+    private IBrush GetBrush(TerminalColor color)
     {
-        return Color.FromRgb(color.R, color.G, color.B);
+        if (!_brushCache.TryGetValue(color, out var brush))
+        {
+            brush = new SolidColorBrush(Color.FromRgb(color.R, color.G, color.B)).ToImmutable();
+            _brushCache[color] = brush;
+        }
+        return brush;
+    }
+
+    private void EnsureSegmentCapacity(int required)
+    {
+        if (_segmentBuffer.Length < required)
+        {
+            var size = _segmentBuffer.Length;
+            while (size < required)
+            {
+                size *= 2;
+            }
+            _segmentBuffer = new char[size];
+        }
+    }
+
+    private static bool HasVisibleGlyph(char[] buffer, int length)
+    {
+        for (var i = 0; i < length; i++)
+        {
+            var ch = buffer[i];
+            if (ch != ' ' && ch != '\0')
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static Color ParseHex(string hex, Color fallback)

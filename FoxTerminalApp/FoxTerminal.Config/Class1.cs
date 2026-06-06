@@ -11,6 +11,9 @@ public sealed class FoxTerminalConfig
     public string SelectionBackground { get; set; } = "#1F2937";
     public double WindowOpacity { get; set; } = 0.92;
     public int Padding { get; set; } = 10;
+    public string ShellBackend { get; set; } = "auto";
+    public string? ShellPath { get; set; }
+    public string? ShellArguments { get; set; }
 
     public static FoxTerminalConfig Default => new();
 }

@@ -1,0 +1,136 @@
+:root{
+  background-color: aliceblue;
+}
+.info-box{
+  background-color: white;
+  border-radius: 10px;
+  padding: 20px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  display: grid;
+  text-align: center;
+  align-items: center;
+  justify-items: center;
+  height: 380px;
+  align-content: start;
+}.info-box h1{
+  margin: 0;
+  font-size: 48px;
+  color: #333;
+  font-family: 'Courier New', Courier, monospace;
+}.info-box .front{
+  display: block;
+  border-radius: 12px;
+  background-color: #606060;
+  color: white;
+  width: 100px;
+  height: 40px;
+  transform: translateY(-6px);
+}.info-box .front p{
+  margin: 0;
+  font-size: 16px;
+  font-family: 'Courier New', Courier, monospace;
+}.info-box .pushable{
+  position: fixed;
+  top: 370px;
+  padding: 0;
+  outline-offset: 4px;
+  background-color: #565656;
+  color: white;
+  width: 100px;
+  height: 40px;
+  border-radius: 12px;
+  border: none;
+}.info-box .pushable:active .front{
+  transform: translateY(-2px);
+}.info-box .pushable p{
+  margin: 0;
+  font-size: 16px;
+  font-family: 'Courier New', Courier, monospace;
+}
+.grid-content{
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  padding: 20px;
+}.grid-content p{
+  background-color: white;
+  border-radius: 10px;
+  padding: 20px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  font-family: 'Courier New', Courier, monospace;
+  color: #333;
+}
+
+.info-box .item{
+  position: relative;
+  
+  background-color: rgb(228, 228, 228);
+  box-shadow: inset 0px 8px 8px rgba(0,0,0,0.1);
+
+  border-radius: 10px;
+  padding: 20px;
+  height: 40px;
+  transition: 0.2s;
+}
+.info-box .item:hover{
+  height: 200px;
+  transition: 0.2s;
+}
+.info-box .item p{
+  opacity: 0;
+  transition: 0.2s;
+}
+.info-box .item:hover p{
+  opacity: 1;
+  transition: 0.2s;
+}
+
+.item{
+}
+button:hover{
+  cursor: pointer;
+}
+.pushable{
+}
+.front{
+}
+
+
+.shop-Container{
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  max-width: 1000px;
+  margin: 0 auto;
+  gap: 20px;
+  padding: 20px;
+}
+.shop-Container .item{
+  background-color: white;
+  border-radius: 10px;
+  padding: 20px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  text-align: center;
+}
+
+.item-button{
+  background-color: #bebebe;
+  max-width: 100px;
+  margin: 0 auto;
+}
+.item-button p{
+  margin: 0;
+  font-size: 16px;
+  font-family: 'Courier New', Courier, monospace;
+  color: white;
+}
+.item-button-block {
+  display: block;
+  background-color: #bebebe;
+  opacity: 0;
+  color: #333;
+  transition: 0.2s;
+}
+.item-button:hover .item-button-block{
+  opacity: 1;
+  transition: 0.2s;
+}

@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Web UI Guide - готові секції</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./assets/css/style.css">
+</head>
+<body data-cursor="glow">
+<div class="noise"></div>
+<div class="cursor-glow" id="cursor-glow"></div>
+
+<header class="topbar">
+  <a class="brand" href="./index.html"><span class="brand-mark">WG</span><span>Web UI Guide</span></a>
+  <nav class="nav">
+    <a href="./examples.html">Приклади</a>
+    <a href="./navigation.html">Навігація</a>
+    <a href="./patterns.html">Секції</a>
+    <a href="./placeholders.html">Заглушки</a>
+    <a href="./cursors.html">Курсори</a>
+    <a href="./docs.html">Документація</a>
+  </nav>
+  <button class="theme-toggle" id="theme-toggle" type="button">Light</button>
+</header>
+
+<main>
+  <section class="section hero reveal">
+    <div>
+      <p class="eyebrow">Готові секції</p>
+      <h1>Блоки, з яких збирається повний сайт.</h1>
+      <p class="hero-text">Це не маленькі елементи, а цілі частини сторінки: hero, features, pricing, FAQ, dashboard, portfolio, ecommerce, game UI, contact і docs layout.</p>
+    </div>
+    <div class="quick-map example-index">
+      <a href="#landing">Landing</a>
+      <a href="#business">Business</a>
+      <a href="#dashboard">Dashboard</a>
+      <a href="#game">Game UI</a>
+    </div>
+  </section>
+
+  <section class="section reveal" id="landing">
+    <div class="section-head">
+      <div><p class="eyebrow">01 / landing</p><h2>Landing page секції</h2></div>
+    </div>
+    <div class="pattern-showcase">
+      <article class="section-preview hero-preview">
+        <span>Hero</span>
+        <h3>Запусти продукт швидше</h3>
+        <p>Великий заголовок, підзаголовок, CTA і візуальний акцент.</p>
+        <button class="btn btn-primary" type="button">Get started</button>
+      </article>
+      <article class="section-preview feature-preview">
+        <h3>Features grid</h3>
+        <div class="mini-feature-grid"><span>Speed</span><span>Design</span><span>Code</span><span>Docs</span></div>
+      </article>
+      <article class="section-preview pricing-preview">
+        <span>Pro</span>
+        <h3>$19</h3>
+        <p>Для сайту з багатьма секціями.</p>
+        <button class="btn btn-soft" type="button">Обрати</button>
+      </article>
+    </div>
+  </section>
+
+  <section class="section reveal" id="business">
+    <div class="section-head">
+      <div><p class="eyebrow">02 / business</p><h2>Бізнес, портфоліо, контент</h2></div>
+    </div>
+    <div class="pattern-showcase">
+      <article class="section-preview timeline-preview">
+        <h3>Process timeline</h3>
+        <ol><li>Research</li><li>Prototype</li><li>Design</li><li>Launch</li></ol>
+      </article>
+      <article class="section-preview testimonial-card">
+        <p>"Готові секції економлять години роботи."</p>
+        <strong>UI Guide</strong>
+      </article>
+      <article class="section-preview contact-preview">
+        <h3>Contact CTA</h3>
+        <p>Фінальний блок із формою або кнопкою.</p>
+        <form class="mini-form"><input placeholder="Email"><button class="btn btn-primary" type="button">Send</button></form>
+      </article>
+    </div>
+  </section>
+
+  <section class="section reveal" id="dashboard">
+    <div class="section-head">
+      <div><p class="eyebrow">03 / dashboard</p><h2>Dashboard layout</h2></div>
+    </div>
+    <div class="dashboard-preview">
+      <aside>
+        <b>Panel</b>
+        <span>Home</span>
+        <span>Stats</span>
+        <span>Settings</span>
+      </aside>
+      <div class="dash-main">
+        <div class="dash-stat"><strong>84%</strong><span>Progress</span></div>
+        <div class="dash-stat"><strong>12k</strong><span>Views</span></div>
+        <div class="dash-chart"><span></span><span></span><span></span><span></span><span></span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section reveal" id="game">
+    <div class="section-head">
+      <div><p class="eyebrow">04 / game ui</p><h2>Фантазійні секції для ігор і фан-сайтів</h2></div>
+    </div>
+    <div class="pattern-showcase">
+      <article class="section-preview game-card">
+        <span>Inventory</span>
+        <div class="inventory-grid"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      </article>
+      <article class="section-preview game-card boss-card">
+        <span>Boss</span>
+        <h3>Ancient Core</h3>
+        <div class="boss-hp"><i></i></div>
+      </article>
+      <article class="section-preview game-card">
+        <span>Leaderboard</span>
+        <ol><li>Fox - 9820</li><li>Neon - 7640</li><li>Byte - 5200</li></ol>
+      </article>
+    </div>
+  </section>
+
+  <section class="section reveal">
+    <div class="section-head">
+      <div><p class="eyebrow">05 / code</p><h2>Шаблон секції</h2></div>
+      <p>Базовий приклад, як робити секцію, яку легко переносити між сторінками.</p>
+    </div>
+    <article class="code-card">
+      <button class="copy-btn" type="button">Copy</button>
+      <pre><code>&lt;section class="section-block"&gt;
+  &lt;div class="section-head"&gt;
+    &lt;p class="eyebrow"&gt;01 / feature&lt;/p&gt;
+    &lt;h2&gt;Заголовок секції&lt;/h2&gt;
+    &lt;p&gt;Короткий опис для людини.&lt;/p&gt;
+  &lt;/div&gt;
+
+  &lt;div class="cards"&gt;
+    &lt;article class="card"&gt;Контент&lt;/article&gt;
+    &lt;article class="card"&gt;Контент&lt;/article&gt;
+  &lt;/div&gt;
+&lt;/section&gt;</code></pre>
+    </article>
+  </section>
+</main>
+
+<div class="toast" id="toast">Готово.</div>
+<footer class="footer"><p><a href="./index.html">На головну</a> · Готові секції</p></footer>
+<script src="./assets/js/main.js"></script>
+</body>
+</html>

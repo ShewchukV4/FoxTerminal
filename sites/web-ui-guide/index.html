@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Web UI Guide - головна</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./assets/css/style.css">
+</head>
+<body data-cursor="glow">
+<div class="noise"></div>
+<div class="cursor-glow" id="cursor-glow"></div>
+
+<header class="topbar">
+  <a class="brand" href="./index.html" aria-label="Web UI Guide">
+    <span class="brand-mark">WG</span>
+    <span>Web UI Guide</span>
+  </a>
+  <nav class="nav">
+    <a href="./examples.html">Приклади</a>
+    <a href="./navigation.html">Навігація</a>
+    <a href="./patterns.html">Секції</a>
+    <a href="./placeholders.html">Заглушки</a>
+    <a href="./cursors.html">Курсори</a>
+    <a href="./docs.html">Документація</a>
+  </nav>
+  <button class="theme-toggle" id="theme-toggle" type="button">Light</button>
+</header>
+
+<main>
+  <section class="hero section reveal">
+    <div class="hero-copy">
+      <p class="eyebrow">Багатосторінковий UI-довідник</p>
+      <h1>Не one-page, а ціла бібліотека для створення сайтів.</h1>
+      <p class="hero-text">Тут є окремі сторінки з прикладами, готовими секціями, модифікаціями курсора і великою документацією по HTML, CSS та JavaScript. Відкривай потрібний розділ і копіюй код.</p>
+      <div class="hero-actions">
+        <a class="btn btn-primary" href="./examples.html">Відкрити приклади</a>
+        <a class="btn btn-ghost" href="./docs.html">Читати документацію</a>
+      </div>
+    </div>
+    <div class="hero-card">
+      <div class="preview-browser">
+        <div class="browser-dots"><span></span><span></span><span></span></div>
+        <div class="preview-pane">
+          <div class="floating-pill">multi page guide</div>
+          <div class="mini-card"></div>
+          <div class="mini-card wide"></div>
+          <div class="mini-grid">
+            <span></span><span></span><span></span><span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section reveal">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">Розділи сайту</p>
+        <h2>Кожна тема винесена на свою сторінку</h2>
+      </div>
+      <p>Так легше розширювати довідник: приклади окремо, документація окремо, фантазійні ефекти окремо.</p>
+    </div>
+    <div class="portal-grid">
+      <a class="portal-card" href="./examples.html">
+        <span>01</span>
+        <h3>Каталог прикладів</h3>
+        <p>Кнопки, картки, форми, ефекти, loaders, sliders, tabs, badges, tooltips і ще багато UI-штук з кодом.</p>
+      </a>
+      <a class="portal-card" href="./navigation.html">
+        <span>02</span>
+        <h3>Навігація</h3>
+        <p>Topbar, sidebar, mega menu, drawer, dock, breadcrumbs, pagination, command palette і не тільки.</p>
+      </a>
+      <a class="portal-card" href="./patterns.html">
+        <span>03</span>
+        <h3>Готові секції</h3>
+        <p>Hero, pricing, FAQ, timeline, dashboard, landing page, portfolio, ecommerce, game UI.</p>
+      </a>
+      <a class="portal-card" href="./placeholders.html">
+        <span>04</span>
+        <h3>Заглушки</h3>
+        <p>Skeleton screens, empty states, error pages, image stubs, lorem-картки, coming soon і paywall.</p>
+      </a>
+      <a class="portal-card" href="./cursors.html">
+        <span>05</span>
+        <h3>Кастомні курсори</h3>
+        <p>Glow, ring, trail, spotlight, magnetic hover, cursor follower і приклади CSS/JS.</p>
+      </a>
+      <a class="portal-card" href="./docs.html">
+        <span>06</span>
+        <h3>Велика документація</h3>
+        <p>HTML, CSS і JavaScript: структура сторінки, layout, адаптивність, DOM, events, patterns і рецепти.</p>
+      </a>
+    </div>
+  </section>
+
+  <section class="section reveal">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">Як користуватися</p>
+        <h2>Швидкий маршрут</h2>
+      </div>
+    </div>
+    <div class="recipe-list">
+      <article>
+        <h3>1. Обери блок</h3>
+        <p>Зайди в каталог прикладів або готових секцій і знайди потрібний тип елемента.</p>
+      </article>
+      <article>
+        <h3>2. Подивись код</h3>
+        <p>Під прикладами є кнопка перегляду коду. Можна копіювати HTML/CSS/JS прямо звідти.</p>
+      </article>
+      <article>
+        <h3>3. Зміни стиль</h3>
+        <p>Кольори, радіуси, тіні й шрифти винесені в CSS-змінні, тому їх легко міняти.</p>
+      </article>
+      <article>
+        <h3>4. Читай docs</h3>
+        <p>Якщо незрозуміло, як щось працює, відкрий документацію з поясненнями і прикладами.</p>
+      </article>
+    </div>
+  </section>
+</main>
+
+<div class="toast" id="toast">Готово.</div>
+
+<footer class="footer">
+  <p>Web UI Guide - локальний багатосторінковий довідник для сайтів.</p>
+</footer>
+
+<script src="./assets/js/main.js"></script>
+</body>
+</html>

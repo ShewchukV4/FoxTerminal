@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Invoker Forge - Trainer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Exo+2:wght@300;400;600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./assets/css/style.css">
+</head>
+<body>
+  <div class="bg-orb bg-orb-one"></div>
+  <div class="bg-orb bg-orb-two"></div>
+  <main class="app">
+    <header class="hero">
+      <div class="eyebrow">Dota 2 spell memory trainer</div>
+      <h1>Invoker <span>Forge</span></h1>
+      <p>Натискай <strong>Q</strong>, <strong>W</strong>, <strong>E</strong>, потім <strong>R</strong>, щоб викликати потрібний скіл. Мета - швидкість, точність і чиста м'язова пам'ять.</p>
+    </header>
+
+    <section class="panel status-panel" aria-label="Статистика гри">
+      <div class="stat-card">
+        <span>Очки</span>
+        <strong id="score">0</strong>
+      </div>
+      <div class="stat-card">
+        <span>Серія</span>
+        <strong id="streak">0</strong>
+      </div>
+      <div class="stat-card">
+        <span>Кращий</span>
+        <strong id="bestScore">0</strong>
+      </div>
+      <div class="stat-card">
+        <span>Best SR10</span>
+        <strong id="bestSpeedrun">--:--</strong>
+      </div>
+      <div class="stat-card">
+        <span>Час</span>
+        <strong id="timer">00:00</strong>
+      </div>
+    </section>
+
+    <section class="mode-row" aria-label="Режими гри">
+      <button class="mode-btn active" data-mode="practice">
+        <span>Practice</span>
+        <small>підказка комбо</small>
+      </button>
+      <button class="mode-btn" data-mode="quiz">
+        <span>Quiz</span>
+        <small>без підказки</small>
+      </button>
+      <button class="mode-btn" data-mode="sprint">
+        <span>Sprint 60</span>
+        <small>максимум за хвилину</small>
+      </button>
+      <button class="mode-btn" data-mode="speedrun10">
+        <span>Speedrun 10</span>
+        <small>усі скіли на час</small>
+      </button>
+    </section>
+
+    <section class="game-grid">
+      <article class="panel challenge-card">
+        <div class="section-label">Поточна ціль</div>
+        <div class="spell-focus">
+          <div class="spell-frame">
+            <img id="targetIcon" src="./assets/img/skills/invoker_cold_snap.png" alt="Cold Snap">
+          </div>
+          <div>
+            <h2 id="targetName">Cold Snap</h2>
+            <p id="targetHint">Quas Quas Quas</p>
+          </div>
+        </div>
+
+        <div class="cast-window" aria-label="Поточні орби">
+          <div class="slot" id="slot0">-</div>
+          <div class="slot" id="slot1">-</div>
+          <div class="slot" id="slot2">-</div>
+        </div>
+
+        <div class="feedback" id="feedback">Готовий. Натисни Q/W/E або клікай орби.</div>
+
+        <div class="control-grid" aria-label="Керування">
+          <button class="orb-btn quas" data-orb="Q">
+            <img src="./assets/img/skills/invoker_quas.png" alt="Quas">
+            <span data-key-label="quas">Q</span>
+            <small>Quas</small>
+          </button>
+          <button class="orb-btn wex" data-orb="W">
+            <img src="./assets/img/skills/invoker_wex.png" alt="Wex">
+            <span data-key-label="wex">W</span>
+            <small>Wex</small>
+          </button>
+          <button class="orb-btn exort" data-orb="E">
+            <img src="./assets/img/skills/invoker_exort.png" alt="Exort">
+            <span data-key-label="exort">E</span>
+            <small>Exort</small>
+          </button>
+          <button class="invoke-btn" id="invokeBtn">
+            <img src="./assets/img/skills/invoker_invoke.png" alt="Invoke">
+            <span data-key-label="invoke">R</span>
+            <small>Invoke</small>
+          </button>
+        </div>
+
+        <div class="actions">
+          <button id="skipBtn">Пропустити</button>
+          <button id="resetBtn">Скинути</button>
+        </div>
+      </article>
+
+      <aside class="panel guide-panel">
+        <div class="section-label">Шпаргалка</div>
+        <div class="spell-list" id="spellList"></div>
+      </aside>
+    </section>
+
+    <section class="panel tips-panel">
+      <div>
+        <h3>Як грати</h3>
+        <p>Комбінація рахується по кількості орбів, порядок Q/W/E не важливий. Після трьох орбів натисни R. Таймер стартує тільки після першого Q/W/E, а Speedrun 10 дає всі скіли без повторів.</p>
+      </div>
+      <div>
+        <h3>Клавіші</h3>
+        <p><kbd data-key-label="quas">Q</kbd> Quas, <kbd data-key-label="wex">W</kbd> Wex, <kbd data-key-label="exort">E</kbd> Exort, <kbd data-key-label="invoke">R</kbd> Invoke, <kbd data-key-label="skip">Space</kbd> пропуск.</p>
+      </div>
+      <div>
+        <h3>Бінди</h3>
+        <div class="bind-grid" id="bindGrid">
+          <button data-bind-action="quas"><span>Quas</span><kbd data-key-label="quas">Q</kbd></button>
+          <button data-bind-action="wex"><span>Wex</span><kbd data-key-label="wex">W</kbd></button>
+          <button data-bind-action="exort"><span>Exort</span><kbd data-key-label="exort">E</kbd></button>
+          <button data-bind-action="invoke"><span>Invoke</span><kbd data-key-label="invoke">R</kbd></button>
+          <button data-bind-action="skip"><span>Skip</span><kbd data-key-label="skip">Space</kbd></button>
+        </div>
+        <p class="bind-note" id="bindNote">Клікни на дію, потім натисни нову клавішу. Esc скасовує.</p>
+      </div>
+    </section>
+  </main>
+
+  <script src="./assets/js/main.js"></script>
+</body>
+</html>

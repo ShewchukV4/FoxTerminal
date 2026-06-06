@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dota Shop Randomizer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800;900&family=Exo+2:wght@300;400;600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./assets/css/style.css">
+</head>
+<body>
+  <img class="side-hero side-hero-left" src="./assets/img/dazzle_full.png" alt="" aria-hidden="true">
+  <img class="side-hero side-hero-right" src="./assets/img/hoodwink_full.png" alt="" aria-hidden="true">
+  <main class="app">
+    <header class="hero panel">
+      <div>
+        <div class="eyebrow">Dota 2 Item Draft</div>
+        <h1>Рандом <span>Шмоток</span></h1>
+        <p>Обери секцію й рандомай предмет. Розхідники, ботинки й цінові категорії не перетинаються між собою.</p>
+      </div>
+      <div class="shop-mark">SHOP</div>
+    </header>
+
+    <section class="panel controls">
+      <div class="section-label">Секції</div>
+      <div class="section-buttons" id="sectionButtons"></div>
+      <div class="actions">
+        <button id="randomSection">Рандом із секції</button>
+        <button id="randomAll">Рандом з усіх секцій</button>
+      </div>
+    </section>
+
+    <section class="main-grid">
+      <article class="panel item-card" id="itemCard">
+        <div class="loader">Завантажую предмети Dota...</div>
+      </article>
+
+      <aside class="panel list-panel">
+        <div class="list-head">
+          <div>
+            <div class="section-label" id="currentSectionLabel">Секція</div>
+            <p id="sectionMeta">0 предметів</p>
+          </div>
+          <input id="searchInput" type="search" placeholder="Пошук у секції...">
+        </div>
+        <div class="item-list" id="itemList"></div>
+      </aside>
+    </section>
+
+    <section class="panel rules">
+      <div>
+        <strong>Правило без повторів між секціями</strong>
+        <p>Спочатку предмет перевіряється як розхідник, потім як ботинок, і тільки потім попадає у цінову категорію. Тому предмет не дублюється в різних секціях.</p>
+      </div>
+      <div>
+        <strong>Цінові секції</strong>
+        <p>До 2000, 2001-3000, 3001-4000, 4001-6000, більше 6000 золота.</p>
+      </div>
+    </section>
+  </main>
+
+  <script src="./assets/js/main.js"></script>
+</body>
+</html>

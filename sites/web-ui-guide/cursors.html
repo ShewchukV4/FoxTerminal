@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Web UI Guide - курсори</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./assets/css/style.css">
+</head>
+<body data-cursor="glow">
+<div class="noise"></div>
+<div class="cursor-glow" id="cursor-glow"></div>
+
+<header class="topbar">
+  <a class="brand" href="./index.html"><span class="brand-mark">WG</span><span>Web UI Guide</span></a>
+  <nav class="nav">
+    <a href="./examples.html">Приклади</a>
+    <a href="./navigation.html">Навігація</a>
+    <a href="./patterns.html">Секції</a>
+    <a href="./placeholders.html">Заглушки</a>
+    <a href="./cursors.html">Курсори</a>
+    <a href="./docs.html">Документація</a>
+  </nav>
+  <button class="theme-toggle" id="theme-toggle" type="button">Light</button>
+</header>
+
+<main>
+  <section class="section hero reveal">
+    <div>
+      <p class="eyebrow">Cursor lab</p>
+      <h1>Модифікації курсора для вау-ефекту.</h1>
+      <p class="hero-text">Вибери режим і рухай мишкою: glow, ring, trail, spotlight. Нижче є приклади магнітних карток, hover zones і код.</p>
+    </div>
+    <div class="cursor-controls">
+      <button class="mini-action active" type="button" data-cursor-mode="glow">Glow</button>
+      <button class="mini-action" type="button" data-cursor-mode="ring">Ring</button>
+      <button class="mini-action" type="button" data-cursor-mode="trail">Trail dots</button>
+      <button class="mini-action" type="button" data-cursor-mode="spotlight">Spotlight</button>
+    </div>
+  </section>
+
+  <section class="section reveal cursor-section">
+    <div class="section-head">
+      <div><p class="eyebrow">01 / playground</p><h2>Зона тестування</h2></div>
+      <p>Тут можна відчути курсор на різних поверхнях. Наведи на блоки і перемикай режими зверху.</p>
+    </div>
+    <div class="cursor-playground">
+      <div class="cursor-target">Hover zone</div>
+      <div class="cursor-target hot">Magic card</div>
+      <div class="cursor-target magnetic-card">Magnetic hover</div>
+    </div>
+  </section>
+
+  <section class="section reveal">
+    <div class="section-head">
+      <div><p class="eyebrow">02 / cursor recipes</p><h2>Приклади курсорів з кодом</h2></div>
+    </div>
+    <div class="examples-grid">
+      <article class="example-card">
+        <div class="example-demo"><div class="cursor-preview glow-preview"></div><h3>Glow follower</h3></div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>&lt;div class="cursor-glow"&gt;&lt;/div&gt;
+
+.cursor-glow {
+  position: fixed;
+  width: 320px;
+  height: 320px;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(circle, rgba(124,92,255,.22), transparent 68%);
+}</code></pre>
+      </article>
+      <article class="example-card">
+        <div class="example-demo"><div class="cursor-preview ring-preview"></div><h3>Ring cursor</h3></div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>body[data-cursor="ring"] .cursor-glow {
+  width: 56px;
+  height: 56px;
+  border: 2px solid #24d6c8;
+  background: transparent;
+  mix-blend-mode: difference;
+}</code></pre>
+      </article>
+      <article class="example-card">
+        <div class="example-demo"><div class="trail-sample"><span></span><span></span><span></span><span></span></div><h3>Trail dots</h3></div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>window.addEventListener("pointermove", (event) =&gt; {
+  const dot = document.createElement("span");
+  dot.className = "trail-dot";
+  dot.style.left = `${event.clientX}px`;
+  dot.style.top = `${event.clientY}px`;
+  document.body.appendChild(dot);
+  setTimeout(() =&gt; dot.remove(), 700);
+});</code></pre>
+      </article>
+      <article class="example-card">
+        <div class="example-demo"><div class="spotlight-preview"></div><h3>Spotlight</h3></div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>body[data-cursor="spotlight"] .cursor-glow {
+  width: 460px;
+  height: 460px;
+  background: radial-gradient(circle, rgba(255,255,255,.16), transparent 58%);
+  mix-blend-mode: screen;
+}</code></pre>
+      </article>
+    </div>
+  </section>
+
+  <section class="section reveal">
+    <div class="section-head">
+      <div><p class="eyebrow">03 / tips</p><h2>Правила для кастомного курсора</h2></div>
+    </div>
+    <div class="recipe-list">
+      <article><h3>Не перекривай кліки</h3><p>У курсора обов'язково має бути <code>pointer-events: none</code>, інакше він буде блокувати кнопки.</p></article>
+      <article><h3>Не роби занадто важко</h3><p>Trail може створювати багато елементів. Видаляй їх через timeout або використовуй canvas.</p></article>
+      <article><h3>Не ховай системний курсор всюди</h3><p>Для docs і форм краще залишати нормальний курсор або робити дуже легкий ефект.</p></article>
+      <article><h3>Поважай reduced motion</h3><p>Для людей, яким важко від анімацій, можна вимкнути cursor trail через media query.</p></article>
+    </div>
+  </section>
+</main>
+
+<div class="toast" id="toast">Готово.</div>
+<footer class="footer"><p><a href="./index.html">На головну</a> · Cursor lab</p></footer>
+<script src="./assets/js/main.js"></script>
+</body>
+</html>

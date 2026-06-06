@@ -13,9 +13,19 @@ $url = if ($locEncoded -eq "") { "https://wttr.in/?format=3" } else { "https://w
 
 function Try-GetWeatherText([string]$requestUrl) {
     try {
-        $resp = Invoke-WebRequest -Uri $requestUrl -UseBasicParsing -TimeoutSec 6
-        $text = ($resp.Content | Out-String).Trim()
+        $headers = @{
+            "User-Agent" = "curl/8.0"
+            "Accept" = "text/plain"
+        }
+        $resp = Invoke-WebRequest -Uri $requestUrl -UseBasicParsing -TimeoutSec 8 -Headers $headers
+        $content = $resp.Content
+        if ($content -is [byte[]]) {
+            $text = [System.Text.Encoding]::UTF8.GetString($content).Trim()
+        } else {
+            $text = ($content | Out-String).Trim()
+        }
         if ([string]::IsNullOrWhiteSpace($text)) { return $null }
+        if ($text -match '<!DOCTYPE html|<html') { return $null }
         return $text
     } catch {
         return $null

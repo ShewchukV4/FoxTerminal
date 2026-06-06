@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Web UI Guide - приклади</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./assets/css/style.css">
+</head>
+<body data-cursor="glow">
+<div class="noise"></div>
+<div class="cursor-glow" id="cursor-glow"></div>
+
+<header class="topbar">
+  <a class="brand" href="./index.html"><span class="brand-mark">WG</span><span>Web UI Guide</span></a>
+  <nav class="nav">
+    <a href="./examples.html">Приклади</a>
+    <a href="./navigation.html">Навігація</a>
+    <a href="./patterns.html">Секції</a>
+    <a href="./placeholders.html">Заглушки</a>
+    <a href="./cursors.html">Курсори</a>
+    <a href="./docs.html">Документація</a>
+  </nav>
+  <button class="theme-toggle" id="theme-toggle" type="button">Light</button>
+</header>
+
+<main>
+  <section class="section hero reveal">
+    <div>
+      <p class="eyebrow">Каталог UI прикладів</p>
+      <h1>Багато різних штук для сайтів з кодом.</h1>
+      <p class="hero-text">Кожна картка має демо, кнопку показу коду і копіювання. Тут змішані кнопки, бокси, ефекти, inputs, стани, меню, loaders і fantasy UI.</p>
+    </div>
+    <div class="quick-map example-index">
+      <a href="#buttons">Кнопки</a>
+      <a href="#cards">Картки</a>
+      <a href="#forms">Форми</a>
+      <a href="#effects">Ефекти</a>
+      <a href="#loaders">Лоадери</a>
+      <a href="#micro">Мікро UI</a>
+    </div>
+  </section>
+
+  <section class="section reveal" id="buttons">
+    <div class="section-head">
+      <div><p class="eyebrow">01 / buttons</p><h2>Кнопки</h2></div>
+      <p>Для CTA, меню, dangerous actions, floating controls і гейміфікованих сайтів.</p>
+    </div>
+    <div class="examples-grid">
+      <article class="example-card">
+        <div class="example-demo"><button class="btn btn-primary" type="button">Primary gradient</button></div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>&lt;button class="btn-primary"&gt;Primary gradient&lt;/button&gt;
+
+.btn-primary {
+  border: 0;
+  border-radius: 999px;
+  padding: 14px 24px;
+  color: white;
+  background: linear-gradient(135deg, #7c5cff, #5d9dff);
+}</code></pre>
+      </article>
+      <article class="example-card">
+        <div class="example-demo example-liquid-button"><button type="button">Liquid button</button></div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>&lt;button class="liquid-btn"&gt;Liquid button&lt;/button&gt;
+
+.liquid-btn {
+  background: linear-gradient(90deg, #7c5cff, #24d6c8, #7c5cff);
+  background-size: 220%;
+  animation: liquid 3s linear infinite;
+}</code></pre>
+      </article>
+      <article class="example-card">
+        <div class="example-demo"><button class="btn btn-border" type="button">Slide border</button></div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>.btn-border {
+  border: 1px solid #7c5cff;
+  background: linear-gradient(90deg, rgba(124,92,255,.22) 50%, transparent 50%);
+  background-size: 220%;
+  background-position: right;
+}
+.btn-border:hover { background-position: left; }</code></pre>
+      </article>
+      <article class="example-card">
+        <div class="example-demo"><button class="btn btn-tilt" type="button">3D press</button></div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>.btn-3d {
+  border: 0;
+  border-radius: 999px;
+  box-shadow: 0 8px 0 #070a12;
+}
+.btn-3d:active {
+  transform: translateY(5px);
+  box-shadow: 0 3px 0 #070a12;
+}</code></pre>
+      </article>
+    </div>
+  </section>
+
+  <section class="section reveal" id="cards">
+    <div class="section-head">
+      <div><p class="eyebrow">02 / cards</p><h2>Картки, бокси, панелі</h2></div>
+      <p>Для товарів, профілів, dashboard, pricing і статей.</p>
+    </div>
+    <div class="examples-grid">
+      <article class="example-card">
+        <div class="example-demo example-gradient-hero"><span>Hero</span><h3>Cosmic card</h3><p>Градієнтний промо-блок.</p></div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>.cosmic-card {
+  border-radius: 32px;
+  padding: 40px;
+  background: radial-gradient(circle at 80% 20%, #24d6c8, transparent 32%),
+              linear-gradient(135deg, #141b34, #7c5cff);
+}</code></pre>
+      </article>
+      <article class="example-card">
+        <div class="example-demo example-profile-card"><div class="avatar-orbit"></div><h3>Profile</h3><p>Designer</p></div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>.avatar-orbit {
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  background: conic-gradient(#24d6c8, #7c5cff, #ffba4a, #24d6c8);
+  animation: spin 5s linear infinite;
+}</code></pre>
+      </article>
+      <article class="example-card">
+        <div class="example-demo example-product-card"><div class="product-shape"></div><strong>Neon Lamp</strong><span>$39</span></div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>.product-card:hover .product-shape {
+  transform: rotate(-8deg) scale(1.08);
+}
+.product-shape {
+  transition: transform .25s ease;
+}</code></pre>
+      </article>
+      <article class="example-card">
+        <div class="example-demo example-morphism"><h3>Soft UI</h3><p>neumorphism box</p></div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>.soft-box {
+  border-radius: 28px;
+  background: #171f35;
+  box-shadow: inset 14px 14px 34px #070a12,
+              inset -14px -14px 34px rgba(255,255,255,.06);
+}</code></pre>
+      </article>
+    </div>
+  </section>
+
+  <section class="section reveal" id="forms">
+    <div class="section-head">
+      <div><p class="eyebrow">03 / forms</p><h2>Inputs, switches, progress</h2></div>
+      <p>Поля вводу мають чіткий focus-стан, placeholder і нормальний розмір для кліку.</p>
+    </div>
+    <div class="examples-grid">
+      <article class="example-card">
+        <div class="example-demo example-search"><input type="search" placeholder="Search effects..."></div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>&lt;input class="search-input" type="search" placeholder="Search..."&gt;
+
+.search-input {
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 999px;
+  padding: 16px 18px;
+}</code></pre>
+      </article>
+      <article class="example-card">
+        <div class="example-demo example-switch"><label><input type="checkbox" checked><span></span></label></div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>&lt;label class="switch"&gt;
+  &lt;input type="checkbox" checked&gt;
+  &lt;span&gt;&lt;/span&gt;
+&lt;/label&gt;</code></pre>
+      </article>
+      <article class="example-card">
+        <div class="example-demo example-progress"><span>Progress</span><div><i></i></div></div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>.progress {
+  height: 13px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.13);
+}
+.progress i {
+  display: block;
+  width: 72%;
+  height: 100%;
+}</code></pre>
+      </article>
+      <article class="example-card">
+        <div class="example-demo"><form class="mini-form"><input placeholder="Email"><button class="btn btn-primary" type="button">Join</button></form></div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>&lt;form class="inline-form"&gt;
+  &lt;input placeholder="Email"&gt;
+  &lt;button&gt;Join&lt;/button&gt;
+&lt;/form&gt;
+
+.inline-form {
+  display: flex;
+  gap: 10px;
+}</code></pre>
+      </article>
+    </div>
+  </section>
+
+  <section class="section reveal" id="effects">
+    <div class="section-head">
+      <div><p class="eyebrow">04 / effects</p><h2>Ефекти наведення і руху</h2></div>
+      <p>Hover має бути помітним, але не ламати читання.</p>
+    </div>
+    <div class="examples-grid">
+      <article class="example-card">
+        <div class="example-demo effect-box glow-effect">Glow hover</div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>.glow:hover {
+  box-shadow: inset 0 0 0 1px #7c5cff,
+              0 0 42px rgba(124,92,255,.42);
+}</code></pre>
+      </article>
+      <article class="example-card">
+        <div class="example-demo effect-box shine-effect">Shine pass</div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>.shine::after {
+  content: "";
+  position: absolute;
+  width: 42%;
+  background: linear-gradient(90deg, transparent, white, transparent);
+}
+.shine:hover::after { left: 115%; }</code></pre>
+      </article>
+      <article class="example-card">
+        <div class="example-demo example-parallax"><span></span><span></span><b>Parallax</b></div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>.parallax span {
+  position: absolute;
+  transition: transform .25s ease;
+}
+.parallax:hover span:first-child {
+  transform: translate(-48px, -36px) rotate(24deg);
+}</code></pre>
+      </article>
+      <article class="example-card">
+        <div class="example-demo example-marquee"><div>HTML CSS JS UI HTML CSS JS UI</div></div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>.marquee {
+  overflow: hidden;
+}
+.marquee div {
+  white-space: nowrap;
+  animation: marquee 8s linear infinite;
+}</code></pre>
+      </article>
+    </div>
+  </section>
+
+  <section class="section reveal" id="loaders">
+    <div class="section-head">
+      <div><p class="eyebrow">05 / loaders</p><h2>Лоадери, skeleton, badges</h2></div>
+      <p>Використовуй під час завантаження або коли дія ще обробляється.</p>
+    </div>
+    <div class="examples-grid">
+      <article class="example-card">
+        <div class="example-demo"><div class="loader spinner"></div></div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>.spinner {
+  width: 58px;
+  height: 58px;
+  border: 5px solid rgba(255,255,255,.16);
+  border-top-color: #24d6c8;
+  border-radius: 50%;
+  animation: spin .9s linear infinite;
+}</code></pre>
+      </article>
+      <article class="example-card">
+        <div class="example-demo"><div class="loader dots"><span></span><span></span><span></span></div></div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>.dots span {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  animation: bounce .8s ease-in-out infinite alternate;
+}</code></pre>
+      </article>
+      <article class="example-card">
+        <div class="example-demo example-skeleton"><span></span><span></span><span></span></div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>.skeleton span {
+  display: block;
+  height: 18px;
+  background: linear-gradient(90deg, #222, #444, #222);
+  background-size: 220%;
+  animation: loading 1.2s infinite;
+}</code></pre>
+      </article>
+      <article class="example-card">
+        <div class="example-demo"><div class="pulse-badge">Live</div></div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>.pulse-badge {
+  border-radius: 999px;
+  background: #ff4d6d;
+  animation: pulse 1.35s infinite;
+}</code></pre>
+      </article>
+    </div>
+  </section>
+
+  <section class="section reveal" id="micro">
+    <div class="section-head">
+      <div><p class="eyebrow">06 / micro ui</p><h2>Маленькі, але корисні деталі</h2></div>
+      <p>Tooltip, rating, steps, toast, tags, notifications.</p>
+    </div>
+    <div class="examples-grid">
+      <article class="example-card">
+        <div class="example-demo example-tooltip"><button type="button" data-tip="Підказка зверху">Hover me</button></div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>.tooltip::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 12px);
+  opacity: 0;
+}
+.tooltip:hover::after { opacity: 1; }</code></pre>
+      </article>
+      <article class="example-card">
+        <div class="example-demo example-rating"><span>*</span><span>*</span><span>*</span><span>*</span><span>*</span></div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>.rating {
+  color: #ffba4a;
+  font-size: 2rem;
+  letter-spacing: .12em;
+}</code></pre>
+      </article>
+      <article class="example-card">
+        <div class="example-demo example-steps"><span>1</span><span>2</span><span>3</span></div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>.steps {
+  display: flex;
+  gap: 18px;
+}
+.steps span {
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+}</code></pre>
+      </article>
+      <article class="example-card">
+        <div class="example-demo example-notification"><b>Saved</b><p>Зміни збережено локально.</p></div>
+        <div class="example-actions"><button class="mini-action" data-toggle-code type="button">Показати код</button><button class="mini-action" data-copy-example type="button">Copy</button></div>
+        <pre class="example-code"><code>.notification {
+  border-left: 4px solid #24d6c8;
+  border-radius: 18px;
+  padding: 18px;
+  background: rgba(36,214,200,.12);
+}</code></pre>
+      </article>
+    </div>
+  </section>
+</main>
+
+<div class="toast" id="toast">Готово.</div>
+<footer class="footer"><p><a href="./index.html">На головну</a> · Web UI Guide examples</p></footer>
+<script src="./assets/js/main.js"></script>
+</body>
+</html>

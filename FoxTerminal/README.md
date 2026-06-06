@@ -68,3 +68,28 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\install.ps1 -DisableAds
 Якщо папку FoxTerminal додати в PATH, можна викликати просто `DisableBloat`, `DisableAds`, `Status`, `Enable` з будь-якого каталогу.
 
 **Щоб вимкнення діяли завжди і на всьому ноуті:** запусти `DisableBloat` і `DisableAds` **від адміністратора**. Служби тоді вимкнені на весь комп’ютер; реклама/підказки — для поточного юзера і для усіх нових облікових записів. Увімкнути назад — `Enable` від адміна.
+
+## FoxTerminalApp: mintty backend
+
+У `~/.foxterminal.json` можна вибрати backend shell:
+
+```json
+{
+  "shellBackend": "mintty"
+}
+```
+
+`mintty` backend запускає сумісний `bash.exe` (MSYS2/Git Bash) всередині FoxTerminalApp.  
+Автопошук шляхів:
+- `C:\msys64\usr\bin\bash.exe`
+- `C:\Program Files\Git\bin\bash.exe`
+- `C:\Program Files\Git\usr\bin\bash.exe`
+
+Також можна явно вказати shell:
+
+```json
+{
+  "shellPath": "C:\\msys64\\usr\\bin\\bash.exe",
+  "shellArguments": "--login -i"
+}
+```

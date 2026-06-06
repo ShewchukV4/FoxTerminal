@@ -169,10 +169,23 @@ function Resolve-OhMyPoshExe {
 
 function Load-ThemeName {
     $path = Get-ThemePath
-    if (-not (Test-Path $path)) { return "orange" }
-    $name = (Get-Content -Path $path -Raw -ErrorAction SilentlyContinue).Trim()
-    if ([string]::IsNullOrWhiteSpace($name)) { return "orange" }
-    return $name
+    if (-not (Test-Path $path)) {
+        $global:FOXTERM_THEME_CACHE = "orange"
+        return "orange"
+    }
+    try {
+        $mtime = (Get-Item -LiteralPath $path -ErrorAction Stop).LastWriteTimeUtc
+        if ($global:FOXTERM_THEME_CACHE -and $global:FOXTERM_THEME_MTIME -eq $mtime) {
+            return $global:FOXTERM_THEME_CACHE
+        }
+        $name = (Get-Content -Path $path -Raw -ErrorAction SilentlyContinue).Trim()
+        $global:FOXTERM_THEME_CACHE = if ([string]::IsNullOrWhiteSpace($name)) { "orange" } else { $name }
+        $global:FOXTERM_THEME_MTIME = $mtime
+        $global:FOXTERM_PALETTE_CACHE = $null
+        return $global:FOXTERM_THEME_CACHE
+    } catch {
+        return if ($global:FOXTERM_THEME_CACHE) { $global:FOXTERM_THEME_CACHE } else { "orange" }
+    }
 }
 
 function Get-ThemeHex {
@@ -226,12 +239,13 @@ function Adjust-Color([string]$hex, [double]$factor) {
 }
 
 function Get-ThemePalette {
+    if ($global:FOXTERM_PALETTE_CACHE) { return $global:FOXTERM_PALETTE_CACHE }
     $accent = Get-ThemeHex
     $accent2 = Adjust-Color $accent 1.15
     $accent3 = Adjust-Color $accent 0.85
     $accent4 = Adjust-Color $accent 1.3
     $dim = Adjust-Color $accent 0.65
-    return @{
+    $global:FOXTERM_PALETTE_CACHE = @{
         accent = $accent
         accent2 = $accent2
         accent3 = $accent3
@@ -240,6 +254,7 @@ function Get-ThemePalette {
         base = "#0B0F1A"
         text = "#E6E6E6"
     }
+    return $global:FOXTERM_PALETTE_CACHE
 }
 
 function Color-Text([string]$hex, [string]$text) {
@@ -345,7 +360,11 @@ function New-FoxPrompt {
 function Apply-ThemeColors {
     try {
         $p = Get-ThemePalette
-        if (Get-Module -ListAvailable -Name PSReadLine) {
+        if (-not $global:FOXTERM_PSREADLINE_CHECKED) {
+            $global:FOXTERM_PSREADLINE_AVAILABLE = $null -ne (Get-Module -ListAvailable -Name PSReadLine -ErrorAction SilentlyContinue)
+            $global:FOXTERM_PSREADLINE_CHECKED = $true
+        }
+        if ($global:FOXTERM_PSREADLINE_AVAILABLE) {
             Import-Module PSReadLine -ErrorAction SilentlyContinue | Out-Null
             Set-PSReadLineOption -Colors @{
                 Command   = $p.accent
@@ -365,6 +384,8 @@ function Invoke-Foxterm-Refresh {
     try {
         Clear-Host
         $global:FOXTERM_OMP_INIT = $false
+        $global:FOXTERM_PALETTE_CACHE = $null
+        $global:FOXTERM_THEME_CACHE = $null
         Ensure-OhMyPoshConfig
         if ($env:FOXTERM_USER) {
             Set-Title $env:FOXTERM_USER
@@ -455,20 +476,15 @@ function Enable-OhMyPosh {
 function Ensure-OhMyPoshConfig {
     try {
         $configPath = Get-OhMyPoshConfigPath
+        $currentTheme = Load-ThemeName
+        if ($global:FOXTERM_OMP_CONFIG_THEME -eq $currentTheme -and (Test-Path $configPath)) { return }
         $configDir = Split-Path $configPath -Parent
         if (-not (Test-Path $configDir)) { New-Item -ItemType Directory -Path $configDir | Out-Null }
 
         $p = Get-ThemePalette
-        $json = @"
-{
-  "`$schema": "https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/themes/schema.json",
-  "version": 2,
-  "final_space": true,
-  "blocks": [
-    {
-      "type": "prompt",
-      "alignment": "left",
-      "segments": [
+        $showGit = $env:FOXTERM_OMP_GIT -eq "1"
+
+        $segBase = @"
         {
           "type": "text",
           "style": "powerline",
@@ -484,30 +500,46 @@ function Ensure-OhMyPoshConfig {
           "foreground": "p:base",
           "background": "p:accent2",
           "template": " {{ if .Env.FOXTERM_USER }}{{ .Env.FOXTERM_USER }}{{ else }}{{ .UserName }}{{ end }} "
-        },
+        }
+"@
+        $segGit = @"
+,
         {
           "type": "git",
           "style": "powerline",
           "powerline_symbol": "\uE0B0",
           "foreground": "p:base",
           "background": "p:accent3",
-          "properties": {
-            "branch_icon": "",
-            "branch_template": "{{ .HEAD }}"
-          },
+          "fetch_status": false,
+          "properties": { "branch_icon": "" },
           "template": "{{ if .HEAD }} {{ .HEAD }} {{ end }}"
-        },
+        }
+"@
+        $segTime = @"
+,
         {
           "type": "time",
           "style": "powerline",
           "powerline_symbol": "\uE0B0",
           "foreground": "p:base",
           "background": "p:accent4",
-          "properties": {
-            "time_format": "15:04"
-          },
+          "properties": { "time_format": "15:04" },
           "template": " {{ .CurrentDate | date .Format }} "
         }
+"@
+        $segments = $segBase + (if ($showGit) { $segGit } else { "" }) + $segTime
+
+        $json = @"
+{
+  "`$schema": "https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/themes/schema.json",
+  "version": 2,
+  "final_space": true,
+  "blocks": [
+    {
+      "type": "prompt",
+      "alignment": "left",
+      "segments": [
+$segments
       ]
     },
     {
@@ -534,6 +566,7 @@ function Ensure-OhMyPoshConfig {
 }
 "@
         Set-Content -Path $configPath -Value $json -Encoding UTF8
+        $global:FOXTERM_OMP_CONFIG_THEME = $currentTheme
     } catch {
         # ignore config errors
     }
@@ -629,15 +662,16 @@ function Select-Menu([string]$title, [string[]]$options) {
         # ignore cursor visibility errors
     }
     try {
+        $p = Get-ThemePalette
+        $fgSelected = Get-ContrastText $p.accent2
         while ($true) {
-            $p = Get-ThemePalette
             $lines = New-Object System.Collections.Generic.List[string]
             $lines.Add((Color-Text $p.accent ("=== " + $title + " ===")))
             $lines.Add("")
             for ($i = 0; $i -lt $options.Count; $i++) {
                 if ($i -eq $index) {
                     $label = "  " + $options[$i] + "  "
-                    $lines.Add((Color-TextBg (Get-ContrastText $p.accent2) $p.accent2 $label))
+                    $lines.Add((Color-TextBg $fgSelected $p.accent2 $label))
                 } else {
                     $lines.Add((Color-Text $p.text ("  " + $options[$i])))
                 }
