@@ -3,21 +3,31 @@ param(
     [string[]]$Args
 )
 
-function Resolve-FirefoxPath {
-    if ($env:FIREFOX_PATH -and (Test-Path $env:FIREFOX_PATH)) {
-        return $env:FIREFOX_PATH
-    }
-    $candidates = @(
-        "$env:ProgramFiles\Mozilla Firefox\firefox.exe",
-        "$env:ProgramFiles(x86)\Mozilla Firefox\firefox.exe"
-    )
-    foreach ($candidate in $candidates) {
-        if (Test-Path $candidate) {
-            return $candidate
+if ($env:FOXTERM_SYNC_CONTEXT -ne "daemon") {
+    $pidPath = Join-Path $env:LOCALAPPDATA "FoxTerminal\shared-session\daemon.pid"
+    $ffsyncPath = Join-Path $PSScriptRoot "ffsync.ps1"
+    if ((Test-Path $pidPath) -and (Test-Path $ffsyncPath)) {
+        $renderedArgs = @()
+        foreach ($a in $Args) {
+            if ($null -eq $a) { continue }
+            if ($a -match '\s') {
+                $escaped = $a -replace '"', '\"'
+                $renderedArgs += ('"' + $escaped + '"')
+            } else {
+                $renderedArgs += $a
+            }
         }
+        $relayLine = "ff"
+        if ($renderedArgs.Count -gt 0) {
+            $relayLine += " " + ($renderedArgs -join " ")
+        }
+        & powershell -NoProfile -ExecutionPolicy Bypass -File $ffsyncPath exec $relayLine
+        exit $LASTEXITCODE
     }
-    return "firefox"
 }
+
+. (Join-Path $PSScriptRoot "fox-browser.ps1")
+function Resolve-FirefoxPath { Resolve-FoxBrowserPath }
 
 function Show-Usage {
     Write-Host "Usage:"
@@ -88,10 +98,8 @@ if (-not ($isKnownBinding -or $isYoutube -or $isUrl -or $isDomain)) {
     Write-Host "Run: bbind -> Site alias, to bind this name."
     exit 1
 }
-$firefox = Resolve-FirefoxPath
-
 try {
-    Start-Process -FilePath $firefox -ArgumentList @("-new-tab", $url) | Out-Null
+    Open-FoxBrowserUrl -Url $url -Mode tab | Out-Null
 } catch {
     Write-Host "Failed to open: $url"
 }

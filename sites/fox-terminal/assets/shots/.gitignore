@@ -1,0 +1,6 @@
+node_modules/
+package-lock.json
+package.json
+_shot-*.html
+capture.mjs
+# keep popup.png sidebar.png overlay.png tracked

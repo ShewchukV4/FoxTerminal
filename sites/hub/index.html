@@ -228,6 +228,32 @@
       letter-spacing: 0.06em;
     }
 
+    /* ── Category sections ── */
+    .hub-section {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      width: 100%;
+    }
+    .section-head {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding: 0 2px;
+    }
+    .section-name {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 0.92rem;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: #8b93b8;
+    }
+    .section-blurb {
+      font-size: 0.78rem;
+      color: #3a4262;
+    }
+
     /* ── Responsive ── */
     @media (max-width: 600px) {
       .logo-title { font-size: 2.2rem; }
@@ -267,125 +293,94 @@
       </svg>
       <span class="logo-title">FOX HUB</span>
     </div>
-    <p class="logo-sub">Обери сайт для запуску</p>
+    <p class="logo-sub">Категорії та локальні сайти FoxTerminal</p>
   </header>
 
-  <main id="grid" class="grid"></main>
+  <main id="sections" style="display:flex;flex-direction:column;gap:28px;width:100%"></main>
 
   <footer class="footer">FoxTerminal · Local Sites</footer>
 </div>
 
 <script>
-const SITES = [
-  {
-    name: 'Type Writer',
-    desc:  'Практика набору тексту з різними рівнями та режимами',
-    url:   '../typewriter/index.html',
-    color: '#2dd4bf',
-    icon: `<svg viewBox="0 0 24 24" stroke="currentColor">
-      <rect x="2" y="4" width="20" height="16" rx="2.5"/>
-      <path d="M6 9h.01M10 9h.01M14 9h.01M18 9h.01"/>
-      <path d="M6 13h.01M10 13h.01M14 13h.01M18 13h.01"/>
-      <path d="M7 17h10"/>
-    </svg>`
-  },
-  {
-    name: 'Fox Snake',
-    desc:  'Класична змійка з кількома режимами та повним налаштуванням',
-    url:   '../snake/index.html',
-    color: '#86efac',
-    icon: `<svg viewBox="0 0 24 24" stroke="currentColor">
-      <rect x="2" y="8" width="20" height="12" rx="5"/>
-      <path d="M9 8V5.5a3 3 0 0 1 6 0V8"/>
-      <path d="M9 14h.01M15 14h.01"/>
-      <path d="M9 12v4M7 14h4"/>
-      <circle cx="17" cy="13" r="1.2" fill="currentColor" stroke="none"/>
-      <circle cx="17" cy="16" r="1.2" fill="currentColor" stroke="none"/>
-    </svg>`
-  },
-  {
-    name: 'Invoker Forge',
-    desc:  'Тренажер комбо Invoker зі справжніми іконками вмінь',
-    url:   '../invoker/index.html',
-    color: '#fbbf24',
-    icon: `<svg viewBox="0 0 24 24" stroke="currentColor">
-      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10"/>
-    </svg>`
-  },
-  {
-    name: 'Techies Minefield',
-    desc:  'Мінсвіпер у стилі Dota 2 з проксіміті-мінами Techies',
-    url:   '../techies-sweeper/index.html',
-    color: '#f87171',
-    icon: `<svg viewBox="0 0 24 24" stroke="currentColor">
-      <circle cx="12" cy="15" r="7"/>
-      <line x1="12" y1="8" x2="12" y2="5"/>
-      <line x1="8.8" y1="8.8" x2="6.8" y2="6.8"/>
-      <line x1="15.2" y1="8.8" x2="17.2" y2="6.8"/>
-      <path d="M17.5 5 L20 3"/>
-    </svg>`
-  },
-  {
-    name: 'Dice Forge',
-    desc:  'Анімований 3D-кубик із темами Default, DND та Dota',
-    url:   '../dice-forge/index.html',
-    color: '#c084fc',
-    icon: `<svg viewBox="0 0 24 24" stroke="currentColor">
-      <rect x="2" y="2" width="20" height="20" rx="4"/>
-      <circle cx="8"  cy="8"  r="1.4" fill="currentColor" stroke="none"/>
-      <circle cx="16" cy="8"  r="1.4" fill="currentColor" stroke="none"/>
-      <circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/>
-      <circle cx="8"  cy="16" r="1.4" fill="currentColor" stroke="none"/>
-      <circle cx="16" cy="16" r="1.4" fill="currentColor" stroke="none"/>
-    </svg>`
-  },
-  {
-    name: 'Dota Randomizer',
-    desc:  'Рандомайзер предметів Dota 2 з українськими секціями',
-    url:   '../dota-items-randomizer/index.html',
-    color: '#fb923c',
-    icon: `<svg viewBox="0 0 24 24" stroke="currentColor">
-      <polyline points="16 3 21 3 21 8"/>
-      <line x1="4" y1="20" x2="21" y2="3"/>
-      <polyline points="21 16 21 21 16 21"/>
-      <line x1="15" y1="15" x2="21" y2="21"/>
-    </svg>`
-  },
-  {
-    name: 'Web UI Guide',
-    desc:  'Повний гайд по UI/CSS: приклади, документація, патерни',
-    url:   '../web-ui-guide/index.html',
-    color: '#38bdf8',
-    icon: `<svg viewBox="0 0 24 24" stroke="currentColor">
-      <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
-      <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
-    </svg>`
-  }
-];
-
 const ARROW = `<svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>`;
 
-const grid = document.getElementById('grid');
+const SITE_META = {
+  hub:                      { color: '#a78bfa', icon: 'hub' },
+  'fox-terminal':           { color: '#dc7a14', icon: 'fox' },
+  'fox-utils':              { color: '#38bdf8', icon: 'gear' },
+  'web-ui-guide':           { color: '#38bdf8', icon: 'book' },
+  snake:                    { color: '#86efac', icon: 'snake' },
+  invoker:                  { color: '#fbbf24', icon: 'bolt' },
+  'techies-sweeper':        { color: '#f87171', icon: 'mine' },
+  'dice-forge':             { color: '#c084fc', icon: 'dice' },
+  'dota-items-randomizer':  { color: '#fb923c', icon: 'shuffle' },
+  typewriter:               { color: '#2dd4bf', icon: 'keys' },
+  'fox-stack':              { color: '#dc7a14', icon: 'stack' },
+  OnePageStore:             { color: '#94a3b8', icon: 'box' }
+};
 
-SITES.forEach(({ name, desc, url, color, icon }) => {
+const ICONS = {
+  hub: `<svg viewBox="0 0 24 24" stroke="currentColor"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 10v10h14V10"/></svg>`,
+  fox: `<svg viewBox="0 0 24 24" stroke="currentColor"><path d="M4 14 L8 4 L12 14 Z"/><path d="M20 14 L16 4 L12 14 Z"/><ellipse cx="12" cy="16" rx="7" ry="5"/><circle cx="9.5" cy="15" r="1" fill="currentColor" stroke="none"/><circle cx="14.5" cy="15" r="1" fill="currentColor" stroke="none"/></svg>`,
+  gear: `<svg viewBox="0 0 24 24" stroke="currentColor"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/><circle cx="12" cy="12" r="4"/></svg>`,
+  book: `<svg viewBox="0 0 24 24" stroke="currentColor"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>`,
+  snake: `<svg viewBox="0 0 24 24" stroke="currentColor"><rect x="2" y="8" width="20" height="12" rx="5"/><path d="M9 8V5.5a3 3 0 0 1 6 0V8"/><circle cx="17" cy="13" r="1.2" fill="currentColor" stroke="none"/><circle cx="17" cy="16" r="1.2" fill="currentColor" stroke="none"/></svg>`,
+  bolt: `<svg viewBox="0 0 24 24" stroke="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10"/></svg>`,
+  mine: `<svg viewBox="0 0 24 24" stroke="currentColor"><circle cx="12" cy="15" r="7"/><line x1="12" y1="8" x2="12" y2="5"/><path d="M17.5 5 L20 3"/></svg>`,
+  dice: `<svg viewBox="0 0 24 24" stroke="currentColor"><rect x="2" y="2" width="20" height="20" rx="4"/><circle cx="8" cy="8" r="1.4" fill="currentColor" stroke="none"/><circle cx="16" cy="16" r="1.4" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/></svg>`,
+  shuffle: `<svg viewBox="0 0 24 24" stroke="currentColor"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/></svg>`,
+  keys: `<svg viewBox="0 0 24 24" stroke="currentColor"><rect x="2" y="4" width="20" height="16" rx="2.5"/><path d="M6 9h.01M10 9h.01M14 9h.01M18 9h.01"/><path d="M7 17h10"/></svg>`,
+  stack: `<svg viewBox="0 0 24 24" stroke="currentColor"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="8" y="14" width="7" height="7" rx="1"/></svg>`,
+  box: `<svg viewBox="0 0 24 24" stroke="currentColor"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/></svg>`
+};
+
+function resolveUrl(raw) {
+  if (!raw) return '#';
+  return raw.replace(/^\.\//, '../');
+}
+
+function renderCard(site) {
+  const meta = SITE_META[site.id] || { color: '#7c5cff', icon: 'box' };
+  const color = meta.color;
+  const icon = ICONS[meta.icon] || ICONS.box;
   const card = document.createElement('a');
   card.className = 'card';
-  card.href = url;
+  card.href = resolveUrl(site.url);
   card.style.setProperty('--c-glow',   `radial-gradient(ellipse at 0% 0%, ${color}12 0%, transparent 65%)`);
   card.style.setProperty('--c-shadow', `0 0 50px ${color}16`);
-
   card.innerHTML = `
-    <div class="icon-wrap"
-         style="background:${color}18; box-shadow: 0 0 0 1px ${color}2e; color:${color}">
-      ${icon}
-    </div>
-    <div class="card-name">${name}</div>
-    <div class="card-desc">${desc}</div>
-    <div class="card-hint">${ARROW} відкрити</div>
-  `;
+    <div class="icon-wrap" style="background:${color}18; box-shadow: 0 0 0 1px ${color}2e; color:${color}">${icon}</div>
+    <div class="card-name">${site.name}</div>
+    <div class="card-desc">${site.description}</div>
+    <div class="card-hint">${ARROW} відкрити</div>`;
+  return card;
+}
 
-  grid.appendChild(card);
-});
+async function loadHub() {
+  const root = document.getElementById('sections');
+  try {
+    const res = await fetch('../sites.json');
+    const data = await res.json();
+    (data.categories || []).forEach(cat => {
+      const section = document.createElement('section');
+      section.className = 'hub-section';
+      section.innerHTML = `
+        <div class="section-head">
+          <div class="section-name">${cat.name}</div>
+          <div class="section-blurb">${cat.blurb || ''}</div>
+        </div>`;
+      const grid = document.createElement('div');
+      grid.className = 'grid';
+      (cat.sites || []).forEach(site => grid.appendChild(renderCard(site)));
+      section.appendChild(grid);
+      root.appendChild(section);
+    });
+  } catch (e) {
+    root.innerHTML = '<p style="color:#4e586f">Не вдалося завантажити sites.json</p>';
+  }
+}
+
+loadHub();
 </script>
 </body>
 </html>

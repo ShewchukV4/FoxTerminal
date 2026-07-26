@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FoxTerminal Translate Overlay — design mock</title>
+  <style>
+    :root { color-scheme: dark; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Georgia, "Times New Roman", serif;
+      background: #f4f1ea;
+      color: #222;
+    }
+    .page {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 80px 24px 40px;
+    }
+    h1 { font-size: 2rem; margin: 0 0 12px; }
+    p { line-height: 1.6; color: #333; }
+
+    .box {
+      --accent: #6c8dff;
+      --accent2: #6b53ff;
+      --text: #eef3ff;
+      --dim: #9bb0df;
+      position: fixed;
+      top: 18px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: min(520px, calc(100vw - 24px));
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      border-radius: 18px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      background: linear-gradient(180deg, rgba(255,255,255,0.12), rgba(255,255,255,0.04)), rgba(12, 18, 34, 0.55);
+      color: var(--text);
+      box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255,255,255,0.2);
+      backdrop-filter: blur(22px) saturate(160%);
+      -webkit-backdrop-filter: blur(22px) saturate(160%);
+      font: 14px/1.4 "Segoe UI", Tahoma, sans-serif;
+      overflow: hidden;
+      z-index: 10;
+    }
+    .head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 10px 12px;
+      background: linear-gradient(130deg, var(--accent), var(--accent2));
+      cursor: grab;
+      user-select: none;
+    }
+    .title { font-weight: 700; font-size: 13px; color: #fff; }
+    .actions { display: flex; gap: 6px; }
+    .btn {
+      border: 1px solid rgba(255, 255, 255, 0.28);
+      background: rgba(255, 255, 255, 0.12);
+      color: #fff;
+      border-radius: 10px;
+      padding: 4px 8px;
+      font: inherit;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .body {
+      padding: 0 12px 12px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 15px;
+    }
+    .hint {
+      padding: 0 12px 10px;
+      color: var(--dim);
+      font-size: 11px;
+    }
+    .note {
+      position: fixed;
+      right: 16px;
+      bottom: 16px;
+      background: #111;
+      color: #ddd;
+      padding: 10px 12px;
+      border-radius: 10px;
+      font: 12px/1.4 "Segoe UI", sans-serif;
+      max-width: 260px;
+    }
+  </style>
+</head>
+<body>
+  <div class="box" id="overlay">
+    <div class="head">
+      <div class="title">Переклад · English → Українська</div>
+      <div class="actions">
+        <button type="button" class="btn">Копіювати</button>
+        <button type="button" class="btn">✕</button>
+      </div>
+    </div>
+    <div class="body">Адольф Гітлер</div>
+    <div class="hint">Перетягни заголовок, щоб перемістити</div>
+  </div>
+
+  <div class="page">
+    <h1>Fake article page</h1>
+    <p>
+      This is a fake webpage background so the designer can see how the translate overlay
+      sits over content. Redesign the floating glass card at the top.
+    </p>
+    <p>
+      Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer nec odio. Praesent libero.
+      Sed cursus ante dapibus diam. Sed nisi. Nulla quis sem at nibh elementum imperdiet.
+    </p>
+  </div>
+
+  <div class="note">
+    Design mock only.<br>
+    Source styles live in extension <code>translate-overlay.js</code> (shadow CSS).
+  </div>
+
+  <script>
+    (function () {
+      const box = document.getElementById("overlay");
+      const head = box.querySelector(".head");
+      let drag = null;
+      head.addEventListener("pointerdown", (e) => {
+        if (e.button !== 0) return;
+        const rect = box.getBoundingClientRect();
+        drag = { ox: e.clientX - rect.left, oy: e.clientY - rect.top };
+        head.setPointerCapture(e.pointerId);
+      });
+      head.addEventListener("pointermove", (e) => {
+        if (!drag) return;
+        box.style.left = (e.clientX - drag.ox) + "px";
+        box.style.top = (e.clientY - drag.oy) + "px";
+        box.style.transform = "none";
+      });
+      head.addEventListener("pointerup", () => { drag = null; });
+    })();
+  </script>
+</body>
+</html>

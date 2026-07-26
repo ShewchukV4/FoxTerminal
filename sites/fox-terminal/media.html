@@ -1,0 +1,101 @@
+﻿<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FoxTerminal — Медіа</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css?v=20260726">
+</head>
+<body data-page="media">
+  <canvas id="bg-particles" aria-hidden="true"></canvas>
+  <div class="noise"></div>
+  <div class="orbs"><div class="orb orb-a"></div><div class="orb orb-b"></div><div class="orb orb-c"></div></div>
+  <div class="cursor-glow" id="cursor-glow"></div>
+  <div class="intro-splash" id="intro-splash"><div class="splash-inner"><div class="splash-term-window"><div class="term-bar"><span class="term-dot"></span><span class="term-dot"></span><span class="term-dot"></span></div><div class="splash-term-body"><div>❯ <span class="prompt">ytm-ui</span><span class="caret"></span></div></div></div><div class="splash-title">MEDIA</div><div class="splash-sub" data-i18n="splash.media">Музика</div><div class="splash-bar"><div class="splash-bar-fill"></div></div></div></div>
+
+  <header class="topbar">
+    <div class="topbar-dots" aria-hidden="true"><span class="term-dot"></span><span class="term-dot"></span><span class="term-dot"></span></div>
+    <a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">❯</span><span class="brand-text"><span class="brand-name">FoxTerminal</span><small>Media</small></span></a>
+    <nav class="nav">
+      <a href="index.html" data-page="home">Головна</a>
+      <a href="companion.html" data-page="companion">Zen</a>
+      <a href="themes.html" data-page="themes">Теми</a>
+      <a href="commands.html" data-page="commands">Команди</a>
+      <a href="terminal.html" data-page="terminal">Термінал</a>
+      <a href="ai.html" data-page="ai">AI</a>
+      <a href="media.html" data-page="media">Медіа</a>
+      <a href="hotkeys.html" data-page="hotkeys">Hotkeys</a>
+      <a href="ecosystem.html" data-page="ecosystem">Екосистема</a>
+    </nav>
+    <div class="topbar-actions">
+      <button class="btn btn-sm btn-ghost" id="noir-toggle" type="button">Noir</button>
+      <button class="btn btn-sm btn-ghost" id="theme-toggle" type="button">Light</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero reveal">
+      <p class="eyebrow" data-stagger data-i18n="media.eyebrow">yt · ytm-ui · sp-ui · dj</p>
+      <h1 class="title-gradient" data-stagger data-i18n="media.title">Музика & Firefox</h1>
+      <p class="muted" data-stagger data-i18n="media.desc">YouTube · YTM · Spotify · DJ visualizer на system audio.</p>
+      <div class="page-hero-visual hero-mesh reveal" data-mesh="media" aria-hidden="true"></div>
+    </section>
+
+    <section class="section reveal">
+      <div class="portal-grid">
+        <article class="portal-card">
+          <span class="num">YT</span>
+          <h3>YouTube</h3>
+          <p data-i18n="media.yt.p">yt query · youtube · hotkey Shift+Alt+Y</p>
+        </article>
+        <article class="portal-card">
+          <span class="num">YTM</span>
+          <h3>YouTube Music</h3>
+          <p data-i18n="media.ytm.p">ytm · ytm-ui — TUI + DJ bars у терміналі</p>
+        </article>
+        <article class="portal-card">
+          <span class="num">SP</span>
+          <h3>Spotify</h3>
+          <p data-i18n="media.sp.p">sp · sp-ui — Play/Next/Prev controls</p>
+        </article>
+        <article class="portal-card">
+          <span class="num">DJ</span>
+          <h3>Visualizer</h3>
+          <p data-i18n="media.dj.p">dj — audio peak bars, theme-aware colors</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section reveal">
+      <div class="section-head">
+        <h2 data-i18n="media.dj.title">Live DJ Bars (browser)</h2>
+        <button class="btn btn-sm" id="start-viz" type="button">▶ Start</button>
+      </div>
+      <div class="panel">
+        <div id="media-bars" style="display:flex;align-items:flex-end;gap:4px;height:120px;padding:16px 0"></div>
+        <p class="muted" style="font-size:0.84rem" data-i18n="media.dj.note">Імітація ytm-ui/sp-ui — справжній DJ читає system audio у терміналі.</p>
+      </div>
+    </section>
+
+    <section class="section reveal">
+      <div class="section-head"><h2 data-i18n="media.ff.title">Firefox integration</h2></div>
+      <div class="cmd-list">
+        <div class="cmd-item"><strong class="mono">ff</strong><div class="cmd-body"><code>ff open [alias]</code><p class="muted cmd-desc" data-i18n="media.ff.ff">URL або binding з bbind</p></div></div>
+        <div class="cmd-item"><strong class="mono">foxhotkeys</strong><div class="cmd-body"><code>Shift+Alt+F</code><p class="muted cmd-desc" data-i18n="media.ff.hotkeys">Firefox to front</p></div></div>
+        <div class="cmd-item"><strong class="mono">tg</strong><div class="cmd-body"><code>tg [alias]</code><p class="muted cmd-desc" data-i18n="media.ff.tg">Telegram Web + tg_bindings</p></div></div>
+      </div>
+    </section>
+  </main>
+
+  <div class="toast" id="toast"></div>
+  <script src="assets/js/data.js?v=20260726"></script>
+  <script src="assets/js/i18n.js?v=20260726"></script>
+  <script src="assets/js/i18n-data.js?v=20260726"></script>
+  <script src="assets/js/shell.js?v=20260726"></script>
+  <script src="assets/js/main.js?v=20260726"></script>
+  <script src="assets/js/effects.js?v=20260726"></script>
+  <script src="assets/js/media-page.js?v=20260726"></script>
+</body>
+</html>

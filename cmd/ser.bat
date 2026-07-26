@@ -6,12 +6,14 @@ if "%~1"=="" (
 )
 
 set "QUERY=%*"
-for /f "usebackq delims=" %%A in (`powershell -NoProfile -Command "[uri]::EscapeDataString($env:QUERY)"`) do set "encoded=%%A"
-
+for /f "usebackq delims=" %%A in (`powershell -NoProfile -ExecutionPolicy Bypass -Command "[uri]::EscapeDataString($env:QUERY)"`) do set "encoded=%%A"
 set "url=https://www.google.com/search?q=%encoded%"
-if defined FIREFOX_PATH (
-  start "" "%FIREFOX_PATH%" --new-tab "%url%"
+
+for /f "usebackq delims=" %%B in (`powershell -NoProfile -ExecutionPolicy Bypass -Command ". '%~dp0fox-browser.ps1'; Resolve-FoxBrowserPath"`) do set "BROWSER=%%B"
+
+if defined BROWSER (
+  start "" "%BROWSER%" --new-tab "%url%"
 ) else (
-  start "" "firefox" --new-tab "%url%"
+  start "" "zen" --new-tab "%url%"
 )
 endlocal

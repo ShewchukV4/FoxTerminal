@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fox Word — Wordle</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body class="theme-cyber">
+  <canvas id="bg-canvas" aria-hidden="true"></canvas>
+  <div class="scanlines" aria-hidden="true"></div>
+
+  <div class="app">
+    <header>
+      <div class="logo">FOX<span>WORD</span></div>
+      <div class="tagline">WORDLE · 370K DICT · 14 THEMES</div>
+      <div class="theme-label" id="theme-label">⚡ Cyber — neon grid · sharp tiles</div>
+    </header>
+
+    <div class="top-bar">
+      <div class="theme-scroll">
+        <div class="mode-switcher" id="theme-bar"></div>
+      </div>
+      <div class="top-actions">
+        <button class="icon-btn" id="btn-stats" title="Статистика">📊</button>
+        <button class="icon-btn" id="btn-help" title="Як грати">?</button>
+      </div>
+    </div>
+
+    <div class="mode-switcher mode-row" id="game-mode-bar">
+      <button class="mode-btn active" type="button" data-mode="daily">📅 Daily</button>
+      <button class="mode-btn" type="button" data-mode="random">🎲 Random</button>
+      <button class="mode-btn" type="button" data-mode="practice">∞ Practice</button>
+    </div>
+
+    <div class="dict-status" id="dict-status">Завантаження словника…</div>
+
+    <div class="board-wrap" id="board-wrap" hidden>
+      <div class="board-shell">
+        <div class="board" id="board"></div>
+      </div>
+      <div class="legend">
+        <span><i class="lg-c"></i> на місці</span>
+        <span><i class="lg-p"></i> є в слові</span>
+        <span><i class="lg-a"></i> немає</span>
+      </div>
+      <div class="msg" id="msg"></div>
+    </div>
+
+    <div class="keyboard" id="keyboard" hidden></div>
+
+    <div class="footer-stats">
+      <span id="stat-dict">—</span>
+      <span id="stat-guess">—</span>
+    </div>
+  </div>
+
+  <div class="overlay" id="overlay">
+    <div class="overlay-card">
+      <div class="overlay-title" id="overlay-title">FOX WORD</div>
+      <div class="overlay-body" id="overlay-body"></div>
+      <button class="overlay-btn primary" id="overlay-close">OK</button>
+    </div>
+  </div>
+
+  <div class="overlay" id="load-overlay">
+    <div class="overlay-card load-card">
+      <div class="overlay-title">Розпаковка словника</div>
+      <div class="load-bar"><div class="load-fill" id="load-fill"></div></div>
+      <p class="load-hint" id="load-hint">370 000+ слів</p>
+    </div>
+  </div>
+
+  <script src="assets/js/dict-embed.js"></script>
+  <script src="assets/js/dict.js"></script>
+  <script src="assets/js/main.js"></script>
+</body>
+</html>

@@ -105,8 +105,9 @@ public sealed class VtParser
         var bg = _style.Background;
         var bold = _style.Bold;
 
-        foreach (var code in codes)
+        for (var i = 0; i < codes.Count; i++)
         {
+            var code = codes[i];
             switch (code)
             {
                 case 0:
@@ -119,6 +120,22 @@ public sealed class VtParser
                     break;
                 case 22:
                     bold = false;
+                    break;
+                case 38 when i + 4 < codes.Count && codes[i + 1] == 2:
+                    fg = new TerminalColor(
+                        (byte)Math.Clamp(codes[i + 2], 0, 255),
+                        (byte)Math.Clamp(codes[i + 3], 0, 255),
+                        (byte)Math.Clamp(codes[i + 4], 0, 255),
+                        false);
+                    i += 4;
+                    break;
+                case 48 when i + 4 < codes.Count && codes[i + 1] == 2:
+                    bg = new TerminalColor(
+                        (byte)Math.Clamp(codes[i + 2], 0, 255),
+                        (byte)Math.Clamp(codes[i + 3], 0, 255),
+                        (byte)Math.Clamp(codes[i + 4], 0, 255),
+                        false);
+                    i += 4;
                     break;
                 case >= 30 and <= 37:
                     fg = TerminalColor.FromAnsiIndex(code - 30);

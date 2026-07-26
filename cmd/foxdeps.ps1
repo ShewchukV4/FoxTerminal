@@ -27,34 +27,28 @@ function Find-InRegistry {
 }
 
 function Find-FireFox {
-    $cmd = Get-Command "firefox" -ErrorAction SilentlyContinue
-    if ($cmd -and (Test-Path $cmd.Source)) { return $cmd.Source }
+    . (Join-Path $PSScriptRoot "fox-browser.ps1")
+    try {
+        $info = Get-FoxBrowserInfo
+        if ($info -and $info.Path -and (Test-Path $info.Path)) {
+            return $info.Path
+        }
+    } catch {}
 
     $knownPaths = @(
+        "$env:ProgramFiles\Zen Browser\zen.exe",
+        "$env:LOCALAPPDATA\Zen Browser\zen.exe",
         "$env:ProgramFiles\Mozilla Firefox\firefox.exe",
         "${env:ProgramFiles(x86)}\Mozilla Firefox\firefox.exe",
         "$env:LOCALAPPDATA\Mozilla Firefox\firefox.exe"
     )
     foreach ($p in $knownPaths) { if (Test-Path $p) { return $p } }
 
-    $regPath = Find-InRegistry @(
-        "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\firefox.exe",
-        "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\firefox.exe"
-    ) @("(default)")
-    if ($regPath) { return $regPath }
-
-    foreach ($hive in @("HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
-                         "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall")) {
-        try {
-            Get-ChildItem $hive -ErrorAction SilentlyContinue | ForEach-Object {
-                $pr = Get-ItemProperty $_.PSPath -ErrorAction SilentlyContinue
-                if ($pr.DisplayName -like "*Firefox*" -and $pr.InstallLocation) {
-                    $p = Join-Path $pr.InstallLocation "firefox.exe"
-                    if (Test-Path $p) { return $p }
-                }
-            }
-        } catch {}
+    foreach ($name in @("zen", "firefox")) {
+        $cmd = Get-Command $name -ErrorAction SilentlyContinue
+        if ($cmd -and (Test-Path $cmd.Source)) { return $cmd.Source }
     }
+
     return $null
 }
 
@@ -212,7 +206,7 @@ function Write-DepRow {
 # ============================================================
 
 $p = Get-ThemePalette
-Clear-Host
+Clear-FoxHost
 Write-Host (Color-Text $p.accent "=== FoxTerminal dependency check ===")
 Write-Host ""
 Write-Host (Color-Text $p.dim "  Scanning... (this may take a few seconds)")
@@ -234,7 +228,7 @@ $canWinGet = -not [string]::IsNullOrWhiteSpace($wgPath)
 
 # Display
 Write-Host (Color-Text $p.accent2 "  Required:")
-Write-DepRow "Firefox"         $ffPath   $true
+Write-DepRow "Browser (Zen)"    $ffPath   $true  "Zen preferred, Firefox fallback"
 Write-DepRow "Oh My Posh"      $ompPath  $true
 Write-DepRow "AutoHotkey v2"   $ahkPath  $true  "for foxhotkeys"
 Write-DepRow ".NET 9 Runtime"  $dn9Path  $true  "for FoxTerminalApp"
@@ -257,7 +251,7 @@ Write-Host ""
 # Build missing list
 $missing = [System.Collections.Generic.List[object]]::new()
 
-if (-not $ffPath)  { $missing.Add([pscustomobject]@{ name="Firefox";         id="Mozilla.Firefox";                  action="winget"; required=$true }) }
+if (-not $ffPath)  { $missing.Add([pscustomobject]@{ name="Zen Browser";     id="";                                 action="manual"; required=$true }) }
 if (-not $ompPath) { $missing.Add([pscustomobject]@{ name="Oh My Posh";      id="JanDeDobbeleer.OhMyPosh";          action="winget"; required=$true }) }
 if (-not $ahkPath) { $missing.Add([pscustomobject]@{ name="AutoHotkey v2";   id="AutoHotkey.AutoHotkey";             action="winget"; required=$true }) }
 if (-not $dn9Path -or -not $sdk9Path) {
@@ -301,6 +295,7 @@ if ($missing.Count -gt 0) {
 
     if (-not $canWinGet) {
         Write-Host (Color-Text $p.accent2 "  winget not available. Manual install links:")
+        Write-Host "    Zen Browser:   https://zen-browser.app/download/"
         Write-Host "    Firefox:       https://www.mozilla.org/firefox/"
         Write-Host "    Oh My Posh:    https://ohmyposh.dev/docs/installation/windows"
         Write-Host "    AutoHotkey v2: https://www.autohotkey.com"
@@ -329,7 +324,7 @@ if ($missing.Count -gt 0) {
     $sdk9Path2 = Find-DotnetSdk9
     $ftPath2   = Find-FoxTermApp
 
-    Write-DepRow "Firefox"         $ffPath2   $true
+    Write-DepRow "Browser (Zen)"    $ffPath2   $true  "Zen preferred, Firefox fallback"
     Write-DepRow "Oh My Posh"      $ompPath2  $true
     Write-DepRow "AutoHotkey v2"   $ahkPath2  $true
     Write-DepRow ".NET 9 Runtime"  $dn9Path2  $true

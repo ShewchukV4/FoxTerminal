@@ -4,11 +4,16 @@ param(
     [string]$Open
 )
 
+$foxauthPath = Join-Path $PSScriptRoot "foxauth.ps1"
+if (Test-Path $foxauthPath) {
+    try { . $foxauthPath } catch {}
+}
+
 function Get-SitesFilePath {
     return (Join-Path (Split-Path $PSScriptRoot -Parent) "sites\sites.json")
 }
 
-function Load-Sites {
+function Load-SitesCatalog {
     $path = Get-SitesFilePath
     if (-not (Test-Path $path)) {
         throw "Sites file not found: $path"
@@ -16,12 +21,41 @@ function Load-Sites {
 
     $raw = Get-Content -Path $path -Raw -ErrorAction Stop
     if ([string]::IsNullOrWhiteSpace($raw)) {
-        return @()
+        return @{ version = 2; categories = @() }
     }
 
     $parsed = $raw | ConvertFrom-Json
-    if ($parsed -is [System.Array]) { return $parsed }
-    return @($parsed)
+
+    # Legacy flat array (version 1)
+    if ($parsed -is [System.Array]) {
+        $sites = @($parsed)
+        return @{
+            version    = 1
+            categories = @([pscustomobject]@{
+                id    = "all"
+                name  = "All Sites"
+                blurb = "Legacy flat list"
+                sites = $sites
+            })
+        }
+    }
+
+    if ($parsed.categories) {
+        return @{ version = 2; categories = @($parsed.categories) }
+    }
+
+    return @{ version = 2; categories = @() }
+}
+
+function Get-FlatSites {
+    $catalog = Load-SitesCatalog
+    $flat = New-Object System.Collections.Generic.List[object]
+    foreach ($cat in $catalog.categories) {
+        foreach ($s in @($cat.sites)) {
+            $flat.Add($s) | Out-Null
+        }
+    }
+    return @($flat)
 }
 
 function Find-BashCandidate {
@@ -62,7 +96,6 @@ function Is-MinttySession {
 }
 
 function Resolve-SiteUrl([string]$url) {
-    # Handle relative paths: resolve from the sites/ folder next to cmd/
     if ($url -notmatch '^https?://' -and $url -notmatch '^[A-Za-z]:\\') {
         $sitesDir = Join-Path (Split-Path $PSScriptRoot -Parent) "sites"
         $cleaned  = $url -replace '^\./', '' -replace '^/', ''
@@ -76,18 +109,165 @@ function Resolve-SiteUrl([string]$url) {
 
 function Open-Site([string]$url) {
     $resolved = Resolve-SiteUrl $url
+    . (Join-Path $PSScriptRoot "fox-browser.ps1")
+    try {
+        Open-FoxBrowserUrl -Url $resolved -Mode tab | Out-Null
+        return
+    } catch {
+        Start-Process -FilePath $resolved | Out-Null
+    }
+}
 
-    $firefox = @(
-        "$env:ProgramFiles\Mozilla Firefox\firefox.exe",
-        "$env:ProgramFiles(x86)\Mozilla Firefox\firefox.exe"
-    ) | Where-Object { Test-Path $_ } | Select-Object -First 1
+function Get-SitesPalette {
+    if (Get-Command Get-ThemePalette -ErrorAction SilentlyContinue) {
+        return Get-ThemePalette
+    }
+    return @{
+        accent  = "#5A8CFF"
+        accent2 = "#46DCC8"
+        dim     = "#606060"
+        text    = "#E6E6E6"
+    }
+}
 
-    if ($firefox) {
-        Start-Process -FilePath $firefox -ArgumentList @("-new-tab", $resolved) | Out-Null
+function Write-SitesLine([string]$text, [string]$role, [bool]$selected) {
+    $p = Get-SitesPalette
+    if ($selected) {
+        if (Get-Command Color-TextBg -ErrorAction SilentlyContinue) {
+            $fg = Get-ContrastText $p.accent2
+            Write-Host (Color-TextBg $fg $p.accent2 ("  " + $text + "  "))
+        } else {
+            Write-Host ("  " + $text) -ForegroundColor Black -BackgroundColor Cyan
+        }
+    } else {
+        if (Get-Command Color-Text -ErrorAction SilentlyContinue) {
+            $c = switch ($role) {
+                "title" { $p.accent }
+                "hint"  { $p.dim }
+                default { $p.text }
+            }
+            Write-Host (Color-Text $c ("  " + $text))
+        } else {
+            Write-Host ("  " + $text)
+        }
+    }
+}
+
+function Get-CategoryMenuLabel($c) {
+    return ($c.name + "  -  " + $c.blurb)
+}
+
+function Get-SiteMenuLabel($s) {
+    return ($s.name + "  -  " + $s.description)
+}
+
+function Select-ArrowMenu {
+    param(
+        [string]$Title,
+        [string]$Subtitle,
+        [object[]]$Items,
+        [scriptblock]$LabelFn,
+        [switch]$AllowBack
+    )
+
+    if ($null -eq $Items -or $Items.Count -eq 0) { return @{ action = "empty" } }
+
+    $index = 0
+    while ($true) {
+        if (Get-Command Clear-FoxHost -ErrorAction SilentlyContinue) { Clear-FoxHost } else { Clear-Host }
+
+        $p = Get-SitesPalette
+        if (Get-Command Color-Text -ErrorAction SilentlyContinue) {
+            Write-Host (Color-Text $p.accent ("=== " + $Title + " ==="))
+        } else {
+            Write-Host ("=== " + $Title + " ===") -ForegroundColor Cyan
+        }
+        if ($Subtitle) {
+            Write-SitesLine $Subtitle "hint" $false
+        }
+        Write-Host ""
+
+        for ($i = 0; $i -lt $Items.Count; $i++) {
+            Write-SitesLine (& $LabelFn $Items[$i]) "item" ($i -eq $index)
+        }
+
+        Write-Host ""
+        $hint = if ($AllowBack) {
+            "Up/Down scroll | Enter open | Esc back"
+        } else {
+            "Up/Down scroll | Enter open | Esc exit"
+        }
+        Write-SitesLine $hint "hint" $false
+
+        $key = [Console]::ReadKey($true)
+        switch ($key.Key) {
+            "UpArrow"   { if ($index -gt 0) { $index-- } }
+            "DownArrow" { if ($index -lt ($Items.Count - 1)) { $index++ } }
+            "Enter"     { return @{ action = "pick"; item = $Items[$index] } }
+            "Escape"    {
+                if ($AllowBack) { return @{ action = "back" } }
+                return @{ action = "exit" }
+            }
+            "Q"         { return @{ action = if ($AllowBack) { "back" } else { "exit" } } }
+            "LeftArrow" {
+                if ($AllowBack) { return @{ action = "back" } }
+            }
+        }
+    }
+}
+
+function Select-SitesCatalog {
+    $catalog = Load-SitesCatalog
+    $categories = @($catalog.categories | Where-Object { $_.sites -and @($_.sites).Count -gt 0 })
+
+    if ($categories.Count -eq 0) {
+        Write-Host "No categories in sites.json." -ForegroundColor Yellow
         return
     }
 
-    Start-Process -FilePath $resolved | Out-Null
+    while ($true) {
+        $catPick = Select-ArrowMenu `
+            -Title "Fox Hub" `
+            -Subtitle "Obери kategoriyu" `
+            -Items $categories `
+            -LabelFn ${function:Get-CategoryMenuLabel}
+
+        if ($catPick.action -eq "exit") { return }
+        if ($catPick.action -ne "pick") { continue }
+
+        $category = $catPick.item
+        $sites = @($category.sites)
+        if ($sites.Count -eq 0) { continue }
+
+        while ($true) {
+            $sitePick = Select-ArrowMenu `
+                -Title $category.name `
+                -Subtitle $category.blurb `
+                -Items $sites `
+                -AllowBack `
+                -LabelFn ${function:Get-SiteMenuLabel}
+
+            if ($sitePick.action -eq "back") { break }
+            if ($sitePick.action -eq "exit") { return }
+            if ($sitePick.action -ne "pick") { continue }
+
+            $site = $sitePick.item
+            Open-Site -url $site.url
+            Write-Host ""
+            Write-Host ("Opened: " + $site.name) -ForegroundColor Green
+            Start-Sleep -Milliseconds 400
+        }
+    }
+}
+
+function Save-SitesCatalog([hashtable]$catalog) {
+    $path = Get-SitesFilePath
+    $payload = [ordered]@{
+        version    = 2
+        categories = @($catalog.categories)
+    }
+    $json = $payload | ConvertTo-Json -Depth 8
+    [System.IO.File]::WriteAllText($path, $json, [System.Text.Encoding]::UTF8)
 }
 
 function Try-RunMinttyUi {
@@ -104,45 +284,9 @@ function Try-RunMinttyUi {
     if ([string]::IsNullOrWhiteSpace($uiScriptPathUnix)) { return $false }
 
     $env:FOXTERM_SITES_FILE_WIN = Get-SitesFilePath
+    $env:FOXTERM_CMD_PATH_WIN   = $PSScriptRoot
     & $bash -lc ("bash " + (To-BashSingleQuoted $uiScriptPathUnix))
     return $true
-}
-
-function Select-Site([object[]]$sites) {
-    $index = 0
-    while ($true) {
-        Clear-Host
-        Write-Host "=== FoxTerminal Sites ===" -ForegroundColor Cyan
-        Write-Host ""
-
-        for ($i = 0; $i -lt $sites.Count; $i++) {
-            $site = $sites[$i]
-            $line = "  {0} - {1}" -f $site.name, $site.description
-            if ($i -eq $index) {
-                Write-Host $line -ForegroundColor Black -BackgroundColor Cyan
-            } else {
-                Write-Host $line
-            }
-        }
-
-        Write-Host ""
-        Write-Host "Up/Down: scroll list, Enter: open site, Esc/Q: exit" -ForegroundColor DarkGray
-
-        $key = [Console]::ReadKey($true)
-        switch ($key.Key) {
-            "UpArrow" { if ($index -gt 0) { $index-- } }
-            "DownArrow" { if ($index -lt ($sites.Count - 1)) { $index++ } }
-            "Enter" { return $sites[$index] }
-            "Escape" { return $null }
-            "Q" { return $null }
-        }
-    }
-}
-
-function Save-Sites([object[]]$sites) {
-    $path = Get-SitesFilePath
-    $json = $sites | ConvertTo-Json -Depth 5
-    [System.IO.File]::WriteAllText($path, $json, [System.Text.Encoding]::UTF8)
 }
 
 function New-SiteFolder([string]$name) {
@@ -226,28 +370,55 @@ console.log('$displayName loaded');
 "@
 
     $utf8 = New-Object System.Text.UTF8Encoding($false)
-    [System.IO.File]::WriteAllText((Join-Path $siteDir "index.html"),       $html, $utf8)
-    [System.IO.File]::WriteAllText((Join-Path $cssDir  "style.css"),        $css,  $utf8)
-    [System.IO.File]::WriteAllText((Join-Path $jsDir   "main.js"),          $js,   $utf8)
+    [System.IO.File]::WriteAllText((Join-Path $siteDir "index.html"), $html, $utf8)
+    [System.IO.File]::WriteAllText((Join-Path $cssDir  "style.css"),  $css,  $utf8)
+    [System.IO.File]::WriteAllText((Join-Path $jsDir   "main.js"),   $js,   $utf8)
 
-    $sites = @(Load-Sites)
-    $alreadyIn = $sites | Where-Object { $_.id -eq $folderName }
-    if (-not $alreadyIn) {
-        $newEntry = [pscustomobject]@{
+    $catalog = Load-SitesCatalog
+    $categories = [System.Collections.Generic.List[object]]::new()
+    foreach ($c in $catalog.categories) { $categories.Add($c) | Out-Null }
+
+    $sandbox = $categories | Where-Object { $_.id -eq "sandbox" } | Select-Object -First 1
+    if (-not $sandbox) {
+        $sandbox = [pscustomobject]@{
+            id    = "sandbox"
+            name  = "Sandbox"
+            blurb = "Експерименти та чернетки"
+            sites = @()
+        }
+        $categories.Add($sandbox) | Out-Null
+    }
+
+    $siteList = [System.Collections.Generic.List[object]]::new()
+    foreach ($s in @($sandbox.sites)) { $siteList.Add($s) | Out-Null }
+
+    $exists = $siteList | Where-Object { $_.id -eq $folderName }
+    if (-not $exists) {
+        $siteList.Add([pscustomobject]@{
             id          = $folderName
             name        = $displayName
             url         = "./$folderName/index.html"
             description = "$displayName (local)"
-        }
-        $sites += $newEntry
-        Save-Sites $sites
-        Write-Host ("Added to sites.json: " + $folderName) -ForegroundColor DarkGray
+        }) | Out-Null
     }
 
+    $updated = @()
+    foreach ($c in $categories) {
+        if ($c.id -eq "sandbox") {
+            $updated += [pscustomobject]@{
+                id    = $c.id
+                name  = $c.name
+                blurb = $c.blurb
+                sites = @($siteList)
+            }
+        } else {
+            $updated += $c
+        }
+    }
+
+    Save-SitesCatalog @{ categories = $updated }
+    Write-Host ("Added to sites.json [Sandbox]: " + $folderName) -ForegroundColor DarkGray
     Write-Host ("Created: " + $siteDir) -ForegroundColor Green
-    Write-Host "  index.html" -ForegroundColor DarkGray
-    Write-Host "  assets/css/style.css" -ForegroundColor DarkGray
-    Write-Host "  assets/js/main.js" -ForegroundColor DarkGray
 }
 
 function Open-SiteInCode([string]$name) {
@@ -292,8 +463,8 @@ try {
         exit 0
     }
 
-    $sites = @(Load-Sites)
-    if ($sites.Count -eq 0) {
+    $catalog = Load-SitesCatalog
+    if ($catalog.categories.Count -eq 0) {
         Write-Host "No sites configured in $(Get-SitesFilePath)." -ForegroundColor Yellow
         exit 1
     }
@@ -302,14 +473,7 @@ try {
         exit $LASTEXITCODE
     }
 
-    $selected = Select-Site -sites $sites
-    if ($null -eq $selected) {
-        Write-Host "Cancelled."
-        exit 0
-    }
-
-    Open-Site -url $selected.url
-    Write-Host ("Opened: " + $selected.name + " -> " + $selected.url)
+    Select-SitesCatalog
 }
 catch {
     Write-Host ("sites error: " + $_.Exception.Message) -ForegroundColor Red

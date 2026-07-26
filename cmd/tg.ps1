@@ -1,18 +1,4 @@
-function Resolve-FirefoxPath {
-    if ($env:FIREFOX_PATH -and (Test-Path $env:FIREFOX_PATH)) {
-        return $env:FIREFOX_PATH
-    }
-    $candidates = @(
-        "$env:ProgramFiles\Mozilla Firefox\firefox.exe",
-        "$env:ProgramFiles(x86)\Mozilla Firefox\firefox.exe"
-    )
-    foreach ($candidate in $candidates) {
-        if (Test-Path $candidate) {
-            return $candidate
-        }
-    }
-    return "firefox"
-}
+. (Join-Path $PSScriptRoot "fox-browser.ps1")
 
 function Load-TgBindings {
     $path = Join-Path $PSScriptRoot "tg_bindings.json"
@@ -61,9 +47,8 @@ if ($Args.Count -ge 1) {
         }
     }
 }
-$firefox = Resolve-FirefoxPath
 try {
-    Start-Process -FilePath $firefox -ArgumentList @("--new-tab", $url) | Out-Null
+    Open-FoxBrowserUrl -Url $url -Mode tab | Out-Null
 } catch {
     Write-Host "Failed to open: $url"
 }

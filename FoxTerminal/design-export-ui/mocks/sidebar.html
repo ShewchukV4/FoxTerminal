@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FoxTerminal Sidebar — design mock</title>
+  <link rel="stylesheet" href="../css/sidebar.css">
+  <style>
+    html, body { height: 100%; }
+    body {
+      max-width: 380px;
+      margin: 0 auto;
+      border-left: 1px solid rgba(255,255,255,.08);
+      border-right: 1px solid rgba(255,255,255,.08);
+      box-shadow: 0 0 80px rgba(0,0,0,.35);
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-glow" aria-hidden="true"></div>
+  <main class="layout">
+    <header class="topbar glass">
+      <div>
+        <h1>FoxTerminal</h1>
+        <p class="hint">Design mock · sidebar</p>
+      </div>
+      <span class="pill connected">online</span>
+    </header>
+
+    <nav class="tabs glass" role="tablist">
+      <button type="button" class="tab active" data-tab="terminal">Термінал</button>
+      <button type="button" class="tab" data-tab="sessions">Вкладки</button>
+      <button type="button" class="tab" data-tab="themes">Теми</button>
+      <button type="button" class="tab" data-tab="translate">Переклад</button>
+      <button type="button" class="tab" data-tab="settings">Налашт.</button>
+    </nav>
+
+    <section id="panel-terminal" class="panel active">
+      <div class="cwd glass-soft">cwd: C:\Users\demo\FireFoxBot</div>
+      <div id="terminal-output" class="output" aria-live="polite"></div>
+      <form class="command-form glass" onsubmit="return false">
+        <input type="text" placeholder="Введи команду: ff open youtube" value="ff open youtube">
+        <button type="button" class="btn-primary">Run</button>
+        <button type="button" class="btn-ghost">Clear</button>
+      </form>
+    </section>
+
+    <section id="panel-sessions" class="panel">
+      <div class="sessions-toolbar">
+        <input type="text" placeholder="Назва сесії (необовʼязково)">
+        <div class="sessions-actions">
+          <button type="button" class="btn-primary">Зберегти сесію</button>
+          <button type="button" class="btn-ghost">Закріпити вкладку</button>
+        </div>
+      </div>
+      <p class="translate-status">Demo sessions list</p>
+      <div id="sessions-list" class="sessions-list"></div>
+    </section>
+
+    <section id="panel-themes" class="panel">
+      <div class="themes-hero glass">
+        <div>
+          <h2 id="theme-current-label">Slate</h2>
+          <p class="themes-sub">Кольори як у терміналі · liquid glass</p>
+        </div>
+        <div id="theme-current-swatch" class="theme-swatch big" style="background:linear-gradient(135deg,#7D93B0,#90A9CA)"></div>
+      </div>
+      <div class="themes-filters">
+        <button type="button" class="chip active">Усі</button>
+        <button type="button" class="chip">Special</button>
+        <button type="button" class="chip">Pride</button>
+        <button type="button" class="chip">Colors</button>
+      </div>
+      <div id="themes-grid" class="themes-grid"></div>
+    </section>
+
+    <section id="panel-translate" class="panel">
+      <div class="translate-meta">
+        <span>en → uk</span>
+        <button type="button" class="btn-primary">Копіювати</button>
+      </div>
+      <label class="field-label">Оригінал</label>
+      <textarea class="translate-box" readonly>Hello world</textarea>
+      <label class="field-label">Переклад</label>
+      <textarea class="translate-box result" readonly>Привіт світ</textarea>
+      <p class="translate-status">Demo translation panel</p>
+    </section>
+
+    <section id="panel-settings" class="panel">
+      <form class="settings-form glass" onsubmit="return false">
+        <label class="field-label">Мова перекладу</label>
+        <select><option>Українська</option><option>English</option></select>
+        <label class="field-label">Мова оригіналу</label>
+        <select><option>Авто</option><option>English</option></select>
+        <label class="check-row"><input type="checkbox" checked> <span>Показувати бокс перекладу</span></label>
+        <button type="button" class="btn-primary">Зберегти налаштування</button>
+      </form>
+    </section>
+  </main>
+
+  <script src="../js/themes.js"></script>
+  <script src="../js/demo.js"></script>
+</body>
+</html>

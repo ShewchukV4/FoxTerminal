@@ -9,9 +9,7 @@ open_url() {
   local raw_url="$1"
   local resolved_url="$raw_url"
 
-  # Resolve relative paths to file:/// from the sites/ folder
   if [[ "$raw_url" != http://* && "$raw_url" != https://* && "$raw_url" != file://* ]]; then
-    local cmd_parent=""
     if [[ -n "$CMD_PATH_WIN" ]]; then
       local sites_win="${CMD_PATH_WIN%\\cmd}\\sites"
       local cleaned="${raw_url#./}"
@@ -35,25 +33,15 @@ if ! command -v dialog >/dev/null 2>&1; then
   exit 1
 fi
 
-# Default site (fallback when sites.json is not readable)
-SITE_ID="typewriter"
-SITE_NAME="Type Writer"
-SITE_URL="./typewriter/index.html"
-SITE_DESC="Typing practice website (local)"
+if [[ -z "$SITES_FILE_WIN" ]] || ! command -v jq >/dev/null 2>&1; then
+  echo "sites-ui requires jq and FOXTERM_SITES_FILE_WIN."
+  exit 1
+fi
 
-# Load first site from sites.json if jq is available
-if [[ -n "$SITES_FILE_WIN" ]] && command -v jq >/dev/null 2>&1; then
-  SITES_UNIX="$(cygpath -u "$SITES_FILE_WIN" 2>/dev/null || true)"
-  if [[ -n "$SITES_UNIX" && -f "$SITES_UNIX" ]]; then
-    _id="$(jq -r '.[0].id // empty' "$SITES_UNIX" 2>/dev/null || true)"
-    _nm="$(jq -r '.[0].name // empty' "$SITES_UNIX" 2>/dev/null || true)"
-    _ur="$(jq -r '.[0].url // empty' "$SITES_UNIX" 2>/dev/null || true)"
-    _ds="$(jq -r '.[0].description // empty' "$SITES_UNIX" 2>/dev/null || true)"
-    [[ -n "$_id" ]] && SITE_ID="$_id"
-    [[ -n "$_nm" ]] && SITE_NAME="$_nm"
-    [[ -n "$_ur" ]] && SITE_URL="$_ur"
-    [[ -n "$_ds" ]] && SITE_DESC="$_ds"
-  fi
+SITES_UNIX="$(cygpath -u "$SITES_FILE_WIN" 2>/dev/null || true)"
+if [[ -z "$SITES_UNIX" || ! -f "$SITES_UNIX" ]]; then
+  echo "sites.json not found."
+  exit 1
 fi
 
 tmp_rc="${TMPDIR:-/tmp}/foxterm-sites-dialogrc-$$"
@@ -74,25 +62,76 @@ RCEOF
 export DIALOGRC="$tmp_rc"
 trap 'rm -f "$tmp_rc" >/dev/null 2>&1 || true; clear' EXIT
 
-while true; do
-  choice=$(
-    dialog --stdout --no-shadow --mouse \
-      --backtitle "FoxTerminal | Sites" \
-      --title " [ Sites ] " \
-      --default-item "$SITE_ID" \
-      --menu "Scroll: Up/Down   Open: Enter   Exit: Esc" \
-      14 60 6 \
-      "$SITE_ID" "$SITE_NAME  —  $SITE_DESC" \
-      refresh "Reload" \
-      exit    "Close"
-  )
-  status=$?
+pick_category() {
+  local -a args=()
+  local id name blurb count i
 
+  count="$(jq '.categories | length' "$SITES_UNIX" 2>/dev/null || echo 0)"
+  if [[ "$count" -eq 0 ]]; then
+    return 1
+  fi
+
+  for ((i = 0; i < count; i++)); do
+    id="$(jq -r ".categories[$i].id" "$SITES_UNIX")"
+    name="$(jq -r ".categories[$i].name" "$SITES_UNIX")"
+    blurb="$(jq -r ".categories[$i].blurb" "$SITES_UNIX")"
+    args+=("$id" "$name — $blurb")
+  done
+
+  dialog --stdout --no-shadow --mouse \
+    --backtitle "FoxTerminal | Fox Hub" \
+    --title " [ Категорії ] " \
+    --menu "Обери розділ   Esc: exit" \
+    16 72 8 \
+    "${args[@]}"
+}
+
+pick_site() {
+  local cat_id="$1"
+  local -a args=()
+  local id name desc count i idx
+
+  count="$(jq --arg c "$cat_id" '[.categories[] | select(.id == $c) | .sites[]] | length' "$SITES_UNIX" 2>/dev/null || echo 0)"
+  if [[ "$count" -eq 0 ]]; then
+    return 1
+  fi
+
+  idx="$(jq --arg c "$cat_id" '[.categories[] | select(.id == $c)] | .[0].sites | to_entries[] | .key' "$SITES_UNIX" | head -1 | tr -d '\r')"
+
+  for ((i = 0; i < count; i++)); do
+    id="$(jq -r --arg c "$cat_id" --argjson n "$i" '.categories[] | select(.id == $c) | .sites[$n].id' "$SITES_UNIX")"
+    name="$(jq -r --arg c "$cat_id" --argjson n "$i" '.categories[] | select(.id == $c) | .sites[$n].name' "$SITES_UNIX")"
+    desc="$(jq -r --arg c "$cat_id" --argjson n "$i" '.categories[] | select(.id == $c) | .sites[$n].description' "$SITES_UNIX")"
+    args+=("$id" "$name — $desc")
+  done
+
+  dialog --stdout --no-shadow --mouse \
+    --backtitle "FoxTerminal | Fox Hub" \
+    --title " [ $(jq -r --arg c "$cat_id" '.categories[] | select(.id == $c) | .name' "$SITES_UNIX") ] " \
+    --menu "Enter: open   Esc: back" \
+    18 78 10 \
+    "${args[@]}"
+}
+
+resolve_site_url() {
+  local cat_id="$1"
+  local site_id="$2"
+  jq -r --arg c "$cat_id" --arg s "$site_id" \
+    '.categories[] | select(.id == $c) | .sites[] | select(.id == $s) | .url' \
+    "$SITES_UNIX" 2>/dev/null
+}
+
+while true; do
+  cat_choice="$(pick_category)"
+  status=$?
   [[ $status -ne 0 ]] && exit 0
 
-  case "$choice" in
-    "$SITE_ID") open_url "$SITE_URL" ;;
-    refresh)    : ;;
-    exit)       exit 0 ;;
-  esac
+  while true; do
+    site_choice="$(pick_site "$cat_choice")"
+    status=$?
+    [[ $status -ne 0 ]] && break
+
+    url="$(resolve_site_url "$cat_choice" "$site_choice")"
+    [[ -n "$url" && "$url" != "null" ]] && open_url "$url"
+  done
 done

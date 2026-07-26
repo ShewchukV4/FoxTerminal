@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FoxTerminal Popup — design mock</title>
+  <link rel="stylesheet" href="../css/popup.css">
+  <style>
+    /* Frame for designer preview outside extension */
+    html { background: #1a1f2e; min-height: 100%; }
+    body {
+      margin: 24px auto !important;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0,0,0,.45);
+      overflow: hidden;
+    }
+  </style>
+</head>
+<body>
+  <main class="container">
+    <div class="header">
+      <h1>FoxTerminal</h1>
+      <p class="subtitle">Design mock · popup</p>
+    </div>
+
+    <section class="theme-block">
+      <div class="theme-block-title">Тема</div>
+      <div id="theme-row" class="theme-row" aria-label="Швидкі теми"></div>
+    </section>
+
+    <button class="action secondary" type="button">Відкрити сайдбар</button>
+
+    <label class="label" for="action-select">Дія</label>
+    <select id="action-select">
+      <option>AI Command Parser (Ollama)</option>
+      <option>Відкрити side terminal</option>
+      <option>One-Click Clean Page</option>
+    </select>
+
+    <label class="label" for="input-value">Параметр</label>
+    <input id="input-value" type="text" value="відкрий youtube" autocomplete="off">
+
+    <button class="action" type="button">Запустити через FoxTerminal</button>
+
+    <pre class="status">Готово. Обери тему зверху або запусти дію.</pre>
+  </main>
+
+  <script src="../js/themes.js"></script>
+  <script src="../js/demo.js"></script>
+</body>
+</html>

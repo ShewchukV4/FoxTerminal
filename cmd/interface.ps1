@@ -109,6 +109,26 @@ if ([string]::IsNullOrWhiteSpace($uiScriptPathUnix) -or
 $env:FOXTERM_CMD_PATH_WIN = $PSScriptRoot
 $env:FOXTERM_CMD_PATH_UNIX = $cmdDirUnix
 
+$ifaceTheme = "orange"
+$themeFile = Join-Path $PSScriptRoot "theme.txt"
+if (Test-Path $themeFile) {
+    $ifaceTheme = ((Get-Content -Path $themeFile -Raw -ErrorAction SilentlyContinue).Trim()).ToLower()
+    if ([string]::IsNullOrWhiteSpace($ifaceTheme)) { $ifaceTheme = "orange" }
+}
+if ($ifaceTheme -eq "noir") {
+    $tmuxStatusStyle = "bg=#0a0a0a,fg=#909090"
+    $tmuxStatusLeft = " #[fg=#909090,bold]FOXTERM #[fg=#707070]| #[fg=#c8c8c8]console+ui "
+    $tmuxStatusRight = "#[fg=#707070]%H:%M "
+    $tmuxPaneBorder = "fg=#404040"
+    $tmuxPaneActive = "fg=#c8c8c8"
+} else {
+    $tmuxStatusStyle = "bg=#0b1220,fg=#7aa2f7"
+    $tmuxStatusLeft = " #[fg=#7aa2f7,bold]FOXTERM #[fg=#9aa5ce]| #[fg=#46d9ff]console+ui "
+    $tmuxStatusRight = "#[fg=#9aa5ce]%H:%M "
+    $tmuxPaneBorder = "fg=#334466"
+    $tmuxPaneActive = "fg=#46d9ff"
+}
+
 if ($Terminal) {
     & $bash -lc ("bash " + (To-BashSingleQuoted $uiScriptPathUnix))
     exit $LASTEXITCODE
@@ -135,11 +155,11 @@ $tmuxCommand = @(
     "tmux split-window -h -t foxiface:0 " + (To-BashSingleQuoted $rightPaneCmd) + ";",
     "tmux set-option -t foxiface -g mouse on;",
     "tmux set-option -t foxiface -g status on;",
-    "tmux set-option -t foxiface -g status-style 'bg=#0b1220,fg=#7aa2f7';",
-    "tmux set-option -t foxiface -g status-left ' #[fg=#7aa2f7,bold]FOXTERM #[fg=#9aa5ce]| #[fg=#46d9ff]console+ui ';",
-    "tmux set-option -t foxiface -g status-right '#[fg=#9aa5ce]%H:%M ';",
-    "tmux set-option -t foxiface -g pane-border-style 'fg=#334466';",
-    "tmux set-option -t foxiface -g pane-active-border-style 'fg=#46d9ff';",
+    "tmux set-option -t foxiface -g status-style '$tmuxStatusStyle';",
+    "tmux set-option -t foxiface -g status-left '$tmuxStatusLeft';",
+    "tmux set-option -t foxiface -g status-right '$tmuxStatusRight';",
+    "tmux set-option -t foxiface -g pane-border-style '$tmuxPaneBorder';",
+    "tmux set-option -t foxiface -g pane-active-border-style '$tmuxPaneActive';",
     "tmux select-pane -t foxiface:0.0;",
     "tmux attach-session -t foxiface;"
 ) -join " "

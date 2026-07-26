@@ -20,6 +20,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\FoxTerminal.Core\FoxTerminal.Core.csproj" />
+    <ProjectReference Include="..\FoxTerminal.Config\FoxTerminal.Config.csproj" />
+    <ProjectReference Include="..\FoxTerminal.Pty\FoxTerminal.Pty.csproj" />
   </ItemGroup>
 
 </Project>

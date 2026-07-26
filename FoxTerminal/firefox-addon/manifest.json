@@ -1,0 +1,54 @@
+{
+  "manifest_version": 2,
+  "name": "FoxTerminal Companion",
+  "version": "0.9.11",
+  "description": "FoxTerminal companion for Zen/Firefox: full browser themes, AI sense-translate, sessions.",
+  "web_accessible_resources": [
+    "translate-overlay.js",
+    "themes.js"
+  ],
+  "permissions": [
+    "nativeMessaging",
+    "notifications",
+    "browsingData",
+    "activeTab",
+    "tabs",
+    "<all_urls>",
+    "storage",
+    "theme",
+    "contextMenus",
+    "clipboardWrite",
+    "http://127.0.0.1:11434/*",
+    "http://localhost:11434/*",
+    "https://translate.googleapis.com/*",
+    "https://api.mymemory.translated.net/*"
+  ],
+  "omnibox": {
+    "keyword": "ff"
+  },
+  "browser_action": {
+    "default_title": "FoxTerminal",
+    "default_popup": "popup.html"
+  },
+  "sidebar_action": {
+    "default_title": "FoxTerminal",
+    "default_panel": "sidebar.html"
+  },
+  "background": {
+    "scripts": [
+      "themes.js",
+      "background.js"
+    ]
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "foxterminal-companion@local",
+      "strict_min_version": "109.0",
+      "data_collection_permissions": {
+        "required": [
+          "websiteContent"
+        ]
+      }
+    }
+  }
+}

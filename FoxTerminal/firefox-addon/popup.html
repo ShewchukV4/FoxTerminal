@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FoxTerminal Companion</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="bg-glow" aria-hidden="true"></div>
+  <main class="container">
+    <header class="header">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <div class="brand-text">
+          <h1>FoxTerminal</h1>
+          <p class="subtitle">Zen · translate fix · v0.9.11</p>
+        </div>
+      </div>
+    </header>
+
+    <section class="block theme-block">
+      <div class="block-label">Тема</div>
+      <div id="theme-row" class="theme-row" aria-label="Швидкі теми"></div>
+    </section>
+
+    <button id="open-sidebar-btn" class="action secondary" type="button">Відкрити сайдбар</button>
+
+    <section class="block fields">
+      <label class="label" for="action-select">Дія</label>
+      <select id="action-select">
+        <option value="ai-command-parser">AI Command Parser (Ollama)</option>
+        <option value="open-side-terminal">Відкрити side terminal</option>
+        <option value="clear-history">Очистити Firefox history</option>
+        <option value="clean-page">One-Click Clean Page</option>
+        <option value="open-youtube">Відкрити YouTube</option>
+        <option value="ff-open">Відкрити alias або URL</option>
+        <option value="search-google">Google пошук</option>
+        <option value="ask-chatgpt">Питання в ChatGPT</option>
+        <option value="open-site-hub">Відкрити Fox Hub</option>
+        <option value="open-site-editor">Відкрити site folder у VS Code</option>
+        <option value="raw-command">Виконати команду як у терміналі</option>
+      </select>
+
+      <label class="label" for="input-value">Параметр</label>
+      <input id="input-value" type="text" placeholder="youtube або https://mozilla.org" autocomplete="off" spellcheck="false">
+    </section>
+
+    <button id="run-button" class="action" type="button">Запустити через FoxTerminal</button>
+
+    <pre id="status-box" class="status">Готово. Обери тему або запусти дію.</pre>
+  </main>
+
+  <script src="themes.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fox Realm Forge — генератор світу</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+  <canvas id="bgCanvas" aria-hidden="true"></canvas>
+
+  <div class="app">
+    <header class="header">
+      <div class="brand">
+        <span class="brand-icon">🗺</span>
+        <div>
+          <h1 class="brand-name">Fox Realm Forge</h1>
+          <p class="brand-sub">процедурний світ · натхнення Azgaar FMG</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button type="button" class="btn primary" id="btnNewMap">✨ Новий світ</button>
+        <button type="button" class="btn ghost" id="btnExportPng">PNG</button>
+        <button type="button" class="btn ghost" id="btnSave">Зберегти</button>
+        <button type="button" class="btn ghost" id="btnLoad">Завантажити</button>
+        <a class="btn ghost" href="../hub/index.html">← Hub</a>
+      </div>
+    </header>
+
+    <div class="workspace">
+      <aside class="sidebar" id="sidebar">
+        <section class="panel">
+          <h2>Світ</h2>
+          <label class="field">
+            <span>Назва</span>
+            <input type="text" id="inpWorldName" placeholder="Азурія">
+          </label>
+          <label class="field">
+            <span>Seed</span>
+            <div class="seed-row">
+              <input type="text" id="inpSeed" placeholder="12345">
+              <button type="button" class="btn ghost sm" id="btnRandomSeed" title="Випадковий seed">🎲</button>
+            </div>
+          </label>
+          <label class="field">
+            <span>Держав</span>
+            <input type="range" id="rngStates" min="3" max="24" value="12">
+            <output id="outStates">12</output>
+          </label>
+          <label class="field">
+            <span>Щільність картки</span>
+            <input type="range" id="rngCells" min="600" max="1800" step="100" value="1000">
+            <output id="outCells">1000</output>
+          </label>
+        </section>
+
+        <section class="panel">
+          <h2>Режим карти</h2>
+          <div class="preset-btns" id="viewPresets">
+            <button type="button" class="preset active" data-view="political">Політична</button>
+            <button type="button" class="preset" data-view="biomes">Біоми</button>
+            <button type="button" class="preset" data-view="height">Рельєф</button>
+            <button type="button" class="preset" data-view="physical">Фізична</button>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>Шари</h2>
+          <ul class="layer-list" id="layerList"></ul>
+        </section>
+
+        <section class="panel panel-hint">
+          <p><strong>Підказка:</strong> коліщатко — зум, перетягування — рух карти. Подвійний клік — центр.</p>
+          <p class="muted">Це спрощений генератор у стилі <a href="https://azgaar.github.io/Fantasy-Map-Generator/" target="_blank" rel="noopener">Azgaar FMG</a> — Voronoi, біоми, річки, держави, міста.</p>
+        </section>
+      </aside>
+
+      <main class="map-stage" id="mapStage">
+        <div class="map-toolbar">
+          <span id="mapStats">Генерація…</span>
+          <div class="zoom-btns">
+            <button type="button" class="btn ghost sm" id="btnZoomIn">+</button>
+            <button type="button" class="btn ghost sm" id="btnZoomOut">−</button>
+            <button type="button" class="btn ghost sm" id="btnZoomReset">100%</button>
+          </div>
+        </div>
+        <div class="map-viewport" id="mapViewport">
+          <svg id="mapSvg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 600" preserveAspectRatio="xMidYMid meet">
+            <defs id="mapDefs"></defs>
+            <g id="layerOcean"></g>
+            <g id="layerLand"></g>
+            <g id="layerRelief"></g>
+            <g id="layerRivers"></g>
+            <g id="layerBorders"></g>
+            <g id="layerRoutes"></g>
+            <g id="layerLabels"></g>
+            <g id="layerMarkers"></g>
+            <g id="layerGrid"></g>
+            <g id="layerVignette"></g>
+          </svg>
+        </div>
+        <div class="loading" id="loading" hidden>
+          <div class="loading-inner">Генерую світ…</div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <input type="file" id="fileInput" accept=".json" hidden>
+
+  <script src="assets/js/vendor/d3-delaunay.min.js"></script>
+  <script src="assets/js/noise.js"></script>
+  <script src="assets/js/generator.js"></script>
+  <script src="assets/js/render.js"></script>
+  <script src="assets/js/main.js"></script>
+</body>
+</html>

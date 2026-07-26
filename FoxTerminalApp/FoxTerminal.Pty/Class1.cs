@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Collections.Generic;
 
 namespace FoxTerminal.Pty;
 
@@ -151,6 +152,8 @@ public sealed class BasicProcessPty : IPty
 
 public static class PtyFactory
 {
+    private const string CmdScriptsDirectoryName = "cmd";
+
     public static IPty CreateDefault(PtyLaunchOptions? options = null)
     {
         options ??= PtyLaunchOptions.Default;
@@ -182,8 +185,8 @@ public static class PtyFactory
             }
 
             var shell = Environment.GetEnvironmentVariable("COMSPEC") ?? "cmd.exe";
-            var cmdPath = @"C:\Users\dmytr\Desktop\FireFoxBot\cmd";
-            var args = $"/Q /K \"chcp 65001 >nul & set PATH={cmdPath};%PATH%\"";
+            var cmdPath = ResolveCommandScriptsPath(options.WorkingDirectory);
+            var args = BuildWindowsShellArguments(cmdPath);
             return new BasicProcessPty(shell, args, options.WorkingDirectory ?? Environment.CurrentDirectory);
         }
 
@@ -212,6 +215,69 @@ public static class PtyFactory
 
         bashPath = string.Empty;
         return false;
+    }
+
+    private static string ResolveCommandScriptsPath(string? workingDirectory)
+    {
+        var envPath = Environment.GetEnvironmentVariable("FOXTERM_CMD_PATH_WIN");
+        if (!string.IsNullOrWhiteSpace(envPath) && Directory.Exists(envPath))
+        {
+            return envPath;
+        }
+
+        foreach (var root in EnumerateSearchRoots(workingDirectory))
+        {
+            var candidate = FindDirectoryUpwards(root, CmdScriptsDirectoryName);
+            if (!string.IsNullOrWhiteSpace(candidate))
+            {
+                return candidate;
+            }
+        }
+
+        var fallbackRoot = string.IsNullOrWhiteSpace(workingDirectory)
+            ? Environment.CurrentDirectory
+            : workingDirectory;
+        return Path.Combine(fallbackRoot, CmdScriptsDirectoryName);
+    }
+
+    private static IEnumerable<string> EnumerateSearchRoots(string? workingDirectory)
+    {
+        if (!string.IsNullOrWhiteSpace(workingDirectory))
+        {
+            yield return workingDirectory;
+        }
+
+        yield return Environment.CurrentDirectory;
+        yield return AppContext.BaseDirectory;
+    }
+
+    private static string? FindDirectoryUpwards(string startDirectory, string targetDirectoryName)
+    {
+        try
+        {
+            var current = new DirectoryInfo(startDirectory);
+            while (current != null)
+            {
+                var candidate = Path.Combine(current.FullName, targetDirectoryName);
+                if (Directory.Exists(candidate))
+                {
+                    return candidate;
+                }
+                current = current.Parent;
+            }
+        }
+        catch
+        {
+            // Ignore invalid paths and continue with remaining roots.
+        }
+
+        return null;
+    }
+
+    private static string BuildWindowsShellArguments(string commandScriptsPath)
+    {
+        var normalizedPath = commandScriptsPath.Replace("\"", string.Empty);
+        return $"/Q /K \"chcp 65001 >nul & set \"PATH={normalizedPath};%PATH%\"\"";
     }
 }
 

@@ -1,0 +1,173 @@
+/* FoxTerminal look for Zen Browser — override Zen CSS variables + chrome */
+
+:root,
+html,
+#main-window,
+#browser {
+  --zen-primary-color: #6c8dff !important;
+  --zen-primary-color-fg: #ffffff !important;
+  --zen-colors-primary: #6c8dff !important;
+  --zen-colors-secondary: #6b53ff !important;
+  --zen-colors-tertiary: #0a1222 !important;
+  --zen-colors-border: #1d2a47 !important;
+  --zen-main-browser-background: #080d17 !important;
+  --zen-main-browser-background-toolbar: #080d17 !important;
+  --zen-dialog-background: #0a1222 !important;
+  --zen-branding-bg: #080d17 !important;
+  --zen-themed-toolbar-bg: #080d17 !important;
+  --zen-themed-toolbar-bg-transparent: rgba(8, 13, 23, 0.92) !important;
+  --zen-toolbar-element-bg: #111a31 !important;
+  --lwt-accent-color: #080d17 !important;
+  --lwt-text-color: #e7edff !important;
+  --lwt-toolbar-field-background-color: #111a31 !important;
+  --lwt-toolbar-field-color: #e7edff !important;
+  --lwt-toolbar-field-border-color: #1d2a47 !important;
+  --lwt-toolbar-field-focus: #151f3a !important;
+  --toolbar-bgcolor: #080d17 !important;
+  --toolbar-color: #e7edff !important;
+  --tab-selected-bgcolor: #6c8dff !important;
+  --tab-selected-textcolor: #ffffff !important;
+  --tab-hover-background-color: rgba(108, 141, 255, 0.18) !important;
+  --chrome-content-separator-color: #1d2a47 !important;
+  --arrowpanel-background: #0a1222 !important;
+  --arrowpanel-color: #e7edff !important;
+  --arrowpanel-border-color: #1d2a47 !important;
+  --panel-background: #0a1222 !important;
+  --panel-color: #e7edff !important;
+  --panel-border-color: #1d2a47 !important;
+  --button-bgcolor: #111a31 !important;
+  --button-hover-bgcolor: #1a2748 !important;
+  --button-primary-bgcolor: #6c8dff !important;
+  --button-primary-hover-bgcolor: #6b53ff !important;
+  --focus-outline-color: #6c8dff !important;
+}
+
+/* Shell */
+#navigator-toolbox,
+#nav-bar,
+#PersonalToolbar,
+#TabsToolbar,
+#titlebar,
+#zen-appcontent-navbar-wrapper,
+#zen-sidebar-panels-wrapper,
+#zen-tabbox-wrapper,
+#sidebar-box,
+#sidebar-header {
+  background-color: #080d17 !important;
+  background-image: none !important;
+  color: #e7edff !important;
+  border-color: #1d2a47 !important;
+}
+
+#nav-bar {
+  border-bottom: 1px solid #1d2a47 !important;
+}
+
+/* URL / search */
+#urlbar-background,
+#searchbar,
+#urlbar:not([focused="true"]) > #urlbar-background {
+  background-color: #111a31 !important;
+  border: 1px solid #1d2a47 !important;
+  border-radius: 10px !important;
+  box-shadow: none !important;
+}
+
+#urlbar[focused="true"] > #urlbar-background,
+#urlbar[open] > #urlbar-background {
+  background-color: #151f3a !important;
+  border-color: #6c8dff !important;
+  box-shadow: 0 0 0 1px rgba(108, 141, 255, 0.35) !important;
+}
+
+#urlbar-input,
+.urlbar-input,
+#urlbar-input-container,
+.searchbar-textbox {
+  color: #e7edff !important;
+  caret-color: #6c8dff !important;
+}
+
+/* Tabs — vertical + horizontal */
+.tabbrowser-tab .tab-background {
+  background-color: transparent !important;
+  border-radius: 10px !important;
+}
+
+.tabbrowser-tab:hover .tab-background {
+  background-color: rgba(108, 141, 255, 0.16) !important;
+}
+
+.tabbrowser-tab[selected="true"] .tab-background,
+.tabbrowser-tab[visuallyselected="true"] .tab-background {
+  background: linear-gradient(130deg, #6c8dff, #6b53ff) !important;
+  box-shadow: none !important;
+}
+
+.tab-label,
+.tab-text {
+  color: #89a3ff !important;
+}
+
+.tabbrowser-tab[selected="true"] .tab-label,
+.tabbrowser-tab[visuallyselected="true"] .tab-label,
+.tabbrowser-tab[selected="true"] .tab-text,
+.tabbrowser-tab[visuallyselected="true"] .tab-text {
+  color: #ffffff !important;
+  font-weight: 700 !important;
+}
+
+/* Zen workspace / essentials rail */
+#zen-essentials,
+#zen-sidebar-icons-wrapper,
+#zen-current-workspace-indicator,
+.zen-workspace-tabs-section {
+  background-color: #0a1222 !important;
+  color: #e7edff !important;
+  border-color: #1d2a47 !important;
+}
+
+/* Toolbar buttons */
+toolbarbutton,
+.toolbarbutton-1,
+#TabsToolbar .toolbarbutton-1 {
+  fill: #89a3ff !important;
+  color: #89a3ff !important;
+}
+
+toolbarbutton:hover,
+.toolbarbutton-1:hover {
+  background-color: rgba(108, 141, 255, 0.18) !important;
+  fill: #e7edff !important;
+  color: #e7edff !important;
+  border-radius: 8px !important;
+}
+
+/* Panels / menus */
+panelview,
+panel,
+menupopup,
+#appMenu-popup,
+.panel-arrowcontent,
+.panel-arrowbox {
+  --panel-background: #0a1222 !important;
+  --panel-color: #e7edff !important;
+  --panel-border-color: #1d2a47 !important;
+  background-color: #0a1222 !important;
+  color: #e7edff !important;
+  border-color: #1d2a47 !important;
+}
+
+menuitem:hover,
+menu:hover,
+.subviewbutton:hover {
+  background-color: rgba(108, 141, 255, 0.22) !important;
+  color: #ffffff !important;
+}
+
+/* Find bar */
+#findbar {
+  background: #0a1222 !important;
+  color: #e7edff !important;
+  border-top: 1px solid #1d2a47 !important;
+}

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DnD Hero Forge — Креатор персонажа 5e</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+  <canvas id="bgCanvas" aria-hidden="true"></canvas>
+  <div class="app">
+    <header class="header">
+      <div class="brand">
+        <span class="brand-icon">⚔</span>
+        <div>
+          <h1 class="brand-name">Hero Forge</h1>
+          <p class="brand-sub">D&amp;D 5e · повний креатор персонажа</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button type="button" class="btn ghost" id="btnRoster">👥 Персонажі</button>
+        <button type="button" class="btn ghost" id="btnNewChar">+ Новий</button>
+        <button type="button" class="btn ghost" id="btnSaveNow">💾 Зберегти</button>
+        <button type="button" class="btn ghost" id="btnExportJson">JSON</button>
+        <button type="button" class="btn primary" id="btnExportSheet">Лист персонажа</button>
+      </div>
+    </header>
+
+    <div class="layout">
+      <nav class="wizard-nav" id="wizardNav"></nav>
+
+      <main class="wizard-main">
+        <div class="step-panel" id="stepPanel"></div>
+        <div class="wizard-footer">
+          <button type="button" class="btn ghost" id="btnPrev">← Назад</button>
+          <span class="step-indicator" id="stepIndicator">1 / 10</span>
+          <button type="button" class="btn primary" id="btnNext">Далі →</button>
+        </div>
+      </main>
+
+      <aside class="sheet-preview" id="sheetPreview">
+        <h2 class="sheet-title">Попередній перегляд</h2>
+        <div class="sheet-body" id="sheetBody"></div>
+      </aside>
+    </div>
+  </div>
+
+  <div class="roster-panel" id="rosterPanel" hidden>
+    <div class="roster-card">
+      <div class="roster-head">
+        <h3>Мої персонажі</h3>
+        <button type="button" class="btn ghost" id="rosterClose">✕</button>
+      </div>
+      <ul class="roster-list" id="rosterList"></ul>
+      <p class="roster-hint">Автозбереження в браузері. Можна мати багато героїв.</p>
+    </div>
+  </div>
+
+  <div class="overlay" id="overlay" hidden>
+    <div class="overlay-card">
+      <h3 id="overlayTitle"></h3>
+      <pre class="overlay-content" id="overlayContent"></pre>
+      <div class="overlay-actions">
+        <button type="button" class="btn ghost" id="overlayCopy">Копіювати</button>
+        <button type="button" class="btn primary" id="overlayClose">Закрити</button>
+      </div>
+    </div>
+  </div>
+
+  <input type="file" id="fileInput" accept=".json" hidden>
+
+  <script src="assets/js/data.js"></script>
+  <script src="assets/js/extras-data.js"></script>
+  <script src="assets/js/spells-extended.js"></script>
+  <script src="assets/js/i18n.js"></script>
+  <script src="assets/js/storage.js"></script>
+  <script src="assets/js/main.js"></script>
+</body>
+</html>

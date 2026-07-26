@@ -151,6 +151,33 @@ __fox_load_theme() {
     mocha) __fox_accent="#A17A5A" ;;
     black) __fox_accent="#4F5B6A" ;;
     white) __fox_accent="#CDD5E0" ;;
+    noir)
+      __fox_bg="#0A0A0A"
+      __fox_text="#D8D8D8"
+      __fox_accent="#909090"
+      __fox_accent2="#C8C8C8"
+      __fox_accent3="#707070"
+      __fox_accent4="#B0B0B0"
+      return 0
+      ;;
+    arthas-dark)
+      __fox_bg="#060A12"
+      __fox_text="#D7F1FF"
+      __fox_accent="#58B8FF"
+      __fox_accent2="#86CCFF"
+      __fox_accent3="#2F86D8"
+      __fox_accent4="#C1E8FF"
+      return 0
+      ;;
+    arthas-light)
+      __fox_bg="#120F07"
+      __fox_text="#FFF1D0"
+      __fox_accent="#E8C36A"
+      __fox_accent2="#F3D992"
+      __fox_accent3="#C49D43"
+      __fox_accent4="#FFE7B8"
+      return 0
+      ;;
     *) __fox_accent="#DC7A14" ;;
   esac
 

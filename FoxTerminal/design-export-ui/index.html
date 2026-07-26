@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FoxTerminal UI Design Export</title>
+  <style>
+    :root { color-scheme: dark; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background: #0b0f1a;
+      color: #e8ecff;
+      padding: 32px;
+      line-height: 1.45;
+    }
+    h1 { margin: 0 0 8px; }
+    p { color: #93a2d6; max-width: 60ch; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+      margin-top: 24px;
+    }
+    a.card {
+      display: block;
+      padding: 18px;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.04);
+      color: inherit;
+      text-decoration: none;
+      transition: transform .15s ease, border-color .15s ease;
+    }
+    a.card:hover {
+      transform: translateY(-2px);
+      border-color: #6c8dff;
+    }
+    .card strong { display: block; margin-bottom: 6px; font-size: 1.05rem; }
+    .card span { color: #93a2d6; font-size: 0.9rem; }
+    code { color: #9bb0ff; }
+  </style>
+</head>
+<body>
+  <h1>FoxTerminal UI — design export</h1>
+  <p>
+    Візуальні копії барів розширення для редизайну.
+    Відкривай mock-сторінки нижче. Деталі для дизайнера: <code>BRIEF.md</code> / <code>README.md</code>.
+  </p>
+
+  <div class="grid">
+    <a class="card" href="mocks/popup.html">
+      <strong>Popup</strong>
+      <span>Кнопка розширення · ~360px · теми + дії</span>
+    </a>
+    <a class="card" href="mocks/sidebar.html">
+      <strong>Sidebar</strong>
+      <span>Бічна панель · glass · вкладки</span>
+    </a>
+    <a class="card" href="mocks/translate-overlay.html">
+      <strong>Translate overlay</strong>
+      <span>Плаваючий бокс перекладу на сторінці</span>
+    </a>
+    <a class="card" href="css/zen-userChrome.css">
+      <strong>Zen userChrome.css</strong>
+      <span>Стилі оболонки браузера (CSS файл)</span>
+    </a>
+  </div>
+</body>
+</html>

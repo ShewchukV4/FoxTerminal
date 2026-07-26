@@ -1,0 +1,18 @@
+/* FoxTerminal accents for Zen internal pages */
+
+@-moz-document url-prefix("about:") {
+  :root {
+    --in-content-page-background: #080d17 !important;
+    --in-content-box-background: #0a1222 !important;
+    --in-content-text-color: #e7edff !important;
+    --in-content-primary-button-background: #6c8dff !important;
+    --in-content-primary-button-background-hover: #6b53ff !important;
+    --in-content-border-color: #1d2a47 !important;
+    --in-content-link-color: #89a3ff !important;
+  }
+
+  body {
+    background: #080d17 !important;
+    color: #e7edff !important;
+  }
+}

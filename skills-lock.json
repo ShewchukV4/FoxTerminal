@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "skills": {
+    "agent-transcript": {
+      "source": "openclaw/openclaw",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/agent-transcript/SKILL.md",
+      "computedHash": "99e30b39d35e6a4821a466eda3a0e8226b4f34d62bc218978dfcb3acc9c9b7d0"
+    },
+    "animation-shader": {
+      "source": "aiskillstore/marketplace",
+      "sourceType": "github",
+      "skillPath": "skills/yuki001/animation-shader/SKILL.md",
+      "computedHash": "66fcd15af921b4fefd9b99205ba546686fb7aca1157c5c059f79ae4192d17355"
+    },
+    "autoreview": {
+      "source": "openclaw/openclaw",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/autoreview/SKILL.md",
+      "computedHash": "c79a209aa1d4eaabdefd0177b79dff06ef906d960bf9546f2fa1d4f471eba3ea"
+    },
+    "clawsweeper": {
+      "source": "openclaw/openclaw",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/clawsweeper/SKILL.md",
+      "computedHash": "88e87b4f170688d679672851f0d2465de3d577dafa7a8f153b39e1fa6e9716e7"
+    },
+    "control-ui-e2e": {
+      "source": "openclaw/openclaw",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/control-ui-e2e/SKILL.md",
+      "computedHash": "a50a07d9d46864f387d7f182045b08c6581c1947af6fd63968c1009e669c19f5"
+    },
+    "crabbox": {
+      "source": "openclaw/openclaw",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/crabbox/SKILL.md",
+      "computedHash": "1f989d07754add91f019ea71a270799630ad34b927ecd37209e7aabe552134ee"
+    },
+    "design-system": {
+      "source": "affaan-m/ECC",
+      "sourceType": "github",
+      "skillPath": "skills/design-system/SKILL.md",
+      "computedHash": "04ba4a8436c2d2fadcbeac7bc1ca8b8434096ebb6bf724426f5c2468430477d5"
+    },
+    "interaction-flows": {
+      "source": "kouko/monkey-skills",
+      "sourceType": "github",
+      "skillPath": "loom-interface-design/skills/interaction-flows/SKILL.md",
+      "computedHash": "5a8f87fcfed66432a73ccc3711f3ec6108eb8c5d3c8dd21faa0dba592714b9e5"
+    }
+  }
+}

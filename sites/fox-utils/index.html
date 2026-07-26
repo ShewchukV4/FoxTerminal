@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fox Utils — Utilities</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="index.html">
+      <span class="brand-mark">⚙</span>
+      <span>
+        <span data-i18n="title">Fox Utils</span>
+        <small data-i18n="sub">Utilities</small>
+      </span>
+    </a>
+    <div class="topbar-actions">
+      <button class="btn btn-sm" id="lang-toggle" type="button">EN</button>
+      <button class="btn btn-sm" id="noir-toggle" type="button" data-i18n="noir">Noir</button>
+      <a class="btn btn-sm" href="../hub/index.html">Fox Hub</a>
+    </div>
+  </header>
+
+  <div class="shell">
+    <section class="hero">
+      <p class="eyebrow" data-i18n="eyebrow">hash · text · network · pomodoro</p>
+      <h1>Fox Utils</h1>
+      <p data-i18n="hero">Локальні утиліти FoxTerminal у браузері. Без сервера — все в пам'яті пристрою.</p>
+    </section>
+
+    <nav class="tabs" aria-label="Tools">
+      <button class="tab active" type="button" data-tab="hash" data-i18n="tabHash">Hash Vault</button>
+      <button class="tab" type="button" data-tab="text" data-i18n="tabText">Text Tools</button>
+      <button class="tab" type="button" data-tab="net" data-i18n="tabNet">Network Fox</button>
+      <button class="tab" type="button" data-tab="pomo" data-i18n="tabPomo">Pomodoro</button>
+    </nav>
+
+    <!-- HASH -->
+    <section class="panel active" id="panel-hash">
+      <div class="card">
+        <h2 data-i18n="hashTitle">Hash Vault</h2>
+        <p class="sub" data-i18n="hashSub">MD5, SHA, Base64 у браузері. FX1 / unhash — лише в терміналі.</p>
+        <label class="field" data-i18n="input">Вхідний текст</label>
+        <textarea id="hash-input" placeholder="hello world"></textarea>
+        <div class="row">
+          <label class="field" style="margin:0" data-i18n="algo">Алгоритм</label>
+          <select id="hash-algo" style="width:auto;min-width:140px">
+            <option value="sha256">SHA-256</option>
+            <option value="sha1">SHA-1</option>
+            <option value="sha512">SHA-512</option>
+            <option value="md5">MD5</option>
+            <option value="b64">Base64</option>
+          </select>
+          <button class="btn btn-primary" id="hash-run" type="button" data-i18n="run">Обчислити</button>
+          <button class="btn" id="hash-copy" type="button" data-i18n="copy">Копіювати</button>
+          <button class="btn" id="hash-clear" type="button" data-i18n="clear">Очистити</button>
+        </div>
+        <label class="field" style="margin-top:14px" data-i18n="result">Результат</label>
+        <div class="output" id="hash-output"></div>
+        <p class="sub" style="margin-top:12px;margin-bottom:0">
+          <span class="badge">FX1</span>
+          <span data-i18n="fx1note">FX1 → hash fx1 у FoxTerminal</span>
+          <button class="btn btn-sm" type="button" data-term-copy="hash fx1 my secret">copy</button>
+        </p>
+      </div>
+      <div class="card">
+        <h2 data-i18n="history">Історія</h2>
+        <div class="history" id="hash-history"></div>
+      </div>
+    </section>
+
+    <!-- TEXT -->
+    <section class="panel" id="panel-text">
+      <div class="card">
+        <h2 data-i18n="textTitle">File Quick Tools</h2>
+        <p class="sub" data-i18n="textSub">Статистика, JSON, Base64, diff.</p>
+        <div class="dropzone" id="dropzone" data-i18n="drop">Перетягни файл сюди</div>
+        <label class="field" style="margin-top:14px" data-i18n="input">Текст</label>
+        <textarea id="text-main"></textarea>
+        <div class="stat-grid">
+          <div class="stat"><strong id="stat-lines">0</strong><span data-i18n="lines">Рядків</span></div>
+          <div class="stat"><strong id="stat-words">0</strong><span data-i18n="words">Слів</span></div>
+          <div class="stat"><strong id="stat-chars">0</strong><span data-i18n="chars">Символів</span></div>
+          <div class="stat"><strong id="stat-bytes">0</strong><span data-i18n="bytes">Байт</span></div>
+        </div>
+        <div class="row">
+          <button class="btn btn-sm" id="json-format" type="button" data-i18n="format">Форматувати JSON</button>
+          <button class="btn btn-sm" id="json-validate" type="button" data-i18n="validate">Перевірити JSON</button>
+          <button class="btn btn-sm" id="b64-encode" type="button" data-i18n="encode">Base64 encode</button>
+          <button class="btn btn-sm" id="b64-decode" type="button" data-i18n="decode">Base64 decode</button>
+        </div>
+        <label class="field" style="margin-top:14px">Base64 / side</label>
+        <textarea id="text-side" style="min-height:72px"></textarea>
+      </div>
+      <div class="card">
+        <h2 data-i18n="diff">Diff</h2>
+        <div class="grid-2">
+          <div>
+            <label class="field" data-i18n="textA">Текст A</label>
+            <textarea id="diff-a"></textarea>
+          </div>
+          <div>
+            <label class="field" data-i18n="textB">Текст B</label>
+            <textarea id="diff-b"></textarea>
+          </div>
+        </div>
+        <div class="row">
+          <button class="btn btn-primary" id="diff-run" type="button" data-i18n="compare">Порівняти</button>
+        </div>
+        <div class="output" id="diff-out" style="margin-top:12px;min-height:100px"></div>
+      </div>
+    </section>
+
+    <!-- NETWORK -->
+    <section class="panel" id="panel-net">
+      <div class="card">
+        <h2 data-i18n="netTitle">Network Fox</h2>
+        <p class="sub" data-i18n="netSub">Браузерне + підказки для терміналу.</p>
+        <div class="row">
+          <button class="btn btn-primary" id="net-refresh" type="button" data-i18n="refresh">Оновити</button>
+          <input id="net-city" type="text" data-i18n-placeholder="location" placeholder="Місто" style="max-width:200px">
+        </div>
+        <div class="net-grid" style="margin-top:16px">
+          <div class="net-card">
+            <h3>🌐 <span data-i18n="publicIp">Public IP</span></h3>
+            <div class="net-val" id="net-ip">—</div>
+            <div class="net-hint"><button class="btn btn-sm" type="button" data-term-copy="ip">ip</button></div>
+          </div>
+          <div class="net-card">
+            <h3>🌤 <span data-i18n="weather">Погода</span></h3>
+            <div class="net-val" id="net-weather">—</div>
+            <div class="net-hint"><button class="btn btn-sm" type="button" data-term-copy="weather">weather</button></div>
+          </div>
+          <div class="net-card">
+            <h3>📶 Wi‑Fi</h3>
+            <div class="net-val" data-i18n="terminalOnly">Тільки в терміналі</div>
+            <div class="net-hint"><button class="btn btn-sm" type="button" data-term-copy="wifi">wifi</button></div>
+          </div>
+          <div class="net-card">
+            <h3>🏓 Ping</h3>
+            <div class="net-val" data-i18n="terminalOnly">Тільки в терміналі</div>
+            <div class="net-hint"><button class="btn btn-sm" type="button" data-term-copy="netping">netping</button></div>
+          </div>
+          <div class="net-card">
+            <h3>💾 Disk</h3>
+            <div class="net-val" data-i18n="terminalOnly">Тільки в терміналі</div>
+            <div class="net-hint"><button class="btn btn-sm" type="button" data-term-copy="disk">disk</button></div>
+          </div>
+          <div class="net-card">
+            <h3>☀ fday</h3>
+            <div class="net-val">time + weather + wifi + ip</div>
+            <div class="net-hint"><button class="btn btn-sm" type="button" data-term-copy="fday">fday</button></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- POMODORO -->
+    <section class="panel" id="panel-pomo">
+      <div class="card pomo-wrap">
+        <div>
+          <h2 data-i18n="pomoTitle">Pomodoro Fox</h2>
+          <p class="sub" data-i18n="pomoSub">25 / 5 / 15 хв.</p>
+          <div class="row">
+            <button class="btn btn-sm" type="button" data-pomo-phase="work" data-i18n="work">Робота</button>
+            <button class="btn btn-sm" type="button" data-pomo-phase="break" data-i18n="break">Перерва</button>
+            <button class="btn btn-sm" type="button" data-pomo-phase="long" data-i18n="longBreak">Довга</button>
+          </div>
+          <div class="row" style="margin-top:16px">
+            <button class="btn btn-primary" id="pomo-start" type="button" data-i18n="start">Старт</button>
+            <button class="btn" id="pomo-reset" type="button" data-i18n="reset">Скинути</button>
+          </div>
+          <p style="margin-top:16px;color:var(--muted);font-size:0.86rem">
+            <span data-i18n="sessions">Сьогодні</span>: <strong id="pomo-sessions" style="color:var(--fox)">0</strong>
+          </p>
+        </div>
+        <div>
+          <div class="pomo-ring">
+            <svg width="220" height="220" viewBox="0 0 220 220">
+              <circle cx="110" cy="110" r="100" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="12"/>
+              <circle id="pomo-progress" cx="110" cy="110" r="100" fill="none" stroke="var(--fox)" stroke-width="12"
+                stroke-dasharray="628" stroke-dashoffset="0" stroke-linecap="round"/>
+            </svg>
+            <div class="pomo-time" id="pomo-time">25:00</div>
+          </div>
+          <p class="pomo-phase" id="pomo-phase-label" data-i18n="work">Робота</p>
+        </div>
+      </div>
+    </section>
+
+    <p class="footer-note" data-i18n="footer">Fox Utils · sites/fox-utils/</p>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <script src="assets/js/main.js"></script>
+</body>
+</html>

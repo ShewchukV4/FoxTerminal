@@ -7,7 +7,7 @@ function Select-Menu([string]$title, [string[]]$options) {
     $index = 0
     while ($true) {
         $p = Get-ThemePalette
-        Clear-Host
+        Clear-FoxHost
         Write-Host (Color-Text $p.accent ("=== " + $title + " ==="))
         Write-Host ""
         for ($i = 0; $i -lt $options.Count; $i++) {
@@ -37,7 +37,7 @@ function Wait-Back {
 }
 
 function Show-Commands {
-    Clear-Host
+    Clear-FoxHost
     $p = Get-ThemePalette
     Write-Host (Color-Text $p.accent "FoxTerminal commands")
     Write-Host ""
@@ -59,8 +59,11 @@ function Show-Commands {
         $known["sum"]      = @{ usage = "sum <file>"; desc = "summarize a file via OpenAI (needs OPENAI_API_KEY)" }
 
         $known["yt"]       = @{ usage = "yt <query>"; desc = "YouTube search in Firefox" }
-        $known["ytm"]      = @{ usage = "ytm [query|alias|url]"; desc = "open YouTube Music (search/alias/url)" }
+        $known["ytm"]      = @{ usage = "ytm [query|alias|url]"; desc = "empty: open YouTube Music; text: search in YouTube Music; alias/url also supported" }
         $known["ytm-ui"]   = @{ usage = "ytm-ui"; desc = "YouTube Music TUI controls + DJ visualizer" }
+        $known["ytsplit"]  = @{ usage = "ytsplit [-ReportOnly]"; desc = "active-title mode: detect current YouTube/YTM windows, auto-open missing, place left/right" }
+        $known["apps"]     = @{ usage = "apps <app1> / <app2> [/ <app3> [/ <app4>]]"; desc = "arrange up to 4 app windows; 3-app mode: app3 left half, app1/app2 right stack" }
+        $known["appbind"]  = @{ usage = "appbind [add|del|list] ..."; desc = "bind app alias to exe path (+ optional args/title match) for apps layout command" }
         $known["sp"]       = @{ usage = "sp [query|url]"; desc = "open Spotify (app/handler) or search" }
         $known["sp-ui"]    = @{ usage = "sp-ui"; desc = "Spotify DJ UI + controls (Play/Next/Prev/etc.)" }
         $known["dj"]       = @{ usage = "dj"; desc = "audio-level DJ visualizer (system audio peak)" }
@@ -85,7 +88,9 @@ function Show-Commands {
         $known["nfile"]     = @{ usage = "nfile <name.ext>"; desc = "create file in current notes folder" }
         $known["nfould"]    = @{ usage = "nfould <name>"; desc = "create folder in current notes location" }
         $known["fdel"]      = @{ usage = "fdel <name.ext>"; desc = "delete file in notes (password)" }
-        $known["edit"]      = @{ usage = "edit <name.txt>"; desc = "edit .txt file in terminal" }
+        $known["edit"]      = @{ usage = "edit <path-or-name>"; desc = "terminal editor (notes by name, or any file path)" }
+        $known["nano"]      = @{ usage = "nano <file>"; desc = "Linux-style terminal editing (micro/nano/vim, fallback to edit)" }
+        $known["view"]      = @{ usage = "view <file>"; desc = "open file in terminal pager (read-only)" }
         $known["hash"]     = @{ usage = "hash [fx1|md5|sha1|sha256|ntlm|b64] <text>"; desc = "hash text (digests print raw hex)" }
         $known["unhash"]   = @{ usage = "unhash [-offline] [hash]"; desc = "crack: wordlist+rules, nitrxgen MD5 DB, brute; FX1 needs password" }
         $known["build"]    = @{ usage = "build <name>|-list|-restore <n>|-delete <n>"; desc = "save/restore/list config snapshots (builds\ folder)" }
@@ -100,18 +105,30 @@ function Show-Commands {
         $known["ip"]       = @{ usage = "ip"; desc = "public + local IPs" }
         $known["ftime"]    = @{ usage = "ftime"; desc = "time + date" }
         $known["fday"]     = @{ usage = "fday [location]"; desc = "daily summary: time + weather + wifi + ip" }
-        $known["sw"]       = @{ usage = "sw [live] [color|mono] [imagePath]"; desc = "system info + theme switcher (arrows change theme, Ctrl+E exit)" }
+        $known["sw"]       = @{ usage = "sw [themeName] [live] [color|mono] [imagePath]"; desc = "system info + theme switcher (arrows change theme, Ctrl+E exit); example: sw slate" }
+        $known["themes"]   = @{ usage = "themes"; desc = "main themes picker: arrows + Enter (Fox default, Arthas, Pride, Noir, Death Note)" }
+        $known["noir"]     = @{ usage = "noir"; desc = "toggle noir mode: full black & white, locks sw theme picker; run again to restore" }
+        $known["dnote"]    = @{ usage = "dnote"; desc = "toggle Death Note mode: crimson noir-like style, login user selection with strike-through, apple intro + '<user> died'" }
+        $known["apple"]    = @{ usage = "apple [imagePath]"; desc = "show the Death Note scene as extra-large centered ASCII image; press Esc to exit" }
+        $known["pride"]    = @{ usage = "pride"; desc = "toggle pride mode: rainbow flag styles; sw arrows pick gay/bi/lesbian/trans/femboy; run again to restore" }
+        $known["arthas"]   = @{ usage = "arthas"; desc = "toggle Arthas mode: top-centered panel, Left/Right or A/D swaps dark/light Arthas, Ctrl+E closes panel, run again to restore theme" }
+        $known["spider"]   = @{ usage = "spider"; desc = "noir-only: centered Spider-Noir panel + system info (like sw, Ctrl+E exit)" }
+        $known["frederik"] = @{ usage = "frederik [-ListMics] [-Source Auto|Mic|System] [-Mic <idx|name>] [-SetMainMic] [-Bars <n>] [-Height <n>]"; desc = "voice-reactive waveform visualizer, Esc to exit" }
         $known["chek"]     = @{ usage = "chek"; desc = "show current terminal/shell backend (cmd, WT, Cygwin, MSYS, etc.)" }
         $known["sixel"]    = @{ usage = "sixel"; desc = "check SIXEL readiness in mintty and suggest image tools" }
+        $known["foxscan"]  = @{ usage = "foxscan [-Deep] [-IncludeLow] [-IncludeWorkspace] [-Top <n>] [-Path <dir1,dir2,...>]"; desc = "heuristic suspicious-script scanner (names + risk score + reasons)" }
+        $known["foxbg"]    = @{ usage = "foxbg [-IncludeLow] [-Top <n>] [-MinMemoryMB <n>]"; desc = "interactive background cleaner: arrows select, Enter close app, Esc exit" }
         $known["interface-deps"] = @{ usage = "interface-deps [-Install|-Check]"; desc = "install/check required packages for interface mode (bash, mintty, tmux, dialog)" }
         $known["interface"]= @{ usage = "interface [-TwoWindows] [-Terminal] [-Gui]"; desc = "default: tmux split UI in one mintty; -TwoWindows opens 2 mintty windows; -Terminal current-window mode; -Gui Windows GUI split" }
         $known["term"]     = @{ usage = "term [-Set auto|windows|mintty|cygwin] [-Now] [-App mintty]"; desc = "switch backend via menu; -Now switches immediately, -App mintty opens real mintty window" }
+        $known["ffsync"]   = @{ usage = "ffsync start|stop|status|shell|exec <cmd>"; desc = "shared terminal bridge for Firefox sidebar + terminal session sync" }
 
         $known["foxreset"]   = @{ usage = "foxreset [-Git] [-NoGit]"; desc = "hard reset caches + re-init prompt; -Git/-NoGit toggle git branch segment" }
         $known["foxhelp"]    = @{ usage = "foxhelp"; desc = "this menu" }
         $known["foxhotkeys"] = @{ usage = "foxhotkeys [-Stop] [-Restart] [-Status]"; desc = "global hotkey daemon (Shift+Alt/Ctrl combos for YouTube, Firefox, FoxTerminal)" }
         $known["foxinfo"]    = @{ usage = "foxinfo"; desc = "hotkey binding manager: add open/close bindings, configure FoxTerminal path" }
         $known["foxdeps"]    = @{ usage = "foxdeps [-Check] [-Install]"; desc = "check + auto-install all FoxTerminal dependencies (Firefox, OhMyPosh, AHK, .NET 9, FoxTerminalApp)" }
+        $known["foxpack"]    = @{ usage = "foxpack [-Full] [-Open] [-OutPath <path>]"; desc = "pack FoxTerminal into shareable zip (clean by default, -Full keeps your binds/notes/theme)" }
 
         # Auto-detect commands present in cmd\ (include .ps1 and .bat).
         # We de-duplicate by base name, prefer commands people can type (bat/ps1 wrappers).
@@ -126,7 +143,7 @@ function Show-Commands {
             $base = [System.IO.Path]::GetFileNameWithoutExtension($f.Name)
             if ([string]::IsNullOrWhiteSpace($base)) { continue }
             # Not meant to be executed directly by users:
-            if ($base -in @("foxauth", "foxcodec", "foxhash-lookup", "note-lib", "sw-script", "hk_parse", "hk_lib")) { continue }
+            if ($base -in @("foxauth", "foxcodec", "foxhash-lookup", "note-lib", "sw-script", "spider-script", "hk_parse", "hk_lib", "pride-lib", "interface-gui", "foxterm-cmd-init")) { continue }
             $null = $names.Add($base)
         }
 
@@ -153,7 +170,7 @@ function Show-Commands {
     function Write-CommandSection([string]$title, [object[]]$rows, [string[]]$names) {
         if ($null -eq $rows -or $rows.Count -eq 0) { return }
         $p = Get-ThemePalette
-        $picked = @($rows | Where-Object { $names -contains $_.name })
+        $picked = @($rows | Where-Object { $names -contains $_.name } | Sort-Object name)
         if ($picked.Count -eq 0) { return }
         Write-Host (Color-Text $p.accent2 $title)
         foreach ($r in $picked) {
@@ -165,17 +182,19 @@ function Show-Commands {
 
     $inv = Get-CommandInventory
 
-    Write-CommandSection "Login / Users:" $inv @("l","nuser","uexit","users","who","passwd")
+    Write-CommandSection "Login / Users:" $inv @("l","nuser","passwd","uexit","users","who")
     Write-CommandSection "AI:" $inv @("ask","friend","sum")
-    Write-CommandSection "Media:" $inv @("yt","ytm","ytm-ui","sp","sp-ui","dj")
-    Write-CommandSection "Firefox / aliases:" $inv @("ff","sites","youtube","bbind","blist","bdel","ser","gask","ffbot")
-    Write-CommandSection "Telegram:" $inv @("tg","tgub","tglist")
-    Write-CommandSection "Notes / files:" $inv @("wai","go","up","nfile","nfould","fdel","edit","hash","unhash")
-    Write-CommandSection "Builds / snapshots:" $inv @("build")
-    Write-CommandSection "Network & system:" $inv @("wifi","reconnect","ip","weather","netping","disk","ftime","fday","sw","chek","sixel","interface-deps","interface","term","clear","texit")
+    Write-CommandSection "Media:" $inv @("dj","sp","sp-ui","yt","ytm","ytm-ui","ytsplit")
+    Write-CommandSection "Apps / layout:" $inv @("appbind","apps")
+    Write-CommandSection "Firefox / web aliases:" $inv @("bbind","bdel","blist","ff","ffbot","gask","ser","sites","youtube")
+    Write-CommandSection "Telegram:" $inv @("tg","tglist","tgub")
+    Write-CommandSection "Notes / files:" $inv @("edit","fdel","go","hash","nano","nfile","nfould","unhash","up","view","wai")
+    Write-CommandSection "Builds / packaging:" $inv @("build","foxpack")
+    Write-CommandSection "Themes / visual modes:" $inv @("apple","arthas","dnote","frederik","noir","pride","spider","sw","themes")
+    Write-CommandSection "Network / diagnostics:" $inv @("chek","disk","fday","ftime","ip","netping","reconnect","sixel","weather","wifi")
+    Write-CommandSection "System tools:" $inv @("clear","ffsync","foxbg","foxscan","interface","interface-deps","term","texit")
     Write-CommandSection "Hotkeys / bindings:" $inv @("foxhotkeys","foxinfo")
-    Write-CommandSection "Setup / deps:" $inv @("foxdeps","interface-deps")
-    Write-CommandSection "Help:" $inv @("foxreset","foxhelp")
+    Write-CommandSection "Setup / reset / help:" $inv @("foxdeps","foxhelp","foxreset")
 
     # Commands that live outside cmd\ (in FoxTerminal folder).
     Write-Host (Color-Text $p.accent2 "Windows (run from FoxTerminal folder):")
@@ -200,7 +219,7 @@ function Show-Commands {
 }
 
 function Show-OllamaAI {
-    Clear-Host
+    Clear-FoxHost
     $p = Get-ThemePalette
     Write-Host (Color-Text $p.accent "Ollama & AI (FoxTerminal)")
     Write-Host ""
@@ -224,7 +243,7 @@ function Show-OllamaAI {
 }
 
 function Show-WindowsBloatAds {
-    Clear-Host
+    Clear-FoxHost
     $p = Get-ThemePalette
     Write-Host (Color-Text $p.accent "Windows: bloat & ads (FoxTerminal folder)")
     Write-Host ""
@@ -245,7 +264,7 @@ function Show-WindowsBloatAds {
 }
 
 function Show-InstallConfig {
-    Clear-Host
+    Clear-FoxHost
     $p = Get-ThemePalette
     Write-Host (Color-Text $p.accent "FoxTerminal: install & config")
     Write-Host ""
@@ -267,7 +286,7 @@ function Show-InstallConfig {
 }
 
 function Show-Troubles {
-    Clear-Host
+    Clear-FoxHost
     $p = Get-ThemePalette
     Write-Host (Color-Text $p.accent "Why FoxTerminal may not work")
     Write-Host ""
@@ -289,7 +308,7 @@ function Show-Troubles {
 }
 
 function Show-Settings {
-    Clear-Host
+    Clear-FoxHost
     $p = Get-ThemePalette
     Write-Host (Color-Text $p.accent "Correct settings.json path")
     Write-Host "C:\Users\<YOUR_USER>\AppData\Local\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState\settings.json"
@@ -307,7 +326,7 @@ function Show-Settings {
 }
 
 function Show-InterfaceDeps {
-    Clear-Host
+    Clear-FoxHost
     $p = Get-ThemePalette
     Write-Host (Color-Text $p.accent "Interface dependencies")
     Write-Host ""
@@ -334,7 +353,7 @@ function Show-InterfaceDeps {
 }
 
 function Show-SitesInfo {
-    Clear-Host
+    Clear-FoxHost
     $p = Get-ThemePalette
     Write-Host (Color-Text $p.accent "Sites / FoxType Master")
     Write-Host ""
@@ -363,7 +382,7 @@ function Show-SitesInfo {
 }
 
 function Show-BuildsInfo {
-    Clear-Host
+    Clear-FoxHost
     $p = Get-ThemePalette
     Write-Host (Color-Text $p.accent "Builds / Config snapshots")
     Write-Host ""

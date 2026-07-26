@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FoxTerminal</title>
+  <link rel="stylesheet" href="sidebar.css">
+</head>
+<body>
+  <div class="bg-glow" aria-hidden="true"></div>
+  <div class="bg-grid" aria-hidden="true"></div>
+
+  <main class="layout">
+    <header class="topbar glass">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <div class="brand-text">
+          <h1>FoxTerminal</h1>
+          <p class="hint">v0.9.11 · translate fix</p>
+        </div>
+      </div>
+      <span id="connection-pill" class="pill disconnected">offline</span>
+    </header>
+
+    <nav class="tabs glass" role="tablist" aria-label="Розділи">
+      <button type="button" class="tab active" data-tab="terminal" role="tab" aria-selected="true">Термінал</button>
+      <button type="button" class="tab" data-tab="sessions" role="tab" aria-selected="false">Вкладки</button>
+      <button type="button" class="tab" data-tab="themes" role="tab" aria-selected="false">Теми</button>
+      <button type="button" class="tab" data-tab="translate" role="tab" aria-selected="false">Переклад</button>
+      <button type="button" class="tab" data-tab="settings" role="tab" aria-selected="false">Опції</button>
+    </nav>
+
+    <section id="panel-terminal" class="panel active" role="tabpanel">
+      <div id="cwd-bar" class="cwd glass-soft">cwd: -</div>
+      <div id="terminal-output" class="output" aria-live="polite"></div>
+      <form id="command-form" class="command-form glass">
+        <input id="command-input" type="text" placeholder="ff open youtube" autocomplete="off" spellcheck="false">
+        <button id="run-btn" type="submit" class="btn-primary">Run</button>
+        <button id="clear-btn" type="button" class="btn-ghost">Clear</button>
+      </form>
+    </section>
+
+    <section id="panel-sessions" class="panel" role="tabpanel">
+      <div class="sessions-toolbar glass">
+        <input id="session-name-input" type="text" placeholder="Назва сесії (необовʼязково)" autocomplete="off">
+        <div class="sessions-actions">
+          <button id="save-window-btn" type="button" class="btn-primary">Зберегти сесію</button>
+          <button id="save-pin-btn" type="button" class="btn-ghost">Закріпити вкладку</button>
+        </div>
+      </div>
+      <p id="sessions-status" class="status-line">Збережи сесію або закріпи вкладку — відкривай одним кліком.</p>
+      <div id="sessions-list" class="sessions-list"></div>
+    </section>
+
+    <section id="panel-themes" class="panel" role="tabpanel">
+      <div class="themes-hero glass">
+        <div class="themes-hero-text">
+          <h2 id="theme-current-label">Тема</h2>
+          <p class="themes-sub">Space/ліва/низ — після короткого рестарту Zen</p>
+        </div>
+        <div id="theme-current-swatch" class="theme-swatch big"></div>
+      </div>
+      <div class="themes-filters" role="group" aria-label="Фільтр тем">
+        <button type="button" class="chip active" data-group="all">Усі</button>
+        <button type="button" class="chip" data-group="special">Special</button>
+        <button type="button" class="chip" data-group="pride">Pride</button>
+        <button type="button" class="chip" data-group="colors">Colors</button>
+      </div>
+      <div id="themes-grid" class="themes-grid"></div>
+    </section>
+
+    <section id="panel-translate" class="panel" role="tabpanel">
+      <div class="translate-meta glass-soft">
+        <span id="translate-langs">auto → uk</span>
+        <button id="translate-copy-btn" type="button" class="btn-primary btn-sm">Копіювати</button>
+      </div>
+      <label class="field-label" for="translate-source">Оригінал</label>
+      <textarea id="translate-source" class="translate-box" readonly placeholder="Виділи текст → ПКМ → Перекласти"></textarea>
+      <label class="field-label" for="translate-result">Переклад</label>
+      <textarea id="translate-result" class="translate-box result" readonly placeholder="Тут з’явиться переклад"></textarea>
+      <label class="field-label" for="translate-notes">Нотатки від ШІ</label>
+      <textarea id="translate-notes" class="translate-box notes" readonly placeholder="Пояснення іншими словами з’явиться тут (AI)"></textarea>
+      <p id="translate-status" class="status-line">Готово до перекладу.</p>
+    </section>
+
+    <section id="panel-settings" class="panel" role="tabpanel">
+      <form id="settings-form" class="settings-form glass">
+        <label class="field-label" for="setting-target-lang">Мова перекладу</label>
+        <select id="setting-target-lang"></select>
+
+        <label class="field-label" for="setting-source-lang">Мова оригіналу</label>
+        <select id="setting-source-lang"></select>
+
+        <div class="checks">
+          <label class="check-row">
+            <input id="setting-ai-translate" type="checkbox" checked>
+            <span>AI-переклад за сенсом (Ollama), не дослівно</span>
+          </label>
+          <label class="check-row">
+            <input id="setting-open-sidebar" type="checkbox">
+            <span>Відкривати сайдбар після перекладу</span>
+          </label>
+          <label class="check-row">
+            <input id="setting-copy" type="checkbox">
+            <span>Автокопіювати переклад</span>
+          </label>
+          <label class="check-row">
+            <input id="setting-notify" type="checkbox">
+            <span>Бокс перекладу на сторінці</span>
+          </label>
+        </div>
+
+        <button id="settings-save-btn" type="submit" class="btn-primary">Зберегти</button>
+        <p id="settings-status" class="status-line">Зміни локальні в Firefox/Zen.</p>
+      </form>
+    </section>
+  </main>
+
+  <script src="themes.js"></script>
+  <script src="sidebar.js"></script>
+</body>
+</html>

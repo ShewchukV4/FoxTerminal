@@ -23,7 +23,6 @@ public sealed class TerminalControl : Control
     private Size _cellSize = new(8, 16);
     private bool _cellSizeDirty = true;
     private CancellationTokenSource _cts = new();
-    private string _inputBuffer = string.Empty;
 
     // Coalescing flag: 0 = no render queued, 1 = render queued.
     // Many PTY chunks per frame collapse into a single redraw.
@@ -61,6 +60,7 @@ public sealed class TerminalControl : Control
     {
         Focusable = true;
         ClipToBounds = true;
+        GotFocus += (_, _) => RefreshFoxTheme();
         // Aliased edges keep the cell grid pixel-crisp and avoid sub-pixel
         // shimmer that looks like flicker when redrawing rapidly.
         RenderOptions.SetEdgeMode(this, EdgeMode.Aliased);
@@ -74,6 +74,7 @@ public sealed class TerminalControl : Control
 
     public void ApplyConfig(FoxTerminalConfig config)
     {
+        FoxThemeLoader.ApplyToConfig(config);
         _typeface = new Typeface(config.FontFamily);
         _fontSize = config.FontSize;
         _backgroundColor = ParseHex(config.Background, _backgroundColor);
@@ -81,6 +82,15 @@ public sealed class TerminalControl : Control
         _brushCache.Clear();
         _cellSizeDirty = true;
         InvalidateMeasure();
+        InvalidateVisual();
+    }
+
+    public void RefreshFoxTheme()
+    {
+        FoxThemeLoader.ApplyTerminalTheme();
+        _backgroundColor = ParseHex(TerminalTheme.BackgroundHex, _backgroundColor);
+        _backgroundBrush = new SolidColorBrush(_backgroundColor).ToImmutable();
+        _brushCache.Clear();
         InvalidateVisual();
     }
 
@@ -252,7 +262,7 @@ public sealed class TerminalControl : Control
         InvalidateVisual();
     }
 
-    private void OnTextInput(object? sender, TextInputEventArgs e)
+    private async void OnTextInput(object? sender, TextInputEventArgs e)
     {
         var session = _session;
         if (session == null || string.IsNullOrEmpty(e.Text))
@@ -263,8 +273,15 @@ public sealed class TerminalControl : Control
         var ch = e.Text[0];
         if (!char.IsControl(ch))
         {
-            _inputBuffer += e.Text;
-            session.FeedLocal(e.Text);
+            e.Handled = true;
+            try
+            {
+                await session.SendAsync(e.Text, _cts.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                // Control was detached; ignore.
+            }
         }
     }
 
@@ -279,12 +296,9 @@ public sealed class TerminalControl : Control
         if (e.Key == Key.Enter)
         {
             e.Handled = true;
-            session.FeedLocal("\r\n");
-            var line = _inputBuffer;
-            _inputBuffer = string.Empty;
             try
             {
-                await session.SendLineAsync(line, _cts.Token);
+                await session.SendAsync("\r", _cts.Token);
             }
             catch (OperationCanceledException)
             {
@@ -296,10 +310,13 @@ public sealed class TerminalControl : Control
         if (e.Key == Key.Back)
         {
             e.Handled = true;
-            if (_inputBuffer.Length > 0)
+            try
             {
-                _inputBuffer = _inputBuffer[..^1];
-                session.FeedLocal("\b \b");
+                await session.SendAsync("\b", _cts.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                // Control was detached; ignore.
             }
             return;
         }
@@ -311,18 +328,47 @@ public sealed class TerminalControl : Control
             Key.Right => "\u001b[C",
             Key.Up => "\u001b[A",
             Key.Down => "\u001b[B",
-            _ => string.Empty
+            Key.Home => "\u001b[H",
+            Key.End => "\u001b[F",
+            Key.Delete => "\u001b[3~",
+            Key.PageUp => "\u001b[5~",
+            Key.PageDown => "\u001b[6~",
+            Key.Escape => "\u001b",
+            _ => null
         };
+
+        if ((e.KeyModifiers & KeyModifiers.Control) != 0)
+        {
+            seq = e.Key switch
+            {
+                Key.C => "\u0003",
+                Key.D => "\u0004",
+                Key.L => "\u000c",
+                _ => seq
+            };
+        }
 
         if (!string.IsNullOrEmpty(seq))
         {
             e.Handled = true;
-            // Cursor movement is intentionally ignored in line mode for now.
+            try
+            {
+                await session.SendAsync(seq, _cts.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                // Control was detached; ignore.
+            }
         }
     }
 
     private void OnAttached(object? sender, VisualTreeAttachmentEventArgs e)
     {
+        if (_cts.IsCancellationRequested)
+        {
+            _cts.Dispose();
+            _cts = new CancellationTokenSource();
+        }
         Focus();
     }
 

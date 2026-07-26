@@ -1,4 +1,5 @@
 param(
+    [switch]$AnyPath,
     [Parameter(ValueFromRemainingArguments = $true)]
     [string[]]$Args
 )
@@ -13,26 +14,38 @@ $cwd = Get-NoteSessionCwd $paths.NotesRoot $paths.FilesHome
 
 $name = if ($Args.Count -gt 0) { ($Args -join " ").Trim() } else { "" }
 if ([string]::IsNullOrWhiteSpace($name)) {
-    Write-Host "Usage: edit <name.txt>" -ForegroundColor Yellow
-    return
-}
-if (-not (Test-HasFileExtension $name)) {
-    Write-Host "Specify .txt file. Example: edit notes.txt" -ForegroundColor Yellow
+    Write-Host "Usage: edit <path-or-name>" -ForegroundColor Yellow
+    Write-Host "Examples: edit notes.txt | edit .\app\settings.json | edit C:\tmp\todo.md" -ForegroundColor DarkGray
     return
 }
 
-$filePath = Resolve-UnderNotes $cwd $name $paths.NotesRoot
-if ($null -eq $filePath) {
-    Write-Host "Invalid path." -ForegroundColor Yellow
-    return
+$isPathLike = $AnyPath -or
+    [System.IO.Path]::IsPathRooted($name) -or
+    ($name -match "[\\/]" ) -or
+    $name.StartsWith(".")
+
+if ($isPathLike) {
+    $filePath = if ([System.IO.Path]::IsPathRooted($name)) {
+        [System.IO.Path]::GetFullPath($name)
+    } else {
+        [System.IO.Path]::GetFullPath((Join-Path (Get-Location).Path $name))
+    }
+} else {
+    $filePath = Resolve-UnderNotes $cwd $name $paths.NotesRoot
+    if ($null -eq $filePath) {
+        Write-Host "Invalid path." -ForegroundColor Yellow
+        return
+    }
 }
-if ([System.IO.Path]::GetExtension($filePath).ToLowerInvariant() -ne ".txt") {
-    Write-Host "Only .txt files can be edited. Use nfile for other types." -ForegroundColor Yellow
-    return
-}
+
 if (-not (Test-Path -LiteralPath $filePath)) {
+    $parent = Split-Path -Path $filePath -Parent
+    if (-not [string]::IsNullOrWhiteSpace($parent) -and -not (Test-Path -LiteralPath $parent)) {
+        Write-Host "Folder does not exist: $parent" -ForegroundColor Yellow
+        return
+    }
     New-Item -ItemType File -Path $filePath | Out-Null
-    Write-Host "Created: $name" -ForegroundColor DarkGray
+    Write-Host "Created: $filePath" -ForegroundColor DarkGray
 }
 
 $lines = New-Object System.Collections.Generic.List[string]

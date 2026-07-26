@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fox Stack — Tetris</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body class="theme-cyber">
+  <canvas id="bg-canvas" aria-hidden="true"></canvas>
+  <div class="scanlines" id="scanlines" aria-hidden="true"></div>
+
+  <div class="app">
+    <header>
+      <div class="logo">FOX<span>STACK</span></div>
+      <div class="tagline">TETRIS · FOXTERMINAL · STACK THE NIGHT</div>
+    </header>
+
+    <div class="section-label">Візуальна тема</div>
+    <div class="mode-switcher mode-switcher--themes" id="theme-bar">
+      <button class="mode-btn active" type="button" data-theme="cyber">⚡ CYBER</button>
+      <button class="mode-btn" type="button" data-theme="fox">🦊 FOX</button>
+      <button class="mode-btn" type="button" data-theme="noir">🕶 NOIR</button>
+      <button class="mode-btn" type="button" data-theme="neon">🌈 NEON</button>
+      <button class="mode-btn" type="button" data-theme="retro">🕹 RETRO</button>
+      <button class="mode-btn" type="button" data-theme="synth">🌆 SYNTH</button>
+      <button class="mode-btn" type="button" data-theme="ocean">🌊 OCEAN</button>
+      <button class="mode-btn" type="button" data-theme="forest">🍀 FOREST</button>
+      <button class="mode-btn" type="button" data-theme="lava">🔥 LAVA</button>
+      <button class="mode-btn" type="button" data-theme="frost">❄ FROST</button>
+      <button class="mode-btn" type="button" data-theme="espresso">☕ ESPRESSO</button>
+      <button class="mode-btn" type="button" data-theme="arcade">👾 ARCADE</button>
+      <button class="mode-btn" type="button" data-theme="midnight">🌙 MIDNIGHT</button>
+    </div>
+
+    <div class="section-label">Режим гри</div>
+    <div class="mode-switcher mode-switcher--rules" id="rule-bar"></div>
+    <p class="mode-hint" id="mode-hint"></p>
+
+    <div class="stats-bar">
+      <div class="stat">
+        <div class="stat-value" id="stat-score">0</div>
+        <div class="stat-label">Очки</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value" id="stat-lines">0</div>
+        <div class="stat-label">Лінії</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value" id="stat-level">1</div>
+        <div class="stat-label">Рівень</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value" id="stat-combo">—</div>
+        <div class="stat-label">Combo</div>
+      </div>
+      <div class="stat stat-accent" id="stat-bite-wrap" hidden>
+        <div class="stat-value bite-val" id="stat-bite">0%</div>
+        <div class="stat-label">Fox Bite</div>
+      </div>
+      <div class="stat stat-accent" id="stat-flip-wrap" hidden>
+        <div class="stat-value" id="stat-flip">—</div>
+        <div class="stat-label">Gravity</div>
+      </div>
+      <div class="stat stat-accent" id="stat-rush-wrap" hidden>
+        <div class="stat-value" id="stat-rush">—</div>
+        <div class="stat-label">Rush</div>
+      </div>
+    </div>
+
+    <div class="game-layout">
+      <div class="board-shell" id="board-shell">
+        <div class="board-corners"><span></span><span></span><span></span><span></span></div>
+        <div class="board-glow"></div>
+        <canvas id="board" width="300" height="600"></canvas>
+        <div class="overlay" id="overlay">
+          <div class="overlay-fox">🦊</div>
+          <div class="overlay-title" id="overlay-title">FOX STACK</div>
+          <div class="overlay-msg" id="overlay-msg">Обери режим зверху і жми Старт</div>
+          <div class="overlay-btns">
+            <button class="btn primary" id="btn-start" type="button">▶ СТАРТ</button>
+            <button class="btn" id="btn-pause" type="button" hidden>⏸ ПАУЗА</button>
+          </div>
+          <p class="overlay-hint" id="overlay-hint">← → рух · ↑ поворот · ↓ soft · Space hard · P пауза</p>
+        </div>
+      </div>
+
+      <aside class="side">
+        <div class="panel" id="hold-panel" hidden>
+          <div class="panel-title">HOLD <kbd>C</kbd></div>
+          <canvas id="hold" width="128" height="128"></canvas>
+          <button class="btn btn-slot" id="btn-hold" type="button">⇄ Сwap slot</button>
+        </div>
+        <div class="panel">
+          <div class="panel-title">NEXT</div>
+          <canvas id="preview" width="128" height="128"></canvas>
+        </div>
+        <div class="panel panel-hold">
+          <div class="panel-title">CONTROLS</div>
+          <ul class="ctrl-list" id="ctrl-list"></ul>
+        </div>
+        <div class="panel panel-record">
+          <div class="panel-title">РЕКОРД</div>
+          <div class="record-val" id="stat-hs">0</div>
+        </div>
+        <button class="btn primary btn-wide" id="btn-restart" type="button">↺ Нова гра</button>
+      </aside>
+    </div>
+  </div>
+
+  <script src="assets/js/main.js"></script>
+</body>
+</html>

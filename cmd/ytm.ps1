@@ -5,20 +5,23 @@ param(
 
 Set-StrictMode -Version Latest
 
+function Ensure-Utf8Console {
+    try {
+        $chcp = Get-Command chcp -ErrorAction SilentlyContinue
+        if ($chcp) { $null = & $chcp 65001 2>$null }
+        $utf8 = New-Object System.Text.UTF8Encoding($false)
+        [Console]::OutputEncoding = $utf8
+        [Console]::InputEncoding = $utf8
+        $global:OutputEncoding = $utf8
+    } catch {}
+}
+
+Ensure-Utf8Console
+
 $query = if ($CmdArgs -and $CmdArgs.Count -gt 0) { ($CmdArgs -join " ").Trim() } else { "" }
 
-function Resolve-YtmBrowser {
-    $pf    = [string]$env:ProgramFiles
-    $pfx86 = try { [string]${env:ProgramFiles(x86)} } catch { "" }
-    $candidates = @(
-        (Join-Path $pf    "Mozilla Firefox\firefox.exe"),
-        (Join-Path $pfx86 "Mozilla Firefox\firefox.exe")
-    )
-    foreach ($c in $candidates) {
-        if ($c -and (Test-Path $c)) { return $c }
-    }
-    return $null
-}
+. (Join-Path $PSScriptRoot "fox-browser.ps1")
+function Resolve-YtmBrowser { Resolve-FoxBrowserPath }
 
 function Normalize-YtmUrl([string]$url) {
     if ([string]::IsNullOrWhiteSpace($url)) { return $url }
@@ -76,10 +79,17 @@ function Resolve-YtmUrl([string]$input) {
     $input = $input.Trim()
     if ([string]::IsNullOrWhiteSpace($input)) { return "https://music.youtube.com/" }
 
+    if ($input -match '^https?://') { return $input }
+
+    # If user typed a phrase, always treat it as search query.
+    if ($input -match '\s+') {
+        $encoded = [uri]::EscapeDataString($input)
+        return "https://music.youtube.com/search?q=$encoded"
+    }
+
     $bindings = Load-YtmBindings
     if ($bindings.ContainsKey($input)) { return [string]$bindings[$input] }
 
-    if ($input -match '^https?://') { return $input }
     $encoded = [uri]::EscapeDataString($input)
     return "https://music.youtube.com/search?q=$encoded"
 }

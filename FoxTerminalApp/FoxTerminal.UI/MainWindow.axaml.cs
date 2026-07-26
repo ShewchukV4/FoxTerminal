@@ -22,13 +22,23 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         _config = FoxTerminalConfigLoader.Load();
+        FoxThemeLoader.ApplyToConfig(_config);
         ApplyConfigToWindow();
         NewTabButton.Click += OnNewTabClicked;
         CloseTabButton.Click += OnCloseTabClicked;
         Tabs.SelectionChanged += OnTabSelectionChanged;
         Closing += OnClosing;
+        Activated += OnWindowActivated;
         Tabs.ItemsSource = _tabs;
         AddNewTab();
+    }
+
+    private void OnWindowActivated(object? sender, EventArgs e)
+    {
+        if (Tabs.SelectedItem is TabItem tab && tab.Content is TerminalControl control)
+        {
+            control.RefreshFoxTheme();
+        }
     }
 
     private void OnNewTabClicked(object? sender, RoutedEventArgs e)

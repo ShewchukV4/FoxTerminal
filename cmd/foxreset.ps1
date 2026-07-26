@@ -28,6 +28,10 @@ $global:FOXTERM_THEME_CACHE        = $null
 $global:FOXTERM_THEME_MTIME        = $null
 $global:FOXTERM_OMP_INIT           = $false
 $global:FOXTERM_OMP_CONFIG_THEME   = $null
+$global:FOXTERM_SYNCED_THEME       = $null
+$global:FOXTERM_POSH_CONFIG        = $null
+$global:FOXTERM_POSH_EXE           = $null
+$global:FOXTERM_POSH_SHELL         = $null
 $global:FOXTERM_PSREADLINE_CHECKED = $false
 $global:FOXTERM_PSREADLINE_AVAILABLE = $null
 
@@ -45,7 +49,7 @@ try {
     Write-Host ("Reset error: " + $_.Exception.Message) -ForegroundColor Red
 }
 
-Clear-Host
+Clear-FoxHost
 
 $p = Get-ThemePalette
 Write-Host (Color-Text $p.accent "FoxTerminal reset complete.") 

@@ -1,0 +1,215 @@
+﻿<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FoxTerminal — презентація</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css?v=20260726f">
+</head>
+<body data-page="home">
+  <canvas id="bg-particles" aria-hidden="true"></canvas>
+  <div class="noise"></div>
+  <div class="scanlines"></div>
+  <div class="orbs"><div class="orb orb-a"></div><div class="orb orb-b"></div><div class="orb orb-c"></div></div>
+  <div class="cursor-glow" id="cursor-glow"></div>
+
+  <div class="intro-splash" id="intro-splash">
+    <div class="splash-inner">
+      <div class="splash-term-window">
+        <div class="term-bar"><span class="term-dot"></span><span class="term-dot"></span><span class="term-dot"></span></div>
+        <div class="splash-term-body">
+          <div><span class="prompt">foxterm</span> --presentation</div>
+          <div>❯ loading modules<span class="caret"></span></div>
+        </div>
+      </div>
+      <div class="splash-title">FOXTERM</div>
+      <div class="splash-sub" data-i18n="splash.init">init presentation</div>
+      <div class="splash-bar"><div class="splash-bar-fill"></div></div>
+    </div>
+  </div>
+
+  <header class="topbar">
+    <div class="topbar-dots" aria-hidden="true"><span class="term-dot"></span><span class="term-dot"></span><span class="term-dot"></span></div>
+    <a class="brand" href="index.html">
+      <span class="brand-mark" aria-hidden="true">❯</span>
+      <span class="brand-text"><span class="brand-name">FoxTerminal</span><small>Presentation</small></span>
+    </a>
+    <nav class="nav">
+      <a href="index.html" data-page="home">Головна</a>
+      <a href="companion.html" data-page="companion">Zen</a>
+      <a href="themes.html" data-page="themes">Теми</a>
+      <a href="commands.html" data-page="commands">Команди</a>
+      <a href="terminal.html" data-page="terminal">Термінал</a>
+      <a href="ai.html" data-page="ai">AI</a>
+      <a href="media.html" data-page="media">Медіа</a>
+      <a href="hotkeys.html" data-page="hotkeys">Hotkeys</a>
+      <a href="ecosystem.html" data-page="ecosystem">Екосистема</a>
+    </nav>
+    <div class="topbar-actions">
+      <button class="btn btn-sm btn-ghost" id="noir-toggle" type="button">Noir</button>
+      <button class="btn btn-sm btn-ghost" id="scan-toggle" type="button">Scan</button>
+      <button class="btn btn-sm btn-ghost" id="theme-toggle" type="button">Light</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow" data-stagger data-i18n="home.eyebrow">Portable Terminal OS</p>
+        <h1 class="title-gradient" data-stagger data-i18n="home.title">FoxTerminal — це не prompt. Це екосистема.</h1>
+        <p class="hero-text" data-stagger data-i18n="home.desc">Windows Terminal · PowerShell · Oh My Posh · 60+ команд · AI FRIEND · локальні сайти · DJ visualizer · noir · hotkeys. Повна інтерактивна презентація.</p>
+        <div class="hero-badges" data-stagger>
+          <span class="badge hot" data-i18n="home.badge1">★ #1 у Fox Hub</span>
+          <span class="badge" data-i18n="home.badge2">27 тем</span>
+          <span class="badge" data-i18n="home.badge3">Noir + Spider</span>
+          <span class="badge" data-i18n="home.badge4">7 розділів</span>
+        </div>
+        <div class="hero-actions" data-stagger>
+          <a class="btn btn-primary" href="themes.html" data-i18n="home.btn1">Живі теми & Noir</a>
+          <a class="btn btn-ghost" href="commands.html" data-i18n="home.btn2">Усі команди</a>
+          <a class="btn btn-ghost" href="companion.html" data-i18n="home.btn3">Zen Companion →</a>
+        </div>
+        <div class="logo-strip" data-stagger>
+          <img src="assets/img/firefox.svg" alt="Firefox" title="Firefox">
+          <img src="assets/img/zen.svg" alt="Zen" title="Zen Browser">
+          <img src="assets/img/terminal.svg" alt="Terminal" title="Windows Terminal">
+        </div>
+      </div>
+
+      <div class="hero-visual">
+        <div class="hero-glow-ring"></div>
+        <img class="hero-float-img firefox" src="assets/img/firefox.svg" alt="Firefox">
+        <div class="hero-terminal" id="hero-terminal">
+          <div class="term-bar">
+            <span class="term-dot"></span><span class="term-dot"></span><span class="term-dot"></span>
+            <span style="margin-left:10px;font-size:0.72rem;color:#666;font-family:var(--mono)">FoxTerminal — guest</span>
+          </div>
+          <div class="term-body" id="hero-typewriter"></div>
+        </div>
+      </div>
+    </section>
+
+    <div class="marquee-wrap reveal">
+      <div class="marquee-track"></div>
+    </div>
+
+    <section class="section reveal">
+        <div class="stats-row" id="stats-row">
+        <div class="stat-card" data-stagger><strong data-count="85" data-suffix="+">0</strong><span data-i18n="home.stat1">команд у cmd\</span></div>
+        <div class="stat-card" data-stagger><strong data-count="27">0</strong><span data-i18n="home.stat2">тем кольорів</span></div>
+        <div class="stat-card" data-stagger><strong data-count="15">0</strong><span data-i18n="home.stat3">локальних сайтів</span></div>
+        <div class="stat-card" data-stagger><strong data-count="9">0</strong><span data-i18n="home.stat4">розділів презентації</span></div>
+      </div>
+    </section>
+
+    <section class="section reveal">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow" data-i18n="home.update.eyebrow">Оновлення</p>
+          <h2 data-i18n="home.update.title">Що нового у FoxTerminal 2026</h2>
+        </div>
+        <p class="muted" data-i18n="home.update.sub">Актуально по гайду і поточному репозиторію.</p>
+      </div>
+      <div class="feature-grid">
+        <article class="feature-card" data-stagger>
+          <span class="feature-kicker">01</span>
+          <h3 data-i18n="home.update.c1.title">Командний центр</h3>
+          <p data-i18n="home.update.c1.desc">85+ команд: від AI і медіа до інсталятора, бекапів, rebuild і hotkeys-демона.</p>
+        </article>
+        <article class="feature-card" data-stagger>
+          <span class="feature-kicker">02</span>
+          <h3 data-i18n="home.update.c2.title">Розширений Fox Hub</h3>
+          <p data-i18n="home.update.c2.desc">15 локальних сайтів: утиліти, ігри, генератори, інтерфейсні експерименти та презентації.</p>
+        </article>
+        <article class="feature-card" data-stagger>
+          <span class="feature-kicker">03</span>
+          <h3 data-i18n="home.update.c3.title">AI + Workflow</h3>
+          <p data-i18n="home.update.c3.desc">friend/ask/sum, notes-потоки, interface/backends, і повний цикл через foxhelp + build.</p>
+        </article>
+        <article class="feature-card" data-stagger>
+          <span class="feature-kicker">04</span>
+          <h3 data-i18n="home.update.c4.title">Zen Companion</h3>
+          <p data-i18n="home.update.c4.desc">Розширення для Zen: glass сайдбар, теми Space/chrome, AI-переклад за сенсом і сесії вкладок.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section reveal">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow" data-i18n="home.zen.eyebrow">Zen Browser</p>
+          <h2 data-i18n="home.zen.title">Companion у браузері</h2>
+        </div>
+        <p class="muted" data-i18n="home.zen.sub">Liquid glass UI · native host · Ollama bridge</p>
+      </div>
+      <p class="muted" style="max-width:62ch;margin:0 0 18px" data-i18n="home.zen.desc">Popup, сайдбар і overlay перекладу — той самий стиль, що в розширенні. Теми фарбують увесь Zen chrome, не лише панель аддона.</p>
+      <div class="ba-slider" data-ba style="--ba:50;margin-bottom:18px">
+        <img class="ba-after" src="assets/shots/zen-after.png?v=6" alt="Zen after" width="1280" height="800" draggable="false">
+        <div class="ba-before-clip">
+          <img class="ba-before" src="assets/shots/zen-before.png?v=6" alt="Zen before" width="1280" height="800" draggable="false">
+        </div>
+        <div class="ba-handle" aria-hidden="true"><div class="ba-knob"></div></div>
+        <div class="ba-labels">
+          <span data-i18n="zen.ba.before">До</span>
+          <span data-i18n="zen.ba.after">Після</span>
+        </div>
+      </div>
+      <div class="shot-pair">
+        <figure class="shot-card">
+          <img src="assets/shots/sidebar.png?v=5" alt="FoxTerminal sidebar" width="840" height="1440" loading="lazy">
+          <figcaption class="shot-meta"><strong data-i18n="home.zen.shot1">Sidebar · Terminal</strong><span>v0.9.11</span></figcaption>
+        </figure>
+        <figure class="shot-card">
+          <img src="assets/shots/popup.png?v=5" alt="FoxTerminal popup" width="760" height="1280" loading="lazy">
+          <figcaption class="shot-meta"><strong data-i18n="home.zen.shot2">Popup · AI actions</strong><span>v0.9.11</span></figcaption>
+        </figure>
+      </div>
+      <div style="margin-top:18px">
+        <a class="btn btn-primary" href="companion.html" data-i18n="home.zen.cta">Повна сторінка Zen →</a>
+      </div>
+    </section>
+
+    <section class="section reveal">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow" data-i18n="home.nav.eyebrow">Навігація</p>
+          <h2 data-i18n="home.nav.title">9 сторінок — кожна як окремий модуль</h2>
+        </div>
+        <p class="muted" data-i18n="home.nav.sub">FoxTerminal великий. Сайт теж.</p>
+      </div>
+      <div class="portal-grid">
+        <a class="portal-card" href="companion.html" data-stagger><span class="num">00</span><h3 data-i18n="home.p0.title">Zen Companion</h3><p data-i18n="home.p0.desc">Розширення Zen: теми, переклад, сесії, side terminal.</p></a>
+        <a class="portal-card" href="themes.html" data-stagger><span class="num">01</span><h3 data-i18n="home.p1.title">Теми & Noir</h3><p data-i18n="home.p1.desc">27 кольорів, pride flags, noir B&W, spider, live preview.</p></a>
+        <a class="portal-card" href="commands.html" data-stagger><span class="num">02</span><h3 data-i18n="home.p2.title">Команди</h3><p data-i18n="home.p2.desc">Каталог з пошуком: AI, медіа, notes, мережа.</p></a>
+        <a class="portal-card" href="terminal.html" data-stagger><span class="num">03</span><h3 data-i18n="home.p3.title">Термінал</h3><p data-i18n="home.p3.desc">Симулятор shell, backends, Oh My Posh.</p></a>
+        <a class="portal-card" href="ai.html" data-stagger><span class="num">04</span><h3 data-i18n="home.p4.title">AI / FRIEND</h3><p data-i18n="home.p4.desc">Ollama, friend chat, env vars, демо-чат.</p></a>
+        <a class="portal-card" href="media.html" data-stagger><span class="num">05</span><h3 data-i18n="home.p5.title">Медіа</h3><p data-i18n="home.p5.desc">YouTube, YTM DJ, Spotify, visualizer.</p></a>
+        <a class="portal-card" href="hotkeys.html" data-stagger><span class="num">06</span><h3 data-i18n="home.p6.title">Hotkeys</h3><p data-i18n="home.p6.desc">AHK daemon, інтерактивна клавіатура.</p></a>
+        <a class="portal-card" href="ecosystem.html" data-stagger><span class="num">07</span><h3 data-i18n="home.p7.title">Екосистема</h3><p data-i18n="home.p7.desc">Sites, notes, builds, FoxTerminalApp.</p></a>
+      </div>
+    </section>
+
+    <section class="section reveal">
+      <div class="section-head"><div><p class="eyebrow" data-i18n="home.start.eyebrow">Швидкий старт</p><h2 data-i18n="home.start.title">Відкрити з терміналу</h2></div></div>
+      <div class="panel">
+        <div class="cmd-list">
+          <div class="cmd-item"><strong class="mono">sites</strong><div class="cmd-body"><code>sites</code><p class="muted cmd-desc" data-i18n="home.start.sites">FoxTerminal — перший у списку</p></div><button class="copy-mini" type="button" data-copy="sites">copy</button></div>
+          <div class="cmd-item"><strong class="mono">ff</strong><div class="cmd-body"><code>ff open foxterm</code><p class="muted cmd-desc" data-i18n="home.start.ff">Через bbind alias</p></div><button class="copy-mini" type="button" data-copy="ff open foxterm">copy</button></div>
+        </div>
+      </div>
+      <p class="footer-note" data-i18n="home.footer">FoxTerminal Presentation · sites/fox-terminal/</p>
+    </section>
+  </main>
+
+  <div class="toast" id="toast"></div>
+  <script src="assets/js/data.js?v=20260726c"></script>
+  <script src="assets/js/i18n.js?v=20260726c"></script>
+  <script src="assets/js/i18n-data.js?v=20260726c"></script>
+  <script src="assets/js/shell.js?v=20260726c"></script>
+  <script src="assets/js/main.js?v=20260726c"></script>
+  <script src="assets/js/effects.js?v=20260726c"></script>
+</body>
+</html>

@@ -23,17 +23,17 @@ RegisterCustomHotkeys(g_Config.bindings)
 ; ── Built-in hotkeys ─────────────────────────────────────────────────────────
 
 ; Shift+Alt+Y  → open YouTube
-+!y:: OpenInFirefox("https://www.youtube.com")
++!y:: OpenInBrowser("https://www.youtube.com")
 
-; Shift+Ctrl+Y → close the Firefox tab whose title contains "YouTube"
+; Shift+Ctrl+Y → close the browser tab whose title contains "YouTube"
 ;               (works regardless of which tab is currently active)
-+^y:: CloseFirefoxTabWith("YouTube")
++^y:: CloseBrowserTabWith("YouTube")
 
-; Shift+Alt+F  → open Firefox / bring it to front
-+!f:: OpenOrFocusFirefox()
+; Shift+Alt+F  → open Zen/Firefox / bring it to front
++!f:: OpenOrFocusBrowser()
 
-; Shift+Alt+M  → open YouTube Music in Firefox
-+!m:: OpenInFirefox("https://music.youtube.com")
+; Shift+Alt+M  → open YouTube Music
++!m:: OpenInBrowser("https://music.youtube.com")
 
 ; Shift+Alt+Space  → show / launch FoxTerminal
 +!Space:: ShowFoxTerm()
@@ -43,28 +43,60 @@ RegisterCustomHotkeys(g_Config.bindings)
 
 ; ── Core helpers ─────────────────────────────────────────────────────────────
 
-OpenInFirefox(url) {
-    Run 'firefox.exe "' url '"',, "Hide"
+ResolveBrowserExe() {
+    zen := "C:\Program Files\Zen Browser\zen.exe"
+    if FileExist(zen)
+        return zen
+    zenLocal := EnvGet("LOCALAPPDATA") "\Zen Browser\zen.exe"
+    if FileExist(zenLocal)
+        return zenLocal
+    custom := EnvGet("FOXTERM_BROWSER")
+    if (custom != "" && FileExist(custom))
+        return custom
+    customFf := EnvGet("FIREFOX_PATH")
+    if (customFf != "" && FileExist(customFf))
+        return customFf
+    return "zen.exe"
 }
 
-OpenOrFocusFirefox() {
-    if WinExist("ahk_exe firefox.exe")
+BrowserExeName() {
+    full := ResolveBrowserExe()
+    SplitPath full, &name
+    return name
+}
+
+OpenInBrowser(url) {
+    exe := ResolveBrowserExe()
+    Run '"' exe '" -new-tab "' url '"',, "Hide"
+}
+
+OpenOrFocusBrowser() {
+    exeName := BrowserExeName()
+    if WinExist("ahk_exe " exeName)
+        WinActivate "ahk_exe " exeName
+    else if WinExist("ahk_exe zen.exe")
+        WinActivate "ahk_exe zen.exe"
+    else if WinExist("ahk_exe firefox.exe")
         WinActivate "ahk_exe firefox.exe"
     else
-        Run "firefox.exe"
+        Run ResolveBrowserExe()
 }
 
-; Find a Firefox window whose title contains titlePart, close that tab,
+; Find a browser window whose title contains titlePart, close that tab,
 ; then restore focus to whatever was active before.
-CloseFirefoxTabWith(titlePart) {
+CloseBrowserTabWith(titlePart) {
     prevHwnd := WinGetID("A")
 
     hwnd := 0
-    for w in WinGetList("ahk_exe firefox.exe") {
-        if InStr(WinGetTitle("ahk_id " w), titlePart) {
-            hwnd := w
-            break
+    for exeName in ["zen.exe", "firefox.exe"] {
+        for w in WinGetList("ahk_exe " exeName) {
+            if InStr(WinGetTitle("ahk_id " w), titlePart) {
+                hwnd := w
+                break
+            }
         }
+        if hwnd
+            break
     }
     if !hwnd
         return
@@ -74,8 +106,10 @@ CloseFirefoxTabWith(titlePart) {
     Send "^w"
     Sleep 100
     try {
-        if prevHwnd && WinExist("ahk_id " prevHwnd)
+        if prevHwnd && WinExist("ahk_id " prevHwnd) {
             WinActivate "ahk_id " prevHwnd
+            Sleep 80
+        }
     }
 }
 
@@ -95,6 +129,7 @@ ShowFoxTerm() {
         WinShow    "ahk_exe FoxTerminal.UI.exe"
         WinActivate "ahk_exe FoxTerminal.UI.exe"
         WinRestore  "ahk_exe FoxTerminal.UI.exe"
+        Sleep 80
     } else if g_FoxExe && FileExist(g_FoxExe) {
         Run g_FoxExe
     } else {
