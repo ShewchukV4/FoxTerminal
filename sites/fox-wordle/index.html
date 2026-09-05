@@ -5,16 +5,22 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Fox Word — Wordle</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="stylesheet" href="../shared/fox-ui.css">
 </head>
 <body class="theme-cyber">
+  <div class="orbs" aria-hidden="true"><div class="orb orb-a"></div><div class="orb orb-b"></div><div class="orb orb-c"></div></div>
   <canvas id="bg-canvas" aria-hidden="true"></canvas>
   <div class="scanlines" aria-hidden="true"></div>
 
+  <div class="chrome">
+    <a class="hub-link" href="../hub/index.html">← Hub</a>
+  </div>
+
   <div class="app">
     <header>
-      <div class="logo">FOX<span>WORD</span></div>
+      <div class="logo">FOX <span>WORD</span></div>
       <div class="tagline">WORDLE · 370K DICT · 14 THEMES</div>
       <div class="theme-label" id="theme-label">⚡ Cyber — neon grid · sharp tiles</div>
     </header>

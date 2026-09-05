@@ -39,7 +39,7 @@ function Wait-Back {
 function Show-Commands {
     Clear-FoxHost
     $p = Get-ThemePalette
-    Write-Host (Color-Text $p.accent "FoxTerminal commands")
+    Write-Host (Color-Text $p.accent ((Get-FoxIcon 0xF120) + "  FoxTerminal commands"))
     Write-Host ""
 
     function Get-CommandInventory {
@@ -82,7 +82,7 @@ function Show-Commands {
         $known["tgub"]     = @{ usage = "tgub <@user|user|url> <alias> | tgub phone <num> <alias>"; desc = "bind telegram alias to username/phone" }
         $known["tglist"]   = @{ usage = "tglist"; desc = "list/edit telegram binds (tg_bindings.json)" }
 
-        $known["wai"]      = @{ usage = "wai"; desc = "where you are in notes + list files (default: notes/<user>/files)" }
+        $known["wai"]      = @{ usage = "wai [-pin|-unpin]"; desc = "where you are in notes + list files; -pin keeps it at the top across clear/go/up" }
         $known["go"]       = @{ usage = "go <path>"; desc = "change notes folder (e.g. go files/important)" }
         $known["up"]        = @{ usage = "up"; desc = "go up one folder inside notes" }
         $known["nfile"]     = @{ usage = "nfile <name.ext>"; desc = "create file in current notes folder" }
@@ -94,7 +94,7 @@ function Show-Commands {
         $known["hash"]     = @{ usage = "hash [fx1|md5|sha1|sha256|ntlm|b64] <text>"; desc = "hash text (digests print raw hex)" }
         $known["unhash"]   = @{ usage = "unhash [-offline] [hash]"; desc = "crack: wordlist+rules, nitrxgen MD5 DB, brute; FX1 needs password" }
         $known["build"]    = @{ usage = "build <name>|-list|-restore <n>|-delete <n>"; desc = "save/restore/list config snapshots (builds\ folder)" }
-        $known["clear"]    = @{ usage = "clear"; desc = "clear screen" }
+        $known["clear"]    = @{ usage = "clear"; desc = "clear screen (keeps pinned wai if wai -pin is on)" }
         $known["texit"]    = @{ usage = "texit"; desc = "force-exit current terminal process" }
 
         $known["wifi"]     = @{ usage = "wifi"; desc = "Wi-Fi status (SSID/signal/channel)" }
@@ -106,6 +106,8 @@ function Show-Commands {
         $known["ftime"]    = @{ usage = "ftime"; desc = "time + date" }
         $known["fday"]     = @{ usage = "fday [location]"; desc = "daily summary: time + weather + wifi + ip" }
         $known["sw"]       = @{ usage = "sw [themeName] [live] [color|mono] [imagePath]"; desc = "system info + theme switcher (arrows change theme, Ctrl+E exit); example: sw slate" }
+        $known["shader"]   = @{ usage = "shader [on|off|status]"; desc = "toggle Ghostty glass shaders (per-theme GLSL); off disables them for every theme" }
+        $known["foxos"]    = @{ usage = "foxos [on|off|status|apply]"; desc = "animated ASCII rain wallpaper (same fox as sw) + Windows accent; off restores the previous desktop" }
         $known["themes"]   = @{ usage = "themes"; desc = "main themes picker: arrows + Enter (Fox default, Arthas, Pride, Noir, Death Note)" }
         $known["noir"]     = @{ usage = "noir"; desc = "toggle noir mode: full black & white, locks sw theme picker; run again to restore" }
         $known["dnote"]    = @{ usage = "dnote"; desc = "toggle Death Note mode: crimson noir-like style, login user selection with strike-through, apple intro + '<user> died'" }
@@ -114,20 +116,22 @@ function Show-Commands {
         $known["arthas"]   = @{ usage = "arthas"; desc = "toggle Arthas mode: top-centered panel, Left/Right or A/D swaps dark/light Arthas, Ctrl+E closes panel, run again to restore theme" }
         $known["spider"]   = @{ usage = "spider"; desc = "noir-only: centered Spider-Noir panel + system info (like sw, Ctrl+E exit)" }
         $known["frederik"] = @{ usage = "frederik [-ListMics] [-Source Auto|Mic|System] [-Mic <idx|name>] [-SetMainMic] [-Bars <n>] [-Height <n>]"; desc = "voice-reactive waveform visualizer, Esc to exit" }
-        $known["chek"]     = @{ usage = "chek"; desc = "show current terminal/shell backend (cmd, WT, Cygwin, MSYS, etc.)" }
-        $known["sixel"]    = @{ usage = "sixel"; desc = "check SIXEL readiness in mintty and suggest image tools" }
+        $known["chek"]     = @{ usage = "chek"; desc = "show whether this session is Ghostty and dump the detection signals" }
+        $known["sixel"]    = @{ usage = "sixel [-Image <path>]"; desc = "check inline-image support (Ghostty uses the Kitty graphics protocol, not SIXEL)" }
+        $known["foximg"]   = @{ usage = "foximg [path]"; desc = "show a photo in the terminal" }
         $known["foxscan"]  = @{ usage = "foxscan [-Deep] [-IncludeLow] [-IncludeWorkspace] [-Top <n>] [-Path <dir1,dir2,...>]"; desc = "heuristic suspicious-script scanner (names + risk score + reasons)" }
         $known["foxbg"]    = @{ usage = "foxbg [-IncludeLow] [-Top <n>] [-MinMemoryMB <n>]"; desc = "interactive background cleaner: arrows select, Enter close app, Esc exit" }
-        $known["interface-deps"] = @{ usage = "interface-deps [-Install|-Check]"; desc = "install/check required packages for interface mode (bash, mintty, tmux, dialog)" }
-        $known["interface"]= @{ usage = "interface [-TwoWindows] [-Terminal] [-Gui]"; desc = "default: tmux split UI in one mintty; -TwoWindows opens 2 mintty windows; -Terminal current-window mode; -Gui Windows GUI split" }
-        $known["term"]     = @{ usage = "term [-Set auto|windows|mintty|cygwin] [-Now] [-App mintty]"; desc = "switch backend via menu; -Now switches immediately, -App mintty opens real mintty window" }
+        $known["interface"]= @{ usage = "interface [-Split] [-TwoWindows] [-Keys] [-Gui]"; desc = "Ghostty split layout: -Split splits from the CLI, -TwoWindows opens a second window, -Keys lists the keybinds, -Gui Windows GUI split" }
+        $known["term"]     = @{ usage = "term [-Status] [-Apply] [-Edit] [-New] [-Doctor] [-Path]"; desc = "manage the Ghostty config: status, reinstall, edit, new window, diagnostics" }
+        $known["ghostty-lib"] = @{ usage = "ghostty-lib"; desc = "Ghostty detection + config-path library (internal)" }
         $known["ffsync"]   = @{ usage = "ffsync start|stop|status|shell|exec <cmd>"; desc = "shared terminal bridge for Firefox sidebar + terminal session sync" }
 
         $known["foxreset"]   = @{ usage = "foxreset [-Git] [-NoGit]"; desc = "hard reset caches + re-init prompt; -Git/-NoGit toggle git branch segment" }
-        $known["foxhelp"]    = @{ usage = "foxhelp"; desc = "this menu" }
-        $known["foxhotkeys"] = @{ usage = "foxhotkeys [-Stop] [-Restart] [-Status]"; desc = "global hotkey daemon (Shift+Alt/Ctrl combos for YouTube, Firefox, FoxTerminal)" }
+        $known["foxhelp"]    = @{ usage = "foxhelp"; desc = "this menu; on the FoxOS wallpaper opens the command picker" }
+        $known["foxhotkeys"] = @{ usage = "foxhotkeys [-Stop] [-Restart] [-Status]"; desc = "global hotkey daemon (Shift+Alt+T show FoxTerminal, Shift+Ctrl+Alt+T close, plus YouTube/Firefox)" }
         $known["foxinfo"]    = @{ usage = "foxinfo"; desc = "hotkey binding manager: add open/close bindings, configure FoxTerminal path" }
         $known["foxdeps"]    = @{ usage = "foxdeps [-Check] [-Install]"; desc = "check + auto-install all FoxTerminal dependencies (Firefox, OhMyPosh, AHK, .NET 9, FoxTerminalApp)" }
+        $known["foxtest"]    = @{ usage = "foxtest [-List] [-Quiet] [-Only <names>] [-Group all|info|tui|bat] [-Timeout <s>]"; desc = "smoke-test every command: runs the ones that finish, checks the menus still draw, reports what broke" }
         $known["foxpack"]    = @{ usage = "foxpack [-Full] [-Open] [-OutPath <path>]"; desc = "pack FoxTerminal into shareable zip (clean by default, -Full keeps your binds/notes/theme)" }
 
         # Auto-detect commands present in cmd\ (include .ps1 and .bat).
@@ -143,7 +147,7 @@ function Show-Commands {
             $base = [System.IO.Path]::GetFileNameWithoutExtension($f.Name)
             if ([string]::IsNullOrWhiteSpace($base)) { continue }
             # Not meant to be executed directly by users:
-            if ($base -in @("foxauth", "foxcodec", "foxhash-lookup", "note-lib", "sw-script", "spider-script", "hk_parse", "hk_lib", "pride-lib", "interface-gui", "foxterm-cmd-init")) { continue }
+            if ($base -in @("foxauth", "foxcodec", "foxhash-lookup", "note-lib", "sw-script", "spider-script", "hk_parse", "hk_lib", "pride-lib", "shader-lib", "foxos-lib", "foxos-deskcmd", "interface-gui", "foxterm-cmd-init")) { continue }
             $null = $names.Add($base)
         }
 
@@ -167,37 +171,39 @@ function Show-Commands {
         return $rows
     }
 
-    function Write-CommandSection([string]$title, [object[]]$rows, [string[]]$names) {
+    function Write-CommandSection([string]$title, [object[]]$rows, [string[]]$names, [int]$iconCode = 0) {
         if ($null -eq $rows -or $rows.Count -eq 0) { return }
         $p = Get-ThemePalette
         $picked = @($rows | Where-Object { $names -contains $_.name } | Sort-Object name)
         if ($picked.Count -eq 0) { return }
-        Write-Host (Color-Text $p.accent2 $title)
+        $head = if ($iconCode -gt 0) { ((Get-FoxIcon $iconCode) + "  " + $title) } else { $title }
+        Write-Host (Color-Text $p.accent2 $head)
         foreach ($r in $picked) {
             $u = if ($r.usage) { $r.usage } else { $r.name }
-            Write-Host ("  {0,-26} {1}" -f $u, $r.desc)
+            Write-Host (Color-Text $p.text ("  {0,-26} {1}" -f $u, $r.desc))
         }
         Write-Host ""
     }
 
     $inv = Get-CommandInventory
 
-    Write-CommandSection "Login / Users:" $inv @("l","nuser","passwd","uexit","users","who")
-    Write-CommandSection "AI:" $inv @("ask","friend","sum")
-    Write-CommandSection "Media:" $inv @("dj","sp","sp-ui","yt","ytm","ytm-ui","ytsplit")
-    Write-CommandSection "Apps / layout:" $inv @("appbind","apps")
-    Write-CommandSection "Firefox / web aliases:" $inv @("bbind","bdel","blist","ff","ffbot","gask","ser","sites","youtube")
-    Write-CommandSection "Telegram:" $inv @("tg","tglist","tgub")
-    Write-CommandSection "Notes / files:" $inv @("edit","fdel","go","hash","nano","nfile","nfould","unhash","up","view","wai")
-    Write-CommandSection "Builds / packaging:" $inv @("build","foxpack")
-    Write-CommandSection "Themes / visual modes:" $inv @("apple","arthas","dnote","frederik","noir","pride","spider","sw","themes")
-    Write-CommandSection "Network / diagnostics:" $inv @("chek","disk","fday","ftime","ip","netping","reconnect","sixel","weather","wifi")
-    Write-CommandSection "System tools:" $inv @("clear","ffsync","foxbg","foxscan","interface","interface-deps","term","texit")
-    Write-CommandSection "Hotkeys / bindings:" $inv @("foxhotkeys","foxinfo")
-    Write-CommandSection "Setup / reset / help:" $inv @("foxdeps","foxhelp","foxreset")
+    Write-CommandSection "Login / Users:" $inv @("l","nuser","passwd","uexit","users","who") 0xF007
+    Write-CommandSection "AI:" $inv @("ask","friend","sum") 0xF0EB
+    Write-CommandSection "Media:" $inv @("dj","sp","sp-ui","yt","ytm","ytm-ui","ytsplit") 0xF001
+    Write-CommandSection "Apps / layout:" $inv @("appbind","apps") 0xF108
+    Write-CommandSection "Firefox / web aliases:" $inv @("bbind","bdel","blist","ff","ffbot","gask","ser","sites","youtube") 0xF0AC
+    Write-CommandSection "Telegram:" $inv @("tg","tglist","tgub") 0xF1D8
+    Write-CommandSection "Notes / files:" $inv @("edit","fdel","go","hash","nano","nfile","nfould","unhash","up","view","wai") 0xF07B
+    Write-CommandSection "Builds / packaging:" $inv @("build","foxpack") 0xF187
+    Write-CommandSection "Themes / visual modes:" $inv @("apple","arthas","dnote","foxos","frederik","noir","pride","shader","spider","sw","themes") 0xF1FC
+    Write-CommandSection "Network / diagnostics:" $inv @("chek","disk","fday","ftime","foximg","ip","netping","reconnect","sixel","weather","wifi") 0xF1EB
+    Write-CommandSection "System tools:" $inv @("clear","ffsync","foxbg","foxscan","interface","term","texit") 0xF013
+    Write-CommandSection "Hotkeys / bindings:" $inv @("foxhotkeys","foxinfo") 0xF11C
+    Write-CommandSection "Setup / reset / help:" $inv @("foxdeps","foxhelp","foxreset","foxtest") 0xF0AD
+    Write-CommandSection "Wallpaper prompt (FoxOS desk):" $inv @("arthas","dnote","dj","ff","foxhelp","foxos","noir","note","pride","rig","ser","shader","sites","sp","sw","term","yt","ytm","youtube") 0xF1FC
 
     # Commands that live outside cmd\ (in FoxTerminal folder).
-    Write-Host (Color-Text $p.accent2 "Windows (run from FoxTerminal folder):")
+    Write-Host (Color-Text $p.accent2 ((Get-FoxIcon 0xF17A) + "  Windows (run from FoxTerminal folder):"))
     Write-Host ("  {0,-26} {1}" -f ".\\DisableBloat", "disable heavy services (admin)")
     Write-Host ("  {0,-26} {1}" -f ".\\DisableAds", "disable ads/tips (1-5)")
     Write-Host ("  {0,-26} {1}" -f ".\\Status", "show what is disabled/enabled")
@@ -207,9 +213,9 @@ function Show-Commands {
     # Everything else (auto-detected but not yet described).
     $extra = @($inv | Where-Object { $_.known -eq $false })
     if ($extra.Count -gt 0) {
-        Write-Host (Color-Text $p.accent2 ("Other commands detected in cmd\ (" + $extra.Count + "):"))
+        Write-Host (Color-Text $p.accent2 ((Get-FoxIcon 0xF0C9) + "  Other commands detected in cmd\ (" + $extra.Count + "):"))
         foreach ($r in $extra) {
-            Write-Host ("  {0,-26} {1}" -f $r.usage, $r.desc)
+            Write-Host (Color-Text $p.text ("  {0,-26} {1}" -f $r.usage, $r.desc))
         }
         Write-Host ""
     }
@@ -268,20 +274,36 @@ function Show-InstallConfig {
     $p = Get-ThemePalette
     Write-Host (Color-Text $p.accent "FoxTerminal: install & config")
     Write-Host ""
+    Write-Host (Color-Text $p.accent2 "Terminal:")
+    Write-Host "  Ghostty is the only supported terminal."
+    Write-Host "  Windows: winghostty (Ghostty core + native Win32 runtime)"
+    Write-Host "           winget install AmanThanvi.winghostty"
+    Write-Host "  Linux / macOS: https://ghostty.org/download"
+    Write-Host ""
     Write-Host (Color-Text $p.accent2 "Folder:")
-    Write-Host "  FireFoxBot\FoxTerminal\  (wezterm.lua, install.ps1, DisableBloat, ...)"
+    Write-Host "  FireFoxBot\FoxTerminal\          install.ps1, install.sh, DisableBloat, ..."
+    Write-Host "  FireFoxBot\FoxTerminal\ghostty\  config + shell bootstrap"
     Write-Host ""
     Write-Host (Color-Text $p.accent2 "Install (Windows):")
     Write-Host "  cd FoxTerminal"
     Write-Host "  powershell -NoProfile -ExecutionPolicy Bypass -File .\install.ps1"
-    Write-Host "  -> copies wezterm.lua to %USERPROFILE%\.wezterm.lua, creates desktop shortcut"
+    Write-Host "  -> installs ghostty\config as your Ghostty config"
+    Write-Host "  -> generates foxterminal-local.ghostty (shell command + repo path)"
+    Write-Host "  -> creates a desktop shortcut"
     Write-Host ""
-    Write-Host (Color-Text $p.accent2 "Windows Terminal profile:")
-    Write-Host "  FoxTerminal\windows-terminal\apply-foxterminal.ps1"
-    Write-Host "  -> merges foxterminal.json into WT settings.json"
+    Write-Host (Color-Text $p.accent2 "Install (Linux / macOS):")
+    Write-Host "  bash FoxTerminal/install.sh"
+    Write-Host ""
+    Write-Host (Color-Text $p.accent2 "Manage it afterwards:")
+    Write-Host "  term            status + menu"
+    Write-Host "  term -Apply     reinstall the config"
+    Write-Host "  term -Edit      open the installed config"
+    Write-Host "  term -Doctor    full diagnostics"
     Write-Host ""
     Write-Host (Color-Text $p.accent2 "Theme / prompt:")
     Write-Host "  Oh My Posh: FoxTerminal\bin\oh-my-posh.exe, oh-my-posh\foxterm.omp.json"
+    Write-Host "  Colors are also switched live by sw / themes via OSC 10/11/12."
+    Write-Host "  Glass shaders follow the theme (shader off to disable, ctrl+shift+o to toggle)."
     Wait-Back
 }
 
@@ -290,65 +312,103 @@ function Show-Troubles {
     $p = Get-ThemePalette
     Write-Host (Color-Text $p.accent "Why FoxTerminal may not work")
     Write-Host ""
-    Write-Host "1) Wrong settings.json edited"
-    Write-Host "   Use the Windows Terminal settings path."
+    Write-Host "1) Not running in Ghostty"
+    Write-Host "   Run 'chek'. FoxTerminal supports Ghostty only."
     Write-Host ""
-    Write-Host "2) Tab title blocked"
-    Write-Host "   Remove tabTitle and set suppressApplicationTitle: false"
+    Write-Host "2) Config not installed"
+    Write-Host "   Run 'term -Doctor', then 'term -Apply'."
     Write-Host ""
-    Write-Host "3) commandline missing foxauth"
-    Write-Host "   Ensure foxauth.ps1 is loaded in commandline."
+    Write-Host "3) Shell starts without foxauth"
+    Write-Host "   foxterminal-local.ghostty is missing or stale -> 'term -Apply'."
     Write-Host ""
-    Write-Host "4) users.json empty"
+    Write-Host "4) Boxes instead of prompt icons"
+    Write-Host "   No Nerd Font installed -> 'foxdeps', then set font-family in the config."
+    Write-Host ""
+    Write-Host "5) Ghostty reports config errors"
+    Write-Host "   Run: ghostty +show-config   (winghostty.com +show-config on Windows, not the .exe)"
+    Write-Host ""
+    Write-Host "6) users.json empty"
     Write-Host "   Register a user with nuser or l."
-    Write-Host ""
-    Write-Host "5) Not using Windows Terminal"
-    Write-Host "   Arrows menu needs Windows Terminal or modern console."
     Wait-Back
 }
 
-function Show-Settings {
+function Show-GhosttyConfig {
     Clear-FoxHost
     $p = Get-ThemePalette
-    Write-Host (Color-Text $p.accent "Correct settings.json path")
-    Write-Host "C:\Users\<YOUR_USER>\AppData\Local\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState\settings.json"
-    Write-Host ""
-    Write-Host "FoxTerminal profile (example):"
-    Write-Host "  {"
-    Write-Host "    ""guid"": ""{b3f9b1c7-8f5a-4b83-9f6f-1a0c6e9c7e21}"","
-    Write-Host "    ""name"": ""FoxTerminal"","
-    Write-Host "    ""commandline"": ""%SystemRoot%\\System32\\WindowsPowerShell\\v1.0\\powershell.exe -NoLogo -NoProfile -NoExit -Command `"$env:FOXTERM='1'; chcp 65001 > $null; $env:PATH='C:\\Users\\dmytr\\Desktop\\FireFoxBot\\cmd;' + $env:PATH; . 'C:\\Users\\dmytr\\Desktop\\FireFoxBot\\cmd\\foxauth.ps1'; Ensure-Login | Out-Null`"","
-    Write-Host "    ""startingDirectory"": ""C:\\Users\\dmytr\\Desktop\\FireFoxBot"","
-    Write-Host "    ""tabColor"": ""#7AA2F7"","
-    Write-Host "    ""suppressApplicationTitle"": false"
-    Write-Host "  }"
-    Wait-Back
-}
-
-function Show-InterfaceDeps {
-    Clear-FoxHost
-    $p = Get-ThemePalette
-    Write-Host (Color-Text $p.accent "Interface dependencies")
-    Write-Host ""
-    Write-Host "This helper installs/checks packages needed for interface mode:"
-    Write-Host "  bash, mintty, tmux, dialog"
+    Write-Host (Color-Text $p.accent "Ghostty config")
     Write-Host ""
 
-    $options = @(
-        "Install all dependencies",
-        "Check dependencies (and offer to install missing)",
-        "Back"
-    )
-    $choice = Select-Menu "Interface dependencies" $options
-    if ($choice -lt 0 -or $choice -eq 2) { return }
-
-    if ($choice -eq 0) {
-        & (Join-Path $PSScriptRoot "interface-deps.ps1") -Install
-        Wait-Back
-        return
+    $lib = Join-Path $PSScriptRoot "ghostty-lib.ps1"
+    if (Test-Path $lib) {
+        . $lib
+        $cfg = Get-GhosttyConfigPath
+        if ($cfg) {
+            Write-Host (Color-Text $p.accent2 "Installed at:")
+            Write-Host ("  " + $cfg)
+            Write-Host ("  " + (Join-Path (Split-Path -Parent $cfg) "foxterminal-local.ghostty"))
+            Write-Host ""
+        }
     }
 
-    & (Join-Path $PSScriptRoot "interface-deps.ps1") -Check
+    Write-Host (Color-Text $p.accent2 "Source of truth in the repo:")
+    Write-Host "  FoxTerminal\ghostty\config"
+    Write-Host ""
+    Write-Host (Color-Text $p.accent2 "Things you will want to change:")
+    Write-Host ("  {0,-24} {1}" -f "font-family", "Nerd Font name")
+    Write-Host ("  {0,-24} {1}" -f "font-size", "13 by default")
+    Write-Host ("  {0,-24} {1}" -f "background-opacity", "0.92 - transparency")
+    Write-Host ("  {0,-24} {1}" -f "background-blur", "20 - macOS and KDE only")
+    Write-Host ("  {0,-24} {1}" -f "window-padding-x / -y", "12 / 10")
+    Write-Host ("  {0,-24} {1}" -f "palette = N=#RRGGBB", "FoxNight ANSI colors 0-15")
+    Write-Host ("  {0,-24} {1}" -f "keybind", "trigger=action")
+    Write-Host ("  {0,-24} {1}" -f "command-palette-entry", "extra ctrl+shift+p items")
+    Write-Host ""
+    Write-Host (Color-Text $p.dim "Full reference: https://ghostty.org/docs/config/reference")
+    Write-Host (Color-Text $p.dim "Reload without restart: ctrl+shift+comma")
+    Wait-Back
+}
+
+function Show-GhosttyKeys {
+    Clear-FoxHost
+    $p = Get-ThemePalette
+    Write-Host (Color-Text $p.accent "Ghostty keybinds (from the FoxTerminal config)")
+    Write-Host ""
+    Write-Host (Color-Text $p.accent2 "Splits and tabs")
+    Write-Host ("  {0,-22} {1}" -f "ctrl+shift+enter", "split along the larger side")
+    Write-Host ("  {0,-22} {1}" -f "ctrl+shift+l", "split right")
+    Write-Host ("  {0,-22} {1}" -f "ctrl+shift+j", "split down")
+    Write-Host ("  {0,-22} {1}" -f "ctrl+shift+z", "zoom / unzoom split")
+    Write-Host ("  {0,-22} {1}" -f "ctrl+shift+e", "equalize splits")
+    Write-Host ("  {0,-22} {1}" -f "ctrl+alt+arrows", "resize split by 40px")
+    Write-Host ("  {0,-22} {1}" -f "alt+arrows", "move focus between splits")
+    Write-Host ("  {0,-22} {1}" -f "ctrl+shift+t", "new tab")
+    Write-Host ("  {0,-22} {1}" -f "ctrl+shift+w", "close split / tab")
+    Write-Host ""
+    Write-Host (Color-Text $p.accent2 "Per split")
+    Write-Host "  sw / themes in one pane recolor only that pane."
+    Write-Host "  A new split copies this pane. sw colors (slate, ice, ...) stay here;"
+    Write-Host "  a new window starts from Fox Default / the last main theme."
+    Write-Host ""
+    Write-Host (Color-Text $p.accent2 "Scrollback and search")
+    Write-Host ("  {0,-22} {1}" -f "ctrl+shift+f", "search the scrollback")
+    Write-Host ("  {0,-22} {1}" -f "ctrl+shift+up / down", "jump between prompts")
+    Write-Host ("  {0,-22} {1}" -f "ctrl+shift+u", "dump scrollback to a file and open it")
+    Write-Host ("  {0,-22} {1}" -f "ctrl+shift+x", "clear screen (keeps pinned wai)")
+    Write-Host ""
+    Write-Host (Color-Text $p.accent2 "FoxTerminal")
+    Write-Host ("  {0,-22} {1}" -f "ctrl+shift+backquote", "quick terminal (drop-down)")
+    Write-Host ("  {0,-22} {1}" -f "ctrl+backquote", "same, system-wide (macOS / Linux)")
+    Write-Host ("  {0,-22} {1}" -f "ctrl+shift+p", "command palette with Fox commands")
+    Write-Host ("  {0,-22} {1}" -f "ctrl+shift+h", "foxhelp")
+    Write-Host ("  {0,-22} {1}" -f "ctrl+shift+k", "chek")
+    Write-Host ("  {0,-22} {1}" -f "ctrl+shift+s", "sw")
+    Write-Host ("  {0,-22} {1}" -f "ctrl+shift+g", "term")
+    Write-Host ""
+    Write-Host (Color-Text $p.accent2 "Config")
+    Write-Host ("  {0,-22} {1}" -f "ctrl+shift+comma", "reload config")
+    Write-Host ("  {0,-22} {1}" -f "ctrl+shift+i", "terminal inspector")
+    Write-Host ""
+    Write-Host (Color-Text $p.dim "Edit any of these: term -Edit")
     Wait-Back
 }
 
@@ -427,11 +487,11 @@ while ($true) {
         'Sites / FoxType Master',
         'Builds / snapshots',
         'AI: Ollama  ask, friend',
-        'Interface deps',
+        'Ghostty keybinds',
         'Windows: bloat / ads',
         'Install + config',
         'Troubleshooting',
-        'Settings.json (WT)',
+        'Ghostty config',
         'Exit'
     )
     $choice = Select-Menu 'FoxTerminal Help' $options
@@ -442,11 +502,11 @@ while ($true) {
         1 { Show-SitesInfo }
         2 { Show-BuildsInfo }
         3 { Show-OllamaAI }
-        4 { Show-InterfaceDeps }
+        4 { Show-GhosttyKeys }
         5 { Show-WindowsBloatAds }
         6 { Show-InstallConfig }
         7 { Show-Troubles }
-        8 { Show-Settings }
+        8 { Show-GhosttyConfig }
         9 { exit }
     }
 }

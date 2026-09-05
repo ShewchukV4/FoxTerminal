@@ -1,0 +1,244 @@
+# FoxTerminal — Ghostty configuration
+#
+# This is the ONLY terminal configuration in FoxTerminal. Everything visual
+# (FoxNight palette, font, padding, transparency, cursor, tabs, splits) and
+# every terminal-level keybind lives here.
+#
+# Install it with:
+#   Windows        powershell -NoProfile -ExecutionPolicy Bypass -File FoxTerminal\install.ps1
+#   Linux / macOS  bash FoxTerminal/install.sh
+#
+# Reload without restarting: ctrl+shift+comma  (or: term -Reload)
+# Docs: https://ghostty.org/docs/config/reference
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Font
+# ─────────────────────────────────────────────────────────────────────────────
+# First entry wins; the rest are fallbacks, so the config stays portable
+# between machines that have different Nerd Font builds installed.
+font-family = CaskaydiaCove Nerd Font
+font-family = CaskaydiaMono Nerd Font
+font-family = Cascadia Code NF
+font-family = Cascadia Mono NF
+font-family = JetBrainsMono Nerd Font
+font-family = Cascadia Mono
+font-size = 13
+font-style = SemiBold
+font-style-bold = Bold
+font-thicken = true
+
+# Programming ligatures (-> => != ...). Remove these two lines for plain glyphs.
+font-feature = calt
+font-feature = liga
+
+# Equivalent to a 1.05 line height; Ghostty expresses this as a percentage
+# adjustment of the cell box rather than a multiplier.
+adjust-cell-height = 5%
+
+# ─────────────────────────────────────────────────────────────────────────────
+# FoxNight palette
+# ─────────────────────────────────────────────────────────────────────────────
+background = #0B0F1A
+foreground = #E6E6E6
+
+selection-background = #1F2937
+selection-foreground = #E6E6E6
+
+cursor-color = #7AA2F7
+cursor-text = #0B0F1A
+cursor-style = bar
+cursor-style-blink = false
+cursor-click-to-move = true
+
+# ANSI 0-7
+palette = 0=#0B0F1A
+palette = 1=#FF6B6B
+palette = 2=#95F5A0
+palette = 3=#FBD38D
+palette = 4=#7AA2F7
+palette = 5=#BB9AF7
+palette = 6=#7DCFFF
+palette = 7=#E6E6E6
+# Bright 8-15
+palette = 8=#3B4261
+palette = 9=#FF7A93
+palette = 10=#9ECE6A
+palette = 11=#E0AF68
+palette = 12=#7AA2F7
+palette = 13=#C0A7F7
+palette = 14=#7DCFFF
+palette = 15=#F2F2F2
+
+bold-color = bright
+faint-opacity = 0.6
+minimum-contrast = 1.1
+
+# Search highlight, tuned to the FoxNight accents instead of the default yellow.
+search-background = #7AA2F7
+search-foreground = #0B0F1A
+search-selected-background = #FBD38D
+search-selected-foreground = #0B0F1A
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Window & chrome
+# ─────────────────────────────────────────────────────────────────────────────
+background-opacity = 0.92
+background-blur = 20
+background-opacity-cells = true
+
+window-padding-x = 8
+window-padding-y = 8
+window-padding-balance = true
+window-padding-color = background
+
+window-decoration = auto
+window-theme = auto
+window-width = 120
+window-height = 34
+window-inherit-working-directory = true
+window-inherit-font-size = true
+window-save-state = always
+window-subtitle = working-directory
+
+scrollbar = never
+scrollback-limit = 33554432
+resize-overlay = after-first
+mouse-hide-while-typing = true
+copy-on-select = clipboard
+right-click-action = context-menu
+confirm-close-surface = true
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Splits (what the old tmux-based "interface" mode used to do)
+# ─────────────────────────────────────────────────────────────────────────────
+split-divider-color = #7AA2F7
+unfocused-split-opacity = 0.88
+# Leave fill unset so each pane keeps its own OSC background; a fixed fill
+# painted every unfocused split the same FoxNight color.
+split-preserve-zoom = navigation
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Tabs — GTK-only keys, silently ignored on macOS and Windows
+# ─────────────────────────────────────────────────────────────────────────────
+window-show-tab-bar = auto
+window-new-tab-position = end
+gtk-tabs-location = bottom
+gtk-wide-tabs = false
+gtk-titlebar = true
+gtk-single-instance = true
+window-titlebar-background = #0B0F1A
+window-titlebar-foreground = #E6E6E6
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Shell integration — powers OSC 7 cwd inheritance, OSC 133 prompt marks,
+# jump_to_prompt, command-finish notifications and cursor-click-to-move.
+# ─────────────────────────────────────────────────────────────────────────────
+shell-integration = detect
+shell-integration-features = cursor,sudo,title,ssh-env,ssh-terminfo,path
+
+notify-on-command-finish = unfocused
+notify-on-command-finish-action = bell,notify
+notify-on-command-finish-after = 20s
+
+desktop-notifications = true
+progress-style = true
+link-url = true
+link-previews = true
+
+bell-features = system,attention,title,border
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Quick terminal (drop-down / Quake mode). The AHK daemon still owns the
+# system-wide window hotkeys: Shift+Alt+T show, Shift+Ctrl+Alt+T close.
+# ─────────────────────────────────────────────────────────────────────────────
+quick-terminal-position = top
+quick-terminal-size = 45%
+quick-terminal-autohide = true
+quick-terminal-animation-duration = 0.12
+quick-terminal-screen = main
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Keybinds
+# ─────────────────────────────────────────────────────────────────────────────
+# Quick terminal. The global: prefix only works on macOS and on Linux compositors
+# that support it; on Windows the system-wide window hotkeys come from the AHK
+# daemon (foxhotkeys: Shift+Alt+T show, Shift+Ctrl+Alt+T close). ctrl+shift+backquote is a separate, non-global
+# trigger so the quick terminal is always reachable from inside Ghostty.
+keybind = global:ctrl+backquote=toggle_quick_terminal
+keybind = ctrl+shift+backquote=toggle_quick_terminal
+
+# Splits. resize_split takes pixels, not cells.
+keybind = ctrl+shift+enter=new_split:auto
+keybind = ctrl+shift+j=new_split:down
+keybind = ctrl+shift+l=new_split:right
+keybind = ctrl+shift+z=toggle_split_zoom
+keybind = ctrl+shift+e=equalize_splits
+keybind = ctrl+alt+left=resize_split:left,40
+keybind = ctrl+alt+right=resize_split:right,40
+keybind = ctrl+alt+up=resize_split:up,40
+keybind = ctrl+alt+down=resize_split:down,40
+
+# ctrl+alt+arrows is Ghostty's default for goto_split on Linux and resize takes it
+# over above, so bind navigation explicitly. This also makes the same keys work
+# identically on macOS, where the defaults are super-based.
+keybind = alt+left=goto_split:left
+keybind = alt+right=goto_split:right
+keybind = alt+up=goto_split:up
+keybind = alt+down=goto_split:down
+
+# Tabs: pin new_tab so it behaves the same on macOS, where the default is super-based.
+# Closing is left on Ghostty's own defaults (ctrl+shift+w / cmd+w), which is why no
+# FoxTerminal shortcut below claims those keys.
+keybind = ctrl+shift+t=new_tab
+
+# Prompt navigation (needs shell integration)
+keybind = ctrl+shift+up=jump_to_prompt:-1
+keybind = ctrl+shift+down=jump_to_prompt:1
+
+# Scrollback / search / inspection
+keybind = ctrl+shift+f=start_search
+keybind = ctrl+shift+u=write_scrollback_file:open
+keybind = ctrl+shift+x=text:clear\r
+keybind = ctrl+shift+i=inspector:toggle
+keybind = ctrl+shift+p=toggle_command_palette
+keybind = ctrl+shift+comma=reload_config
+
+# FoxTerminal commands, typed straight into the shell. \r is the Enter key.
+keybind = ctrl+shift+h=text:foxhelp\r
+keybind = ctrl+shift+k=text:chek\r
+keybind = ctrl+shift+s=text:sw\r
+keybind = ctrl+shift+g=text:term\r
+keybind = ctrl+shift+o=text:shader toggle\r
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Command palette (ctrl+shift+p) — FoxTerminal commands next to Ghostty actions
+# ─────────────────────────────────────────────────────────────────────────────
+command-palette-entry = title:Fox — Help,description:Interactive FoxTerminal help menu,action:text:foxhelp\r
+command-palette-entry = title:Fox — Terminal check,description:Show detected terminal and shell,action:text:chek\r
+command-palette-entry = title:Fox — Ghostty config,description:Manage the FoxTerminal Ghostty config,action:text:term\r
+command-palette-entry = title:Fox — Theme switcher,description:System info and theme picker,action:text:sw\r
+command-palette-entry = title:Fox — Theme picker,description:Full FoxTerminal theme list,action:text:themes\r
+command-palette-entry = title:Fox — FRIEND chat,description:Local Ollama assistant; exitt to leave,action:text:friend\r
+command-palette-entry = title:Fox — Sites,description:Fox Hub local sites,action:text:sites\r
+command-palette-entry = title:Fox — Dependencies,description:Check and install FoxTerminal dependencies,action:text:foxdeps\r
+command-palette-entry = title:Fox — Health scan,description:Environment health scan,action:text:foxscan\r
+command-palette-entry = title:Fox — Test all commands,description:Smoke-test every FoxTerminal command,action:text:foxtest\r
+command-palette-entry = title:Fox — Show photo,description:Render a photo in the terminal (chafa / Kitty graphics),action:text:foximg\r
+command-palette-entry = title:Fox — Reset,description:Hard reset caches and prompt,action:text:foxreset\r
+command-palette-entry = title:Fox — Shaders,description:Toggle Ghostty glass shaders on or off,action:text:shader toggle\r
+command-palette-entry = title:Fox — Desktop skin,description:Paint Windows wallpaper and accent from the theme,action:text:foxos\r
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Misc
+# ─────────────────────────────────────────────────────────────────────────────
+auto-update = check
+clipboard-paste-protection = true
+image-storage-limit = 335544320
+app-notifications = no-clipboard-copy,config-reload
+
+# Machine-specific bits (shell command, repo path) are generated by the
+# installer. The leading "?" means "ignore if missing", and because
+# config-file is applied after this file, it can override anything above.
+# foxterminal-shaders.ghostty is rewritten by `shader` / theme changes.
+config-file = ?foxterminal-local.ghostty
+config-file = ?foxterminal-shaders.ghostty

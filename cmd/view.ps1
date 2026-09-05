@@ -23,4 +23,12 @@ if (-not (Test-Path -LiteralPath $path)) {
     exit 1
 }
 
-Get-Content -LiteralPath $path | Out-Host -Paging
+try {
+    . "$PSScriptRoot\note-lib.ps1"
+    Suspend-WaiPinForEditor
+    Get-Content -LiteralPath $path | Out-Host -Paging
+} finally {
+    if (Get-Command Resume-WaiPinAfterEditor -ErrorAction SilentlyContinue) {
+        Resume-WaiPinAfterEditor
+    }
+}

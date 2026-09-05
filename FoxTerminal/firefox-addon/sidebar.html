@@ -16,21 +16,37 @@
         <span class="brand-mark" aria-hidden="true"></span>
         <div class="brand-text">
           <h1>FoxTerminal</h1>
-          <p class="hint">v0.9.11 · translate fix</p>
+          <p class="hint">v0.9.15 · Frederik</p>
         </div>
       </div>
       <span id="connection-pill" class="pill disconnected">offline</span>
     </header>
 
     <nav class="tabs glass" role="tablist" aria-label="Розділи">
-      <button type="button" class="tab active" data-tab="terminal" role="tab" aria-selected="true">Термінал</button>
+      <button type="button" class="tab active" data-tab="chat" role="tab" aria-selected="true">Чат</button>
+      <button type="button" class="tab" data-tab="terminal" role="tab" aria-selected="false">Термінал</button>
       <button type="button" class="tab" data-tab="sessions" role="tab" aria-selected="false">Вкладки</button>
       <button type="button" class="tab" data-tab="themes" role="tab" aria-selected="false">Теми</button>
       <button type="button" class="tab" data-tab="translate" role="tab" aria-selected="false">Переклад</button>
       <button type="button" class="tab" data-tab="settings" role="tab" aria-selected="false">Опції</button>
     </nav>
 
-    <section id="panel-terminal" class="panel active" role="tabpanel">
+    <section id="panel-chat" class="panel active" role="tabpanel">
+      <div class="chat-toolbar glass-soft">
+        <span class="chat-title">Frederik</span>
+        <button id="chat-clear-btn" type="button" class="btn-ghost btn-sm">Очистити чат</button>
+      </div>
+      <div id="chat-messages" class="chat-messages" aria-live="polite"></div>
+      <form id="chat-form" class="chat-form glass">
+        <textarea id="chat-input" rows="2" placeholder="Запитай або дай команду: створи нову вкладку ютуб мюзік…" autocomplete="off"></textarea>
+        <div class="chat-actions">
+          <button id="chat-send-btn" type="submit" class="btn-primary">Надіслати</button>
+        </div>
+      </form>
+      <p id="chat-status" class="status-line">Frederik готовий. Може керувати вкладками і відповідати (Ollama).</p>
+    </section>
+
+    <section id="panel-terminal" class="panel" role="tabpanel">
       <div id="cwd-bar" class="cwd glass-soft">cwd: -</div>
       <div id="terminal-output" class="output" aria-live="polite"></div>
       <form id="command-form" class="command-form glass">

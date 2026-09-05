@@ -11,24 +11,29 @@ if (-not (Ensure-Login)) { return }
 $paths = Initialize-NotesPaths $PSScriptRoot $env:FOXTERM_USER
 $cwd = Get-NoteSessionCwd $paths.NotesRoot $paths.FilesHome
 
+$p = Get-ThemePalette
 $name = if ($Args.Count -gt 0) { ($Args -join " ").Trim() } else { "" }
 if ([string]::IsNullOrWhiteSpace($name)) {
-    Write-Host "Usage: nfile <name.ext>  (e.g. nfile notes.txt, nfile data.xlsx)" -ForegroundColor Yellow
+    Write-Host (Color-Text $p.dim ("  " + (Get-FoxIcon 0xF15B) + "  Usage: nfile <name.ext>  (e.g. nfile notes.txt)"))
     return
 }
 if (-not (Test-HasFileExtension $name)) {
-    Write-Host "Extension required. Example: nfile report.txt" -ForegroundColor Yellow
+    Write-Host (Color-Text $p.dim ("  " + (Get-FoxIcon 0xF15B) + "  Extension required. Example: nfile report.txt"))
     return
 }
 
 $filePath = Resolve-UnderNotes $cwd $name $paths.NotesRoot
 if ($null -eq $filePath) {
-    Write-Host "Invalid file name." -ForegroundColor Yellow
+    Write-Host (Color-Text $p.dim ("  " + (Get-FoxIcon 0xF15B) + "  Invalid file name."))
     return
 }
+$st = Get-NotesFileStyle $name $p
 if (-not (Test-Path -LiteralPath $filePath)) {
     New-Item -ItemType File -Path $filePath | Out-Null
-    Write-Host "Created: $name" -ForegroundColor Green
+    Write-Host (Color-Text $p.accent ("  " + $st.Icon + "  Created  ")) -NoNewline
+    Write-Host (Color-Text $p.text $name)
 } else {
-    Write-Host "File already exists: $name" -ForegroundColor DarkYellow
+    Write-Host (Color-Text $p.accent2 ("  " + $st.Icon + "  Already exists  ")) -NoNewline
+    Write-Host (Color-Text $p.text $name)
 }
+Sync-WaiPinFromNotes $PSScriptRoot $env:FOXTERM_USER

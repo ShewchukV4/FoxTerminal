@@ -4,7 +4,8 @@
   if (!output || !input) return;
 
   const responses = {
-    foxhelp: "Відкриваю меню допомоги… Спробуй розділи: themes, commands, ai, media.",
+    foxhelp: "Відкриваю меню допомоги… На шпалерах FoxOS — command picker: WALLPAPER / TERMINAL.",
+    foxos: "foxos on — ASCII rain, desk, rig. foxos off повертає попередній стіл.",
     noir: "Noir mode toggled. Весь термінал — чорно-білий. Тема sw заблокована.",
     spider: "Spider-Noir panel. Потрібен noir mode. Ctrl+E — вихід.",
     sw: "System info + theme picker. ←→ змінюють тему, Ctrl+E вихід.",
@@ -19,9 +20,13 @@
     ip: "Public: 203.0.113.42 · Local: 192.168.1.7",
     wifi: "SSID: HomeNet · Signal: 82% · Channel: 36",
     who: "Current user: guest (not logged in). Use: l <name> <pass>",
-    foxdeps: "Checking: Firefox ✓ · OhMyPosh ✓ · AHK ✓ · .NET 9 ✓",
+    foxdeps: "Checking: Ghostty ✓ · Nerd Font ✓ · Firefox ✓ · OhMyPosh ✓ · AHK ✓",
+    foxtest: "39 ran clean · 27 drew their UI · 0 need attention",
     clear: "__CLEAR__",
-    chek: "Backend: Windows Terminal · FOXTERM=1 · PowerShell 5.1",
+    chek: "Terminal: Ghostty ✓ · FOXTERM=1 · FOXTERM_HOST=ghostty · PowerShell 5.1",
+    term: "Ghostty config manager: -Status · -Apply · -Edit · -New · -Doctor",
+    interface: "Ghostty splits: ctrl+shift+enter · ctrl+shift+j / l · ctrl+shift+z zoom",
+    sixel: "Ghostty uses the Kitty graphics protocol (not SIXEL). chafa ✓ · timg ✗",
     ff: "Usage: ff open [alias-or-url]",
     help: "FoxTerminal — portable terminal OS. foxhelp для повного списку."
   };
@@ -88,4 +93,20 @@
   }
   renderBackends();
   document.addEventListener("foxlangchange", renderBackends);
+
+  function renderGhosttyFeatures() {
+    const el = document.getElementById("ghostty-list");
+    if (!el || !window.FOX_DATA || !FOX_DATA.ghostty) return;
+    el.innerHTML = FOX_DATA.ghostty.map((f) => {
+      const desc = foxDesc(FOX_I18N_DATA?.ghostty, f.name, f.desc);
+      const keys = f.keys && f.keys !== "—" ? `<span class="badge">${f.keys}</span>` : "";
+      return `<div class="kbd-card reveal">
+        <div class="kbd-keys">${keys} ${f.name}</div>
+        <p class="muted" style="margin:0;font-size:0.88rem">${desc}</p>
+      </div>`;
+    }).join("");
+    el.querySelectorAll(".kbd-card").forEach((c) => requestAnimationFrame(() => c.classList.add("visible")));
+  }
+  renderGhosttyFeatures();
+  document.addEventListener("foxlangchange", renderGhosttyFeatures);
 })();

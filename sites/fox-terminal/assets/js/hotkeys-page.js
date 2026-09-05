@@ -28,7 +28,8 @@
     { label: "Space", x: 180, y: 180, w: 200, hk: "Shift+Alt+Space" },
     { label: "Y", x: 60, y: 100, w: 44, hk: "Shift+Alt+Y" },
     { label: "F", x: 20, y: 140, w: 44, hk: "Shift+Alt+F" },
-    { label: "M", x: 110, y: 100, w: 44, hk: "Shift+Alt+M" }
+    { label: "M", x: 110, y: 100, w: 44, hk: "Shift+Alt+M" },
+    { label: "T", x: 155, y: 100, w: 44, hk: "Shift+Alt+T" }
   ];
 
   const hkMap = Object.fromEntries(FOX_DATA.hotkeys.map((h) => [h.keys, h]));

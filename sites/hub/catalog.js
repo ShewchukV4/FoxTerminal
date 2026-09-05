@@ -1,0 +1,129 @@
+window.FOX_SITES = {
+  "version": 2,
+  "categories": [
+    {
+      "id": "deck",
+      "name": "Fox Deck",
+      "blurb": "Hub та презентації FoxTerminal",
+      "sites": [
+        {
+          "id": "hub",
+          "name": "Fox Hub",
+          "url": "./hub/index.html",
+          "description": "Головна сторінка — картки всіх локальних сайтів"
+        },
+        {
+          "id": "fox-terminal",
+          "name": "FoxTerminal Showcase",
+          "url": "./fox-terminal/index.html",
+          "description": "Анімована презентація: теми, noir, Zen Companion, команди, AI, hotkeys"
+        }
+      ]
+    },
+    {
+      "id": "tools",
+      "name": "Fox Toolbox",
+      "blurb": "Утиліти та довідники в браузері",
+      "sites": [
+        {
+          "id": "fox-utils",
+          "name": "Fox Utils",
+          "url": "./fox-utils/index.html",
+          "description": "Hash Vault, Text Tools, Network Fox, Pomodoro"
+        },
+        {
+          "id": "web-ui-guide",
+          "name": "UI Forge Guide",
+          "url": "./web-ui-guide/index.html",
+          "description": "Гайд по HTML/CSS/JS, патерни, cursor effects, приклади"
+        },
+        {
+          "id": "kadr",
+          "name": "Кадр",
+          "url": "./kadr/index.html",
+          "description": "Фільми й серіали з TMDB: оцінки 1–10, обкладинки, підбірка з величезного каталогу"
+        }
+      ]
+    },
+    {
+      "id": "playground",
+      "name": "Playground",
+      "blurb": "Ігри, рандомайзери та аркада",
+      "sites": [
+        {
+          "id": "snake",
+          "name": "Serpent Fox",
+          "url": "./snake/index.html",
+          "description": "Змійка з темами cyber/neon/lava та купою режимів"
+        },
+        {
+          "id": "invoker",
+          "name": "Sunstrike Lab",
+          "url": "./invoker/index.html",
+          "description": "Тренажер комбо Invoker з локальними іконками сфер"
+        },
+        {
+          "id": "techies-sweeper",
+          "name": "Boom Grid",
+          "url": "./techies-sweeper/index.html",
+          "description": "Minesweeper у стилі Techies — проксіміті-міни"
+        },
+        {
+          "id": "dice-forge",
+          "name": "Crystal Roll",
+          "url": "./dice-forge/index.html",
+          "description": "3D-кубики: Default, DND, Dota, Cyber, Space, Arcane"
+        },
+        {
+          "id": "dota-items-randomizer",
+          "name": "Item Oracle",
+          "url": "./dota-items-randomizer/index.html",
+          "description": "Рандомайзер предметів Dota 2, українські секції"
+        },
+        {
+          "id": "typewriter",
+          "name": "Key Rush",
+          "url": "./typewriter/index.html",
+          "description": "Typing trainer — слова, код, цитати, survival"
+        },
+        {
+          "id": "fox-stack",
+          "name": "Fox Stack",
+          "url": "./fox-stack/index.html",
+          "description": "Tetris: Hold slot, Rush, Ghost, Chain + 13 visual themes"
+        },
+        {
+          "id": "fox-wordle",
+          "name": "Fox Word",
+          "url": "./fox-wordle/index.html",
+          "description": "Wordle з 370k+ словником у gzip-паку (~1.2 MB)"
+        },
+        {
+          "id": "dnd-hero-forge",
+          "name": "DnD Hero Forge",
+          "url": "./dnd-hero-forge/index.html",
+          "description": "Повний креатор персонажа D&D 5e: раса, клас, навички, заклинання, лист"
+        },
+        {
+          "id": "fox-realm-forge",
+          "name": "Fox Realm Forge",
+          "url": "./fox-realm-forge/index.html",
+          "description": "Генератор фентезі-світу: Voronoi, біоми, річки, держави, міста (як Azgaar FMG)"
+        }
+      ]
+    },
+    {
+      "id": "sandbox",
+      "name": "Sandbox",
+      "blurb": "Експерименти та чернетки",
+      "sites": [
+        {
+          "id": "OnePageStore",
+          "name": "Fox Den",
+          "url": "./OnePageStore/index.html",
+          "description": "Fox Den — демо вітрина мерчу FoxTerminal з кошиком"
+        }
+      ]
+    }
+  ]
+};

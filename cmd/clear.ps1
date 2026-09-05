@@ -1,3 +1,8 @@
 param()
 . (Join-Path $PSScriptRoot "foxauth.ps1")
-Clear-FoxHost
+
+if (Get-Command Clear-FoxScreen -ErrorAction SilentlyContinue) {
+    Clear-FoxScreen
+} else {
+    Clear-FoxHost
+}

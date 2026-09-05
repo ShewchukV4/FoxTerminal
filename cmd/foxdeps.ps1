@@ -5,6 +5,7 @@ param(
 
 . (Join-Path $PSScriptRoot "foxauth.ps1")
 . (Join-Path $PSScriptRoot "hk_lib.ps1")
+. (Join-Path $PSScriptRoot "ghostty-lib.ps1")
 
 $RootDir = Split-Path $PSScriptRoot -Parent
 
@@ -112,13 +113,32 @@ function Find-Git {
     return $null
 }
 
-function Find-WindowsTerminal {
-    $wt = Get-Command "wt" -ErrorAction SilentlyContinue
-    if ($wt) { return $wt.Source }
-    # Check store package
+function Find-Ghostty {
+    $g = Get-GhosttyCommand
+    if ($g) { return $g.Path }
+    return $null
+}
+
+# The Ghostty config asks for a Nerd Font first; without one the powerline
+# prompt and icons fall back to tofu boxes.
+function Find-NerdFont {
+    $wanted = @(
+        "CaskaydiaCove Nerd Font",
+        "CaskaydiaMono Nerd Font",
+        "Cascadia Code NF",
+        "Cascadia Mono NF",
+        "JetBrainsMono Nerd Font"
+    )
     try {
-        $pkg = Get-AppxPackage -Name "Microsoft.WindowsTerminal" -ErrorAction SilentlyContinue
-        if ($pkg) { return "WindowsTerminal (Store)" }
+        Add-Type -AssemblyName System.Drawing -ErrorAction Stop
+        $installed = (New-Object System.Drawing.Text.InstalledFontCollection).Families | ForEach-Object { $_.Name }
+        foreach ($w in $wanted) {
+            $hit = $installed | Where-Object { $_ -eq $w } | Select-Object -First 1
+            if ($hit) { return $hit }
+        }
+        # Any Nerd Font at all is good enough for the glyphs.
+        $any = $installed | Where-Object { $_ -match "Nerd Font| NF$" } | Select-Object -First 1
+        if ($any) { return $any }
     } catch {}
     return $null
 }
@@ -193,7 +213,7 @@ function Write-DepRow {
     param([string]$Label, [string]$Path, [bool]$Required, [string]$Extra = "")
     $p = Get-ThemePalette
     $ok = -not [string]::IsNullOrWhiteSpace($Path)
-    $tag = if ($ok) { "[OK]    " } elseif ($Required) { "[MISS]  " } else { "[--]    " }
+    $tag = if ($ok) { (Get-FoxIcon 0xF00C) + "  " } elseif ($Required) { (Get-FoxIcon 0xF00D) + "  " } else { (Get-FoxIcon 0xF068) + "  " }
     $color = if ($ok) { $p.accent } elseif ($Required) { $p.accent2 } else { $p.dim }
     $short = if ($ok) { $Path } else { if ($Required) { "NOT FOUND" } else { "not installed (optional)" } }
     if ($short.Length -gt 60) { $short = "..." + $short.Substring($short.Length - 57) }
@@ -207,12 +227,14 @@ function Write-DepRow {
 
 $p = Get-ThemePalette
 Clear-FoxHost
-Write-Host (Color-Text $p.accent "=== FoxTerminal dependency check ===")
+Write-Host (Color-Text $p.accent ("=== " + (Get-FoxIcon 0xF0AD) + "  FoxTerminal dependency check ==="))
 Write-Host ""
 Write-Host (Color-Text $p.dim "  Scanning... (this may take a few seconds)")
 Write-Host ""
 
 # Gather
+$ghPath   = Find-Ghostty
+$fontName = Find-NerdFont
 $ffPath   = Find-FireFox
 $ompPath  = Find-OhMyPosh
 $ahkPath  = Find-AHK
@@ -220,7 +242,6 @@ $dn9Path  = Find-Dotnet9
 $sdk9Path = Find-DotnetSdk9
 $ftPath   = Find-FoxTermApp
 $gitPath  = Find-Git
-$wtPath   = Find-WindowsTerminal
 $olPath   = Find-Ollama
 $wgPath   = Find-WinGet
 
@@ -228,17 +249,20 @@ $canWinGet = -not [string]::IsNullOrWhiteSpace($wgPath)
 
 # Display
 Write-Host (Color-Text $p.accent2 "  Required:")
-Write-DepRow "Browser (Zen)"    $ffPath   $true  "Zen preferred, Firefox fallback"
+Write-DepRow "Ghostty"         $ghPath   $true  "the only supported terminal"
+Write-DepRow "Nerd Font"       $fontName $true  "CaskaydiaCove / Cascadia NF for prompt glyphs"
+Write-DepRow "Browser (Zen)"   $ffPath   $true  "Zen preferred, Firefox fallback"
 Write-DepRow "Oh My Posh"      $ompPath  $true
-Write-DepRow "AutoHotkey v2"   $ahkPath  $true  "for foxhotkeys"
-Write-DepRow ".NET 9 Runtime"  $dn9Path  $true  "for FoxTerminalApp"
-Write-DepRow ".NET 9 SDK"      $sdk9Path $true  "to build FoxTerminalApp"
-Write-DepRow "FoxTerminalApp"  $ftPath   $true  "built exe"
 Write-Host ""
 Write-Host (Color-Text $p.accent2 "  Optional:")
-Write-DepRow "Git"               $gitPath $false "for prompt git info"
-Write-DepRow "Windows Terminal"  $wtPath  $false "better terminal host"
-Write-DepRow "Ollama"            $olPath  $false "for ask/friend AI"
+Write-DepRow "AutoHotkey v2"   $ahkPath  $false "for foxhotkeys app shortcuts"
+Write-DepRow "Git"             $gitPath  $false "for prompt git info"
+Write-DepRow "Ollama"          $olPath   $false "for ask/friend AI"
+Write-Host ""
+Write-Host (Color-Text $p.accent2 "  Legacy (FoxTerminalApp - no longer the terminal host):")
+Write-DepRow ".NET 9 Runtime"  $dn9Path  $false "only to run the old Avalonia app"
+Write-DepRow ".NET 9 SDK"      $sdk9Path $false "only to build the old Avalonia app"
+Write-DepRow "FoxTerminalApp"  $ftPath   $false "built exe"
 Write-Host ""
 
 if ($canWinGet) {
@@ -251,15 +275,10 @@ Write-Host ""
 # Build missing list
 $missing = [System.Collections.Generic.List[object]]::new()
 
-if (-not $ffPath)  { $missing.Add([pscustomobject]@{ name="Zen Browser";     id="";                                 action="manual"; required=$true }) }
-if (-not $ompPath) { $missing.Add([pscustomobject]@{ name="Oh My Posh";      id="JanDeDobbeleer.OhMyPosh";          action="winget"; required=$true }) }
-if (-not $ahkPath) { $missing.Add([pscustomobject]@{ name="AutoHotkey v2";   id="AutoHotkey.AutoHotkey";             action="winget"; required=$true }) }
-if (-not $dn9Path -or -not $sdk9Path) {
-    $missing.Add([pscustomobject]@{ name=".NET 9 SDK"; id="Microsoft.DotNet.SDK.9";    action="winget"; required=$true })
-}
-if (-not $ftPath -and ($sdk9Path -or $dn9Path)) {
-    $missing.Add([pscustomobject]@{ name="FoxTerminalApp (build)"; id=""; action="build"; required=$true })
-}
+if (-not $ghPath)   { $missing.Add([pscustomobject]@{ name="Ghostty (winghostty)"; id="AmanThanvi.winghostty";   action="winget"; required=$true }) }
+if (-not $fontName) { $missing.Add([pscustomobject]@{ name="Nerd Font";             id="";                        action="manual"; required=$true }) }
+if (-not $ffPath)   { $missing.Add([pscustomobject]@{ name="Zen Browser";           id="";                        action="manual"; required=$true }) }
+if (-not $ompPath)  { $missing.Add([pscustomobject]@{ name="Oh My Posh";            id="JanDeDobbeleer.OhMyPosh";  action="winget"; required=$true }) }
 
 if ($missing.Count -eq 0) {
     Write-Host (Color-Text $p.accent "  All required dependencies are installed!")
@@ -295,11 +314,13 @@ if ($missing.Count -gt 0) {
 
     if (-not $canWinGet) {
         Write-Host (Color-Text $p.accent2 "  winget not available. Manual install links:")
-        Write-Host "    Zen Browser:   https://zen-browser.app/download/"
-        Write-Host "    Firefox:       https://www.mozilla.org/firefox/"
-        Write-Host "    Oh My Posh:    https://ohmyposh.dev/docs/installation/windows"
-        Write-Host "    AutoHotkey v2: https://www.autohotkey.com"
-        Write-Host "    .NET 9 SDK:    https://dotnet.microsoft.com/download/dotnet/9.0"
+        Write-Host "    Ghostty (Win):  https://github.com/amanthanvi/winghostty/releases"
+        Write-Host "    Ghostty:        https://ghostty.org/download"
+        Write-Host "    Nerd Font:      https://www.nerdfonts.com/font-downloads  (CaskaydiaCove)"
+        Write-Host "    Zen Browser:    https://zen-browser.app/download/"
+        Write-Host "    Firefox:        https://www.mozilla.org/firefox/"
+        Write-Host "    Oh My Posh:     https://ohmyposh.dev/docs/installation/windows"
+        Write-Host "    AutoHotkey v2:  https://www.autohotkey.com"
         exit 1
     }
 
@@ -309,6 +330,10 @@ if ($missing.Count -gt 0) {
             Install-Via-WinGet -Id $m.id -DisplayName $m.name
         } elseif ($m.action -eq "build") {
             Build-FoxTermApp
+        } elseif ($m.action -eq "manual" -and $m.name -eq "Nerd Font") {
+            Write-Host (Color-Text $p.accent2 "  Nerd Font must be installed by hand:")
+            Write-Host "    https://www.nerdfonts.com/font-downloads  ->  CaskaydiaCove Nerd Font"
+            Write-Host (Color-Text $p.dim "    Any Nerd Font works; adjust font-family with: term -Edit")
         }
         Start-Sleep -Milliseconds 300
     }
@@ -317,26 +342,25 @@ if ($missing.Count -gt 0) {
     Write-Host ""
     Write-Host (Color-Text $p.accent2 "  Re-checking...")
     Write-Host ""
+    $ghPath2   = Find-Ghostty
+    $fontName2 = Find-NerdFont
     $ffPath2   = Find-FireFox
     $ompPath2  = Find-OhMyPosh
-    $ahkPath2  = Find-AHK
-    $dn9Path2  = Find-Dotnet9
-    $sdk9Path2 = Find-DotnetSdk9
-    $ftPath2   = Find-FoxTermApp
 
-    Write-DepRow "Browser (Zen)"    $ffPath2   $true  "Zen preferred, Firefox fallback"
+    Write-DepRow "Ghostty"         $ghPath2   $true  "the only supported terminal"
+    Write-DepRow "Nerd Font"       $fontName2 $true
+    Write-DepRow "Browser (Zen)"   $ffPath2   $true  "Zen preferred, Firefox fallback"
     Write-DepRow "Oh My Posh"      $ompPath2  $true
-    Write-DepRow "AutoHotkey v2"   $ahkPath2  $true
-    Write-DepRow ".NET 9 Runtime"  $dn9Path2  $true
-    Write-DepRow ".NET 9 SDK"      $sdk9Path2 $true
-    Write-DepRow "FoxTerminalApp"  $ftPath2   $true
     Write-Host ""
 
-    $stillMissing = @($ffPath2, $ompPath2, $ahkPath2, $dn9Path2, $sdk9Path2, $ftPath2) |
+    $stillMissing = @($ghPath2, $fontName2, $ffPath2, $ompPath2) |
         Where-Object { [string]::IsNullOrWhiteSpace($_) }
     if ($stillMissing.Count -eq 0) {
         Write-Host (Color-Text $p.accent "  All dependencies installed!")
         Write-Host (Color-Text $p.dim    "  Restart your terminal for PATH changes to apply.")
+        if ($ghPath2) {
+            Write-Host (Color-Text $p.dim "  Now install the FoxTerminal Ghostty config: term -Apply")
+        }
     } else {
         Write-Host (Color-Text $p.accent2 "  Some items still missing. You may need to restart the terminal and re-run foxdeps.")
     }

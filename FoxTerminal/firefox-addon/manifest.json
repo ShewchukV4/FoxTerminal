@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "FoxTerminal Companion",
-  "version": "0.9.11",
+  "version": "0.9.15",
   "description": "FoxTerminal companion for Zen/Firefox: full browser themes, AI sense-translate, sessions.",
   "web_accessible_resources": [
     "translate-overlay.js",

@@ -4,6 +4,9 @@
   --panel-strong: rgba(34, 27, 18, 0.96);
   --line: rgba(226, 174, 86, 0.22);
   --gold: #e2ae56;
+  --accent: #e2ae56;
+  --accent2: #6f9b4b;
+  --accent3: #c94c2f;
   --red: #c94c2f;
   --green: #6f9b4b;
   --blue: #74b9d6;
@@ -34,15 +37,7 @@ body {
 }
 
 body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  background-image:
-    linear-gradient(rgba(226, 174, 86, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(226, 174, 86, 0.035) 1px, transparent 1px);
-  background-size: 54px 54px;
-  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.8), transparent);
+  display: none;
 }
 
 button {
@@ -55,7 +50,7 @@ button {
   z-index: 1;
   width: min(1180px, calc(100% - 28px));
   margin: 0 auto;
-  padding: 28px 0 56px;
+  padding: 52px 0 56px;
 }
 
 .panel {
@@ -88,9 +83,10 @@ button {
 .hero h1 {
   margin-top: 8px;
   font-family: var(--font-title);
-  font-size: clamp(2.4rem, 8vw, 6rem);
-  line-height: 0.95;
-  text-shadow: 0 0 34px rgba(226, 174, 86, 0.22);
+  font-size: clamp(2.2rem, 5vw, 3.4rem);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  text-shadow: none;
 }
 
 .hero h1 span {
@@ -191,8 +187,11 @@ button {
 .new-game {
   min-width: 150px;
   padding: 10px 18px;
-  color: var(--gold);
+  color: #1a1208;
   font-weight: 800;
+  background: linear-gradient(135deg, var(--gold), #c48a2e);
+  border-color: transparent;
+  box-shadow: 0 12px 28px rgba(226, 174, 86, 0.28);
 }
 
 .game-shell {

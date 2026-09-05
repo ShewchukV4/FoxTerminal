@@ -15,19 +15,30 @@ FoxTerminal — це набір скриптів, профілів та утил
 - локальні нотатки з багаторівневою структурою;
 - AI-команди для одноразових запитів і діалогового режиму;
 - теми/візуальні режими (включно з noir/pride/arthas/dnote/spider);
-- керування вікнами, хоткеями та оточенням запуску;
+- керування вікнами, хоткеями та нативні split-панелі Ghostty;
 - знімки конфігурації (`build`) і пакування (`foxpack`) для передачі іншому користувачу.
+
+FoxTerminal працює **тільки в Ghostty**. Офіційний Ghostty ще не має Windows-застосунку,
+тому на Windows використовується [winghostty](https://github.com/amanthanvi/winghostty) —
+те саме ядро терміналу на нативному Win32-рантаймі з ідентичним форматом конфіга — з
+PowerShell. На Linux/macOS це офіційна збірка Ghostty з bash. Уся візуалка живе в одному
+файлі `FoxTerminal/ghostty/config`.
 
 ---
 
 ## 2) Швидкий старт (10 кроків)
 
-1. Відкрий PowerShell у корені проєкту.
-2. Переконайся, що команда залежностей працює:
-   - `foxdeps -Check`
-3. Якщо чогось не вистачає:
-   - `foxdeps -Install`
-4. Подивись повну довідку:
+1. Постав Ghostty: `winget install AmanThanvi.winghostty` (Windows),
+   `brew install --cask ghostty` (macOS), пакетний менеджер дистрибутива (Linux).
+2. Постав конфіг FoxTerminal:
+   - `powershell -NoProfile -ExecutionPolicy Bypass -File .\FoxTerminal\install.ps1`
+   - або `bash ./FoxTerminal/install.sh`
+3. Відкрий Ghostty з нового ярлика і перевір усе:
+   - `chek`
+   - `term -Doctor`
+   - `foxtest -Group info` — прогнати команди й переконатись, що вони справді працюють
+4. Дозалежності й довідка:
+   - `foxdeps -Check`, `foxdeps -Install`
    - `foxhelp`
 5. Зареєструй користувача:
    - `nuser myname mypass`
@@ -51,7 +62,9 @@ FoxTerminal — це набір скриптів, профілів та утил
 
 - `cmd/` — головні користувацькі команди (`.ps1`, `.bat`, `.cmd`);
 - `sites/` — локальні міні-сайти та реєстр сайтів;
-- `FoxTerminal/` — компоненти встановлення/інтеграції/теми;
+- `FoxTerminal/` — скрипти встановлення та файли тем;
+- `FoxTerminal/ghostty/` — конфіг Ghostty і bootstrap-скрипти оболонки
+  (`config`, `foxterminal-boot.ps1`, `foxterminal-boot.sh`);
 - `builds/` — снапшоти конфігурації і службові інсталятори.
 
 Важливо:
@@ -353,6 +366,23 @@ FoxTerminal — це набір скриптів, профілів та утил
 - Призначення: Spider-Noir панель (працює в контексті noir-стилізації).
 - Синтаксис: `spider`
 
+#### `shader`
+- Призначення: Ghostty glass-шейдери під поточну тему. За замовчуванням увімкнені.
+- Синтаксис: `shader [on|off|status|toggle]`
+- Приклади:
+  - `shader` — стан і який `.glsl` зараз активний
+  - `shader off` — вимкнути скло для всіх тем
+  - `shader on` — увімкнути знову
+  - `ctrl+shift+o` — toggle
+
+#### `foxos`
+- Призначення: тема термінала фарбує шпалери Windows і акцент рамок.
+- Синтаксис: `foxos [on|off|status|apply]`
+- Приклади:
+  - `foxos on` — увімкнути (поточні шпалери зберігаються)
+  - `foxos off` — повернути стіл як було
+  - `sw` / `dnote` / `arthas` — поки FoxOS увімкнений, робочий стіл міняється разом із темою
+
 #### `frederik`
 - Призначення: голосова/аудіо-reactive візуалізація.
 - Синтаксис:
@@ -399,12 +429,14 @@ FoxTerminal — це набір скриптів, профілів та утил
 - Синтаксис: `fday [location]`
 
 #### `chek`
-- Призначення: визначення backend-середовища терміналу.
+- Призначення: перевірка, що ти в Ghostty; звіт про shell, host і env-сигнали.
 - Синтаксис: `chek`
 
 #### `sixel`
-- Призначення: перевірка готовності SIXEL у mintty.
-- Синтаксис: `sixel`
+- Призначення: перевірка вбудованих картинок. Ghostty реалізує Kitty graphics protocol
+  (не SIXEL), тож команда показує стан сесії, `image-storage-limit` і які рендерери
+  встановлені (`chafa`, `timg`, `kitten`).
+- Синтаксис: `sixel [-Test]`
 
 #### `foxscan`
 - Призначення: евристичний пошук підозрілих скриптів.
@@ -426,25 +458,26 @@ FoxTerminal — це набір скриптів, профілів та утил
 
 ---
 
-### 4.9 Інтерфейс, backend, layout
-
-#### `interface-deps`
-- Призначення: встановлення/перевірка пакетів для interface-режиму.
-- Синтаксис: `interface-deps [-Install|-Check]`
+### 4.9 Ghostty, splits, layout
 
 #### `interface`
-- Призначення: запуск split-інтерфейсу (tmux/mintty/gui режими).
-- Синтаксис: `interface [-TwoWindows] [-Terminal] [-Gui]`
+- Призначення: створення split-панелей Ghostty і довідка по keybinds. Splits тепер
+  нативні, тому ні tmux, ні mintty, ні bash більше не потрібні.
+- Синтаксис: `interface [-Split down|right|auto] [-TwoWindows] [-Keys] [-Gui]`
 - Приклади:
-  - `interface`
-  - `interface -TwoWindows`
-  - `interface -Gui`
+  - `interface` — інтерактивне меню
+  - `interface -Split right`
+  - `interface -Keys` — список keybinds
+  - `interface -Gui` — Windows GUI-розкладка вікон (fallback)
 
 #### `term`
-- Призначення: вибір/перемикання backend (auto/windows/mintty/cygwin).
-- Синтаксис: `term [-Set auto|windows|mintty|cygwin] [-Now] [-App mintty]`
-- Приклад:
-  - `term -Set mintty -Now`
+- Призначення: менеджер Ghostty-конфіга FoxTerminal.
+- Синтаксис: `term [-Status] [-Apply] [-Edit] [-New] [-Doctor]`
+- Приклади:
+  - `term -Status` — шлях до конфіга, версія Ghostty, чи це Ghostty-сесія
+  - `term -Apply` — перевстановити `FoxTerminal/ghostty/config` (зі бекапом)
+  - `term -Edit` — відкрити конфіг у редакторі
+  - `term -Doctor` — перевірка бінаря, конфіга, шрифта, shell integration
 
 #### `apps`
 - Призначення: розкладка до 4 вікон застосунків.
@@ -463,6 +496,7 @@ FoxTerminal — це набір скриптів, профілів та утил
 #### `foxhotkeys`
 - Призначення: глобальний daemon гарячих клавіш.
 - Синтаксис: `foxhotkeys [-Stop] [-Restart] [-Status]`
+- FoxTerminal: `Shift+Alt+T` показати, `Shift+Ctrl+Alt+T` закрити (Space-варіанти теж show/hide).
 
 #### `foxinfo`
 - Призначення: менеджер гарячих клавіш і FoxTerminal-шляху.
@@ -498,6 +532,21 @@ FoxTerminal — це набір скриптів, профілів та утил
 #### `foxdeps`
 - Призначення: перевірка/автоінсталяція залежностей FoxTerminal.
 - Синтаксис: `foxdeps [-Check] [-Install]`
+
+#### `foxtest`
+- Призначення: прогнати кожну команду FoxTerminal і показати, що зламалось.
+- Синтаксис: `foxtest [-List] [-Quiet] [-Only <назви>] [-Group all|info|tui|bat] [-Timeout <с>]`
+- Що вважається «працює»:
+  - команди, які мають завершитись самі, реально запускаються й повинні вийти без помилок
+  - меню достатньо намалювати інтерфейс і дійти до очікування клавіші
+  - те, що змінює налаштування, закриває термінал або потребує демона ffsync,
+    свідомо пропускається; `foxtest -List` показує причину для кожного
+- Приклади:
+  - `foxtest` — повний прогін, приблизно 6 хвилин
+  - `foxtest -Group info` — тільки команди, що завершуються самі
+  - `foxtest -Only chek,term,sixel` — лише ці три
+- Примітка: якщо додати команду в `cmd\` і не внести її в манiфест, `foxtest` окремо
+  повідомить, що вона не покрита. Манiфест — на початку `cmd\foxtest.ps1`.
 
 #### `foxhelp`
 - Призначення: інтерактивне меню довідки.
@@ -578,6 +627,46 @@ FoxTerminal підтримує швидку зміну “настрою” ін
 
 ---
 
+## 7.5) Фішки Ghostty, які вже налаштовані
+
+Усе нижче вже прописано в `FoxTerminal/ghostty/config`.
+
+| Фішка | Клавіші | Що робить |
+|-------|---------|-----------|
+| Quick terminal | `ctrl+backquote` (глобально) або `ctrl+shift+backquote` | Quake-drop-down згори екрана, 45% висоти, ховається при втраті фокуса |
+| Splits | `ctrl+shift+enter` / `j` / `l` | Нативні панелі без tmux; неактивні затемнені до 85% |
+| Split zoom | `ctrl+shift+z` | Розгорнути активну панель на все вікно і назад |
+| Equalize splits | `ctrl+shift+e` | Вирівняти розміри всіх панелей |
+| Resize split | `ctrl+alt+стрілки` | Змінити розмір панелі на 40 пікселів |
+| Jump to prompt | `ctrl+shift+up` / `down` | Стрибок між промптами через OSC 133 |
+| Пошук по історії | `ctrl+shift+f` | Пошук з підсвіткою в кольорах FoxNight |
+| Історія у файл | `ctrl+shift+u` | Вивантажити весь 32 MB буфер у файл і відкрити |
+| Command palette | `ctrl+shift+p` | Команди FoxTerminal як записи палітри |
+| Terminal inspector | `ctrl+shift+i` | Live-дебагер VT: escape-послідовності, комірки, шрифти, рендер |
+| Перезавантаження конфіга | `ctrl+shift+comma` | Застосувати правки без перезапуску |
+| Fox-шорткати | `ctrl+shift+h/k/s/g` | `foxhelp`, `chek`, `sw`, `term` |
+
+Пасивні фішки без клавіш: Kitty graphics для картинок у терміналі (`sixel` покаже стан,
+рендерять `chafa`/`timg`), desktop-нотифікації про завершені довгі команди у неактивному
+вікні, OSC 9;4 прогрес-бари в заголовку і на таскбарі, `background-opacity 0.92` з 20px
+blur, лігатури Nerd Font через `calt`/`liga`, захист від вставки підозрілого
+багаторядкового тексту, `ssh-terminfo` який ставить `xterm-ghostty` на віддаленому хості,
+і `window-save-state always` — сесія відновлюється після рестарту.
+
+Платформні обмеження, про які варто знати:
+
+- Глобальний `ctrl+backquote` працює на macOS і на частині Linux-композиторів. На Windows
+  системний хоткей дає AHK-демон `foxhotkeys` (`Shift+Alt+T` показати, `Shift+Ctrl+Alt+T`
+  закрити; Space-варіанти теж show/hide), а всередині Ghostty завжди працює
+  `ctrl+shift+backquote`.
+- На Linux quick terminal вимагає Wayland із `wlr-layer-shell-v1` — тобто на GNOME він
+  недоступний.
+- Таби, `gtk-*` ключі і `window-titlebar-*` — GTK-only. На macOS і Windows Ghostty просто
+  ігнорує їх без помилок.
+- `auto-update` і `quick-terminal-screen` реалізовані лише на macOS.
+
+---
+
 ## 8) Безпека та hygiene
 
 1. Не клади секрети в `notes` у відкритому вигляді.
@@ -602,11 +691,16 @@ FoxTerminal підтримує швидку зміну “настрою” ін
   - `ollama pull qwen3-vl`
 - Перевір змінні оточення (якщо налаштовані кастомно).
 
-### Проблема: `interface` не стартує
-- `interface-deps -Check`
-- Якщо немає `tmux`, спробуй:
-  - `interface -TwoWindows`
-  - або `interface -Gui`
+### Проблема: splits або keybinds не працюють
+- Перевір, що ти в Ghostty: `chek`. Splits і keybinds дає сам Ghostty, тому в інших
+  терміналах їх просто немає.
+- Перевір, що конфіг встановлено: `term -Status`, і `term -Apply` якщо його немає.
+- Після правок конфіга — `ctrl+shift+,`.
+- Повна діагностика: `term -Doctor`.
+
+### Проблема: замість іконок квадратики
+- Немає Nerd Font. Запусти `foxdeps -Install` або поміняй `font-family` у конфігу на
+  шрифт, який реально стоїть, і натисни `ctrl+shift+,`.
 
 ### Проблема: Firefox-інтеграція працює некоректно
 - Перевір `ff open youtube`.
@@ -669,13 +763,13 @@ FoxTerminal підтримує швидку зміну “настрою” ін
 - `wifi`, `reconnect`, `ip`, `weather`, `netping`, `disk`, `ftime`, `fday`, `chek`, `sixel`
 
 ### Інтерфейс/термінал
-- `term`, `interface`, `interface-deps`, `apps`, `appbind`, `clear`, `texit`
+- `term`, `chek`, `interface`, `apps`, `appbind`, `clear`, `texit`
 
 ### Теми
 - `sw`, `themes`, `noir`, `dnote`, `apple`, `pride`, `arthas`, `spider`, `frederik`
 
 ### Сервісні
-- `foxscan`, `foxbg`, `foxdeps`, `foxreset`, `foxhelp`, `build`, `foxpack`, `foxhotkeys`, `foxinfo`
+- `foxscan`, `foxbg`, `foxdeps`, `foxtest`, `foxreset`, `foxhelp`, `build`, `foxpack`, `foxhotkeys`, `foxinfo`
 
 ---
 

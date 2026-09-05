@@ -65,10 +65,18 @@ if ($targetFile) {
 
 $editorExe = Resolve-ExternalEditorExe
 if ($editorExe) {
-    if ($targetFile) {
-        & $editorExe $targetFile
-    } else {
-        & $editorExe
+    try {
+        . "$PSScriptRoot\note-lib.ps1"
+        Suspend-WaiPinForEditor
+        if ($targetFile) {
+            & $editorExe $targetFile
+        } else {
+            & $editorExe
+        }
+    } finally {
+        if (Get-Command Resume-WaiPinAfterEditor -ErrorAction SilentlyContinue) {
+            Resume-WaiPinAfterEditor
+        }
     }
     exit $LASTEXITCODE
 }

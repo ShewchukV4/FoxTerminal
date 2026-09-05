@@ -51,6 +51,16 @@ try {
 
 Clear-FoxHost
 
+if (Get-Command Uninstall-WaiPin -ErrorAction SilentlyContinue) {
+    Uninstall-WaiPin
+} else {
+    $foxNoteLib = Join-Path $PSScriptRoot "note-lib.ps1"
+    if (Test-Path $foxNoteLib) {
+        . $foxNoteLib
+        if (Get-Command Uninstall-WaiPin -ErrorAction SilentlyContinue) { Uninstall-WaiPin }
+    }
+}
+
 $p = Get-ThemePalette
 Write-Host (Color-Text $p.accent "FoxTerminal reset complete.") 
 Write-Host ""

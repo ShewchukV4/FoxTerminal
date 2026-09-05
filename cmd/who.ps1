@@ -3,9 +3,13 @@ param()
 . "$PSScriptRoot\foxauth.ps1"
 
 if ([string]::IsNullOrWhiteSpace($env:FOXTERM_USER)) {
-    Write-Host "Not logged in."
+    Write-Host (Color-Text (Get-ThemePalette).dim ("  " + (Get-FoxIcon 0xF007) + "  Not logged in."))
     Show-Users
     return
 }
 
-Write-Host ("Current user: " + $env:FOXTERM_USER)
+$p = Get-ThemePalette
+Write-Host ""
+Write-Host (Color-Text $p.accent ("  " + (Get-FoxIcon 0xF007) + "  ")) -NoNewline
+Write-Host (Color-Text $p.accent2 $env:FOXTERM_USER)
+Write-Host ""

@@ -55,7 +55,7 @@ function Restart-Hotkeys {
 function Show-Header {
     $p = Get-ThemePalette
     Clear-Host
-    Write-Host (Color-Text $p.accent "=== FoxInfo ===")
+    Write-Host (Color-Text $p.accent ("=== " + (Get-FoxIcon 0xF05A) + "  FoxInfo ==="))
     Write-Host ""
 }
 
@@ -85,9 +85,7 @@ function Show-BindWizard {
     Write-Host ""
     Write-Host (Color-Text $p.dim "  Create a hotkey binding to open (and optionally close) something.")
     Write-Host ""
-    Write-Host (Color-Text $p.accent2 "  Hotkey notation:")
-    Write-Host "    +  = Shift    !  = Alt    ^  = Ctrl"
-    Write-Host "    +!g = Shift+Alt+G       +^g = Shift+Ctrl+G"
+    Write-Host (Color-Text $p.dim "  Write it in full, like Shift+Alt+G or Shift+Ctrl+M.")
     Write-Host ""
 
     $name = Prompt-Text "Binding name" "(e.g. GitHub, ChatGPT, Spotify)"
@@ -97,12 +95,13 @@ function Show-BindWizard {
         return
     }
 
-    $openKey = Prompt-Text "Open hotkey" "(e.g. +!g for Shift+Alt+G)"
-    if ([string]::IsNullOrWhiteSpace($openKey)) {
+    $openKeyRaw = Prompt-Text "Open hotkey" "(e.g. Shift+Alt+G)"
+    if ([string]::IsNullOrWhiteSpace($openKeyRaw)) {
         Write-Host (Color-Text $p.dim "  Cancelled.")
         Wait-Back
         return
     }
+    $openKey = ConvertTo-AhkHotkey $openKeyRaw
 
     $openTarget = Prompt-Text "URL or .exe to open" "(e.g. https://github.com or chrome.exe)"
     if ([string]::IsNullOrWhiteSpace($openTarget)) {
@@ -118,19 +117,21 @@ function Show-BindWizard {
     }
 
     Write-Host ""
-    $closeKey = Prompt-Text "Close hotkey (Enter to skip)" "(e.g. +^g for Shift+Ctrl+G)"
+    $closeKeyRaw = Prompt-Text "Close hotkey (Enter to skip)" "(e.g. Shift+Ctrl+G)"
 
     $closeMatch = ""
-    if (-not [string]::IsNullOrWhiteSpace($closeKey)) {
+    $closeKey = ""
+    if (-not [string]::IsNullOrWhiteSpace($closeKeyRaw)) {
+        $closeKey = ConvertTo-AhkHotkey $closeKeyRaw
         $closeMatch = Prompt-Text "Window title fragment to close" "(e.g. GitHub - part of the browser tab title)"
     }
 
     Write-Host ""
     Write-Host (Color-Text $p.accent2 "  Summary:")
     Write-Host "    Name:   $name"
-    Write-Host "    Open:   $openKey  ->  $openTarget  [$openAction]"
+    Write-Host ("    Open:   {0}  ->  {1}  [{2}]" -f (ConvertFrom-AhkHotkey $openKey), $openTarget, $openAction)
     if ($closeKey) {
-        Write-Host "    Close:  $closeKey  ->  tabs matching '$closeMatch'"
+        Write-Host ("    Close:  {0}  ->  tabs matching '{1}'" -f (ConvertFrom-AhkHotkey $closeKey), $closeMatch)
     } else {
         Write-Host "    Close:  (none)"
     }
@@ -174,26 +175,38 @@ function Show-BindWizard {
 function Show-ListBindings {
     $p = Get-ThemePalette
     Show-Header
-    Write-Host (Color-Text $p.accent "  Hotkey bindings")
+    Write-Host (Color-Text $p.accent ("  " + (Get-FoxIcon 0xF11C) + "  Hotkey bindings"))
     Write-Host ""
-    Write-Host (Color-Text $p.accent2 "  Built-in:")
-    Write-Host ("    {0,-22}  {1}" -f "Shift+Alt+Y",      "YouTube")
-    Write-Host ("    {0,-22}  {1}" -f "Shift+Ctrl+Y",     "Close YouTube tab")
-    Write-Host ("    {0,-22}  {1}" -f "Shift+Alt+F",      "Firefox")
-    Write-Host ("    {0,-22}  {1}" -f "Shift+Alt+M",      "YouTube Music")
-    Write-Host ("    {0,-22}  {1}" -f "Shift+Alt+Space",  "Show FoxTerminal")
-    Write-Host ("    {0,-22}  {1}" -f "Shift+Ctrl+Space", "Hide FoxTerminal")
+    Write-Host (Color-Text $p.accent2 ("  " + (Get-FoxIcon 0xF0AD) + "  Built-in:"))
+    $rows = @(
+        @{ Icon = 0xF16A; Key = "Shift+Alt+Y";      Text = "YouTube" },
+        @{ Icon = 0xF00D; Key = "Shift+Ctrl+Y";     Text = "Close YouTube tab" },
+        @{ Icon = 0xF269; Key = "Shift+Alt+F";      Text = "Firefox" },
+        @{ Icon = 0xF001; Key = "Shift+Alt+M";      Text = "YouTube Music" },
+        @{ Icon = 0xF120; Key = "Shift+Alt+Space";  Text = "Show FoxTerminal" },
+        @{ Icon = 0xF070; Key = "Shift+Ctrl+Space"; Text = "Hide FoxTerminal" },
+        @{ Icon = 0xF120; Key = "Shift+Alt+T";      Text = "Show FoxTerminal" },
+        @{ Icon = 0xF00D; Key = "Shift+Ctrl+Alt+T"; Text = "Close FoxTerminal" }
+    )
+    foreach ($r in $rows) {
+        Write-Host (Color-Text $p.accent ("    " + (Get-FoxIcon $r.Icon) + "  ")) -NoNewline
+        Write-Host (Color-Text $p.text ("{0,-22}" -f $r.Key)) -NoNewline
+        Write-Host (Color-Text $p.dim ("  " + $r.Text))
+    }
     Write-Host ""
 
     $cfg = Load-HkConfig
     if (-not $cfg.bindings -or $cfg.bindings.Count -eq 0) {
         Write-Host (Color-Text $p.dim "  No custom bindings.  Use 'Bind open / close' to add one.")
     } else {
-        Write-Host (Color-Text $p.accent2 "  Custom bindings ($($cfg.bindings.Count)):")
+        Write-Host (Color-Text $p.accent2 ("  " + (Get-FoxIcon 0xF0C1) + "  Custom bindings ($($cfg.bindings.Count)):"))
         foreach ($b in $cfg.bindings) {
-            Write-Host ("    [{0,-12}] open: {1,-12}  ->  {2}" -f $b.name, $b.open_key, $b.open_target)
+            Write-Host (Color-Text $p.accent ("    " + (Get-FoxIcon 0xF0C1) + "  ")) -NoNewline
+            Write-Host (Color-Text $p.text ("[{0}]" -f $b.name)) -NoNewline
+            Write-Host (Color-Text $p.dim ("  open {0}  ->  " -f (ConvertFrom-AhkHotkey $b.open_key))) -NoNewline
+            Write-Host (Color-Text $p.accent2 $b.open_target)
             if ($b.close_key) {
-                Write-Host ("    {0,-16} close: {1,-11}  ->  '{2}'" -f "", $b.close_key, $b.close_match)
+                Write-Host (Color-Text $p.dim ("    {0}  close {1}  ->  '{2}'" -f (" " * 2), (ConvertFrom-AhkHotkey $b.close_key), $b.close_match))
             }
         }
     }
@@ -216,7 +229,7 @@ function Show-DeleteBinding {
         return
     }
 
-    $names = @($cfg.bindings | ForEach-Object { "$($_.name)  ($($_.open_key))" })
+    $names = @($cfg.bindings | ForEach-Object { "$($_.name)  ($(ConvertFrom-AhkHotkey $_.open_key))" })
     $names += "Cancel"
     $choice = Select-Menu "Select binding to delete" $names
     if ($choice -lt 0 -or $choice -ge $cfg.bindings.Count) { return }
@@ -277,16 +290,16 @@ function Show-ConfigFoxTermPath {
     $p   = Get-ThemePalette
     $cfg = Load-HkConfig
     Show-Header
-    Write-Host (Color-Text $p.accent "  FoxTerminal path")
+    Write-Host (Color-Text $p.accent "  FoxTerminal path (Ghostty)")
     Write-Host ""
-    Write-Host (Color-Text $p.dim   "  Used by Shift+Alt+Space to launch FoxTerminal.")
-    Write-Host (Color-Text $p.dim   "  Leave empty to auto-detect from build output.")
+    Write-Host (Color-Text $p.dim   "  Used by Shift+Alt+T / Shift+Alt+Space to show / launch FoxTerminal.")
+    Write-Host (Color-Text $p.dim   "  Leave empty to auto-detect ghostty.exe / winghostty.exe.")
     Write-Host ""
     $cur = if ($cfg.foxterm_exe) { $cfg.foxterm_exe } else { "(auto-detect)" }
     Write-Host "  Current: $cur"
     Write-Host ""
 
-    $newPath = Prompt-Text "New path (Enter to keep current)" "(e.g. C:\path\FoxTerminal.UI.exe)"
+    $newPath = Prompt-Text "New path (Enter to keep current)" "(e.g. C:\path\winghostty.exe)"
     if ([string]::IsNullOrWhiteSpace($newPath)) {
         Write-Host (Color-Text $p.dim "  No change.")
         Wait-Back

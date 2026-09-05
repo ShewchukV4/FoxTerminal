@@ -4,7 +4,9 @@ function Get-FoxBrowserCandidates {
     $list = New-Object System.Collections.Generic.List[string]
 
     foreach ($envName in @("FOXTERM_BROWSER", "FIREFOX_PATH", "FOXTERM_YTM_BROWSER")) {
-        $custom = [string](Get-Item -Path "Env:$envName" -ErrorAction SilentlyContinue).Value
+        # Reading through the provider and dereferencing .Value throws under
+        # StrictMode when the variable is unset, so go through the env: drive value.
+        $custom = [Environment]::GetEnvironmentVariable($envName)
         if (-not [string]::IsNullOrWhiteSpace($custom)) {
             $list.Add($custom.Trim())
         }

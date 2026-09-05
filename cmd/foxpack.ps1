@@ -75,6 +75,8 @@ if ($Full) {
     [System.IO.File]::WriteAllText((Join-Path $cmdPkg 'bindings.json'), '{}', $enc)
     [System.IO.File]::WriteAllText((Join-Path $cmdPkg 'users.json'),    '{}', $enc)
     [System.IO.File]::WriteAllText((Join-Path $cmdPkg 'theme.txt'),     "orange`n", $enc)
+    [System.IO.File]::WriteAllText((Join-Path $cmdPkg 'shader_state.txt'), "on`n", $enc)
+    [System.IO.File]::WriteAllText((Join-Path $cmdPkg 'foxos_state.txt'), "off`n", $enc)
     foreach ($f in @('sp_bindings.json', 'tg_bindings.json', 'ytm_bindings.json')) {
         $p = Join-Path $cmdPkg $f
         if (Test-Path $p) { [System.IO.File]::WriteAllText($p, '{}', $enc) }

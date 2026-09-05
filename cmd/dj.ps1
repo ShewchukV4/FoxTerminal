@@ -180,7 +180,7 @@ try {
     $meter = [FoxTerm.AudioMeter]::Create()
 } catch {
     Write-Host "Не можу підключитися до системного аудіо-метра."
-    Write-Host "Спробуй запустити Windows Terminal/PowerShell як звичайний юзер (не адмін) і ще раз."
+    Write-Host "Спробуй запустити Ghostty/PowerShell як звичайний юзер (не адмін) і ще раз."
     Write-Host $_.Exception.Message
     exit 1
 }

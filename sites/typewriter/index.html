@@ -3,22 +3,26 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TypeMaster â€” Ð¡Ð»Ñ–Ð¿Ð¸Ð¹ Ð”Ñ€ÑƒÐº</title>
-<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600;800&display=swap" rel="stylesheet">
+<title>Key Rush — сліпий друк</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="./assets/css/style.css">
+<link rel="stylesheet" href="../shared/fox-ui.css">
 </head>
 <body>
+<div class="orbs" aria-hidden="true"><div class="orb orb-a"></div><div class="orb orb-b"></div><div class="orb orb-c"></div></div>
 <canvas id="particle-canvas" style="position:fixed;inset:0;pointer-events:none;z-index:0;opacity:0.7"></canvas>
 <canvas id="confetti-canvas" style="position:fixed;inset:0;pointer-events:none;z-index:500;display:none"></canvas>
-<!-- LANG TOGGLE -->
-<div class="lang-toggle">
-  <button onclick="setLang('ua',this)" id="lang-ua-btn">🇺🇦 УКР</button>
-  <button onclick="setLang('en',this)" id="lang-en-btn" class="active">EN</button>
+<div class="chrome">
+  <a class="hub-link" href="../hub/index.html">← Hub</a>
+  <div class="lang-toggle">
+    <button type="button" onclick="setLang('ua',this)" id="lang-ua-btn">УКР</button>
+    <button type="button" onclick="setLang('en',this)" id="lang-en-btn" class="active">EN</button>
+  </div>
 </div>
 <div id="fullscreen-overlay" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:400;overflow-y:auto;padding:40px 20px">
   <div style="max-width:800px;margin:0 auto">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-      <div class="logo" style="font-size:1.5rem">TYPE<span>MASTER</span></div>
+      <div class="logo" style="font-size:1.5rem">KEY <span>RUSH</span></div>
       <button class="btn" onclick="exitFullscreen()">✕ Вийти</button>
     </div>
     <div id="fs-stats" style="display:flex;gap:20px;margin-bottom:20px;flex-wrap:wrap">
@@ -36,7 +40,7 @@
 
 <div class="app">
   <header>
-    <div class="logo">TYPE<span>MASTER</span></div>
+    <div class="logo">KEY <span>RUSH</span></div>
     <div class="tagline" id="t-tagline">Навчись сліпому друку · Стань швидшим</div>
     <div style="display:flex;justify-content:center;gap:8px;margin-top:10px;flex-wrap:wrap">
       <button class="mode-btn" onclick="document.getElementById('color-modal').style.display='flex'" title="Змінити акцент-колір">🎨 Колір</button>

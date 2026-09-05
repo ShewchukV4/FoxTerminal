@@ -8,7 +8,7 @@ fi
 
 export FOXTERM=1
 
-# FOXTERM_CMD_PATH_UNIX is injected by term.ps1 launcher.
+# FOXTERM_CMD_PATH_UNIX is injected by FoxTerminal/ghostty/foxterminal-boot.sh.
 if [ -n "${FOXTERM_CMD_PATH_UNIX:-}" ] && [ -d "$FOXTERM_CMD_PATH_UNIX" ]; then
   export PATH="$FOXTERM_CMD_PATH_UNIX:$PATH"
 fi
@@ -187,7 +187,7 @@ __fox_load_theme() {
 }
 
 __fox_apply_terminal_colors() {
-  # Keep mintty visuals aligned with FoxTerminal palette.
+  # Push the active palette into Ghostty via OSC 10/11/12.
   printf '\e]10;%s\a' "$__fox_text"
   printf '\e]11;%s\a' "$__fox_bg"
   printf '\e]12;%s\a' "$__fox_accent"
@@ -243,7 +243,8 @@ __fox_build_prompt() {
 }
 
 __fox_register_cmd_aliases() {
-  if [ -z "${FOXTERM_CMD_PATH_UNIX:-}" ] || [ -z "${FOXTERM_CMD_PATH_WIN:-}" ]; then
+  # Only the unix path is required: on Linux and macOS there is no Windows path at all.
+  if [ -z "${FOXTERM_CMD_PATH_UNIX:-}" ]; then
     return
   fi
 
@@ -257,18 +258,55 @@ __fox_register_cmd_aliases() {
     fi
   }
 
+  # Ghostty runs this bash profile on Linux and macOS, where the only available
+  # PowerShell is pwsh and paths are native, so resolve both instead of assuming
+  # powershell.exe and a Windows path.
+  __fox_powershell() {
+    for candidate in pwsh pwsh.exe powershell.exe; do
+      if command -v "$candidate" >/dev/null 2>&1; then
+        printf '%s' "$candidate"
+        return 0
+      fi
+    done
+    return 1
+  }
+
   fox_run_ps1() {
     local n=$1
     shift || true
-    powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$FOXTERM_CMD_PATH_WIN\\$n.ps1" "$@"
+
+    local ps
+    ps="$(__fox_powershell)" || {
+      printf 'PowerShell not found - install pwsh to run FoxTerminal commands from bash.\n' >&2
+      return 127
+    }
+
+    local script=""
+    if [ -n "${FOXTERM_CMD_PATH_UNIX:-}" ] && [ -f "$FOXTERM_CMD_PATH_UNIX/$n.ps1" ]; then
+      script="$FOXTERM_CMD_PATH_UNIX/$n.ps1"
+    elif [ -n "${FOXTERM_CMD_PATH_WIN:-}" ]; then
+      script="$FOXTERM_CMD_PATH_WIN\\$n.ps1"
+    else
+      printf 'FoxTerminal command not found: %s\n' "$n" >&2
+      return 127
+    fi
+
+    "$ps" -NoProfile -ExecutionPolicy Bypass -File "$script" "$@"
   }
 
   fox_run_bat() {
     local n=$1
     shift || true
-    local bat_unix="$FOXTERM_CMD_PATH_UNIX/$n.bat"
-    local bat_win
-    bat_win="$(cygpath -w "$bat_unix" 2>/dev/null || true)"
+
+    if ! command -v cmd.exe >/dev/null 2>&1; then
+      printf '%s is a Windows-only .bat wrapper.\n' "$n" >&2
+      return 127
+    fi
+
+    local bat_win=""
+    if [ -n "${FOXTERM_CMD_PATH_UNIX:-}" ]; then
+      bat_win="$(cygpath -w "$FOXTERM_CMD_PATH_UNIX/$n.bat" 2>/dev/null || true)"
+    fi
     if [ -z "$bat_win" ]; then
       bat_win="$FOXTERM_CMD_PATH_WIN\\$n.bat"
     fi
@@ -315,34 +353,50 @@ __fox_register_cmd_aliases
 PROMPT_COMMAND=__fox_build_prompt
 
 chek() {
-  local terminal="Unknown"
-  local shell_name="bash"
+  local terminal="Unknown (unsupported)"
+  local shell_name="bash ${BASH_VERSION:-}"
+  local in_ghostty=0
+  local host="Ghostty not installed"
 
-  if [ "${TERM_PROGRAM:-}" = "mintty" ]; then
-    terminal="mintty"
+  if [ -n "${GHOSTTY_RESOURCES_DIR:-}" ] || [ -n "${GHOSTTY_BIN_DIR:-}" ]; then
+    terminal="Ghostty"
+    in_ghostty=1
+  elif printf '%s' "${TERM_PROGRAM:-}" | grep -qi ghostty; then
+    terminal="Ghostty"
+    in_ghostty=1
+  elif printf '%s' "${TERM:-}" | grep -qi ghostty; then
+    terminal="Ghostty"
+    in_ghostty=1
   elif [ -n "${TERM_PROGRAM:-}" ]; then
-    terminal="$TERM_PROGRAM"
-  elif [ -n "${WT_SESSION:-}" ]; then
-    terminal="Windows Terminal"
+    terminal="${TERM_PROGRAM} (unsupported)"
   elif [ -n "${TERM:-}" ]; then
-    terminal="$TERM"
+    terminal="${TERM} (unsupported)"
   fi
 
-  if [ -n "${MSYSTEM:-}" ]; then
-    shell_name="MSYS2/Git Bash"
-  elif [[ "${OSTYPE:-}" == cygwin* ]]; then
-    shell_name="Cygwin Bash"
+  if command -v ghostty >/dev/null 2>&1; then
+    host="ghostty -> $(command -v ghostty)"
+  elif command -v winghostty >/dev/null 2>&1; then
+    host="winghostty -> $(command -v winghostty)"
   fi
 
   printf "=== FoxTerminal Check ===\n"
   printf "Terminal: %s\n" "$terminal"
-  printf "Shell:    %s\n\n" "$shell_name"
+  printf "Shell:    %s\n" "$shell_name"
+  printf "Host:     %s\n\n" "$host"
   printf "Signals:\n"
-  printf "  WT_SESSION=%s\n" "${WT_SESSION:-<empty>}"
   printf "  TERM=%s\n" "${TERM:-<empty>}"
   printf "  TERM_PROGRAM=%s\n" "${TERM_PROGRAM:-<empty>}"
-  printf "  OSTYPE=%s\n" "${OSTYPE:-<empty>}"
-  printf "  MSYSTEM=%s\n" "${MSYSTEM:-<empty>}"
+  printf "  TERM_PROGRAM_VERSION=%s\n" "${TERM_PROGRAM_VERSION:-<empty>}"
+  printf "  COLORTERM=%s\n" "${COLORTERM:-<empty>}"
+  printf "  GHOSTTY_RESOURCES_DIR=%s\n" "${GHOSTTY_RESOURCES_DIR:-<empty>}"
+  printf "  FOXTERM=%s\n" "${FOXTERM:-<empty>}"
+  printf "  FOXTERM_HOST=%s\n\n" "${FOXTERM_HOST:-<empty>}"
+
+  if [ "$in_ghostty" -eq 1 ]; then
+    printf "FoxTerminal is running in its supported terminal.\n"
+  else
+    printf "FoxTerminal only supports Ghostty: https://ghostty.org/download\n"
+  fi
 }
 
 printf "FoxTerminal profile loaded for bash.\n\n"

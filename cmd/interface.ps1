@@ -1,8 +1,12 @@
 param(
-    [switch]$Terminal,
-    [switch]$TwoWindows,
-    [switch]$Gui
+    [switch]$Split,       # Створити split праворуч у поточному вікні Ghostty
+    [switch]$TwoWindows,  # Відкрити друге окреме вікно Ghostty
+    [switch]$Keys,        # Тільки показати keybinds split-режиму
+    [switch]$Gui          # Windows GUI split (WinForms), без Ghostty
 )
+
+. (Join-Path $PSScriptRoot "foxauth.ps1")
+. (Join-Path $PSScriptRoot "ghostty-lib.ps1")
 
 if ($Gui) {
     $gui = Join-Path $PSScriptRoot "interface-gui.ps1"
@@ -14,185 +18,98 @@ if ($Gui) {
     exit $LASTEXITCODE
 }
 
-function Find-BashCandidate {
-    $candidates = @(
-        "C:\cygwin64\bin\bash.exe",
-        "C:\cygwin\bin\bash.exe",
-        "C:\msys64\usr\bin\bash.exe",
-        "C:\Program Files\Git\bin\bash.exe",
-        "C:\Program Files\Git\usr\bin\bash.exe"
-    )
-    foreach ($path in $candidates) {
-        if (Test-Path $path) { return $path }
+function Show-SplitKeys {
+    $p = Get-ThemePalette
+    Write-Host ""
+    Write-Host (Color-Text $p.accent "=== FoxTerminal interface: Ghostty splits ===")
+    Write-Host ""
+    Write-Host (Color-Text $p.dim "Ghostty renders splits natively, so FoxTerminal no longer needs tmux or mintty.")
+    Write-Host ""
+    Write-Host (Color-Text $p.accent2 "Layout")
+    Write-Host "  ctrl+shift+enter    split along the larger side"
+    Write-Host "  ctrl+shift+l        split right"
+    Write-Host "  ctrl+shift+j        split down"
+    Write-Host "  ctrl+shift+z        zoom / unzoom the focused split"
+    Write-Host "  ctrl+shift+e        equalize all splits"
+    Write-Host "  ctrl+alt+arrows     resize the focused split by 40px"
+    Write-Host ""
+    Write-Host (Color-Text $p.accent2 "Focus")
+    Write-Host "  alt+arrows          move between splits"
+    Write-Host "  ctrl+shift+t        new tab"
+    Write-Host "  ctrl+shift+w        close the split / tab (Ghostty default)"
+    Write-Host ""
+    Write-Host (Color-Text $p.accent2 "FoxTerminal")
+    Write-Host "  ctrl+shift+p        command palette with all Fox commands"
+    Write-Host "  ctrl+shift+h        foxhelp"
+    Write-Host "  ctrl+shift+k        chek"
+    Write-Host "  ctrl+shift+backquote  quick terminal (drop-down)"
+    Write-Host ""
+    Write-Host (Color-Text $p.dim "  ctrl+backquote also toggles it system-wide on macOS/Linux;")
+    Write-Host (Color-Text $p.dim "  on Windows foxhotkeys uses Shift+Alt+T (show) and Shift+Ctrl+Alt+T (close).")
+    Write-Host ""
+    Write-Host (Color-Text $p.dim "Each split keeps its own colors: sw / themes in this pane")
+    Write-Host (Color-Text $p.dim "do not recolor the other pane. A new split copies this pane;")
+    Write-Host (Color-Text $p.dim "sw colors like slate stay here, they are not Fox Default.")
+    Write-Host ""
+    Write-Host (Color-Text $p.dim "All of these live in the Ghostty config: term -Edit")
+    Write-Host ""
+}
+
+function Invoke-GhosttyAction([string]$action) {
+    $ghostty = Get-GhosttyCommand
+    if (-not $ghostty) { return $false }
+    try {
+        $null = & (Get-GhosttyCliPath $ghostty) "+perform-action" $action 2>&1
+        return ($LASTEXITCODE -eq 0)
+    } catch {
+        return $false
     }
-    return $null
 }
 
-function Find-MinttyCandidate {
-    $candidates = @(
-        "C:\cygwin64\bin\mintty.exe",
-        "C:\cygwin\bin\mintty.exe",
-        "C:\msys64\bin\mintty.exe",
-        "C:\msys64\usr\bin\mintty.exe",
-        "C:\Program Files\Git\bin\mintty.exe",
-        "C:\Program Files\Git\usr\bin\mintty.exe"
-    )
-    foreach ($path in $candidates) {
-        if (Test-Path $path) { return $path }
+if ($Keys) {
+    Show-SplitKeys
+    exit 0
+}
+
+$p = Get-ThemePalette
+$warn = if (Test-NoirActive) { $p.accent4 } else { "#FBD38D" }
+$ghostty = Get-GhosttyCommand
+
+if (-not $ghostty) {
+    Write-Host (Color-Text $warn "Ghostty not found - interface mode needs it.")
+    foreach ($line in (Get-GhosttyInstallHint)) { Write-Host (Color-Text $p.dim ("  " + $line)) }
+    Write-Host ""
+    Write-Host (Color-Text $p.dim "Windows GUI fallback that needs no terminal: interface -Gui")
+    exit 1
+}
+
+if ($TwoWindows) {
+    try {
+        Start-Process -FilePath $ghostty.Path -ArgumentList @("+new-window") -WorkingDirectory (Get-Location).Path | Out-Null
+        Write-Host (Color-Text $p.accent2 "Opened a second Ghostty window.")
+    } catch {
+        Write-Host (Color-Text $warn ("Cannot open a second window: " + $_))
+        exit 1
     }
-    return $null
+    exit 0
 }
 
-function Convert-ToRuntimeLfFile([string]$sourcePath, [string]$targetName) {
-    $targetPath = Join-Path $env:TEMP $targetName
-    $content = [System.IO.File]::ReadAllText($sourcePath)
-    $content = $content -replace "`r`n", "`n"
-    $content = $content -replace "`r", "`n"
-    $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
-    [System.IO.File]::WriteAllText($targetPath, $content, $utf8NoBom)
-    return $targetPath
+if ($Split) {
+    if (Invoke-GhosttyAction "new_split:right") {
+        Write-Host (Color-Text $p.accent2 "Split created to the right.")
+        exit 0
+    }
+    Write-Host (Color-Text $warn "This Ghostty build has no CLI split action (+perform-action).")
+    Write-Host (Color-Text $p.dim "Use the keybind instead:")
+    Write-Host ""
+    Show-SplitKeys
+    exit 0
 }
 
-function To-BashSingleQuoted([string]$value) {
-    return "'" + ($value -replace "'", "'\''") + "'"
-}
-
-$bash = Find-BashCandidate
-if ([string]::IsNullOrWhiteSpace($bash)) {
-    Write-Host "bash.exe not found (Cygwin/MSYS2/Git Bash)." -ForegroundColor Yellow
-    Write-Host "Run: term -Set mintty -Now"
-    exit 1
-}
-
-$uiScriptPathWin = Join-Path $PSScriptRoot "interface-ui.sh"
-if (-not (Test-Path $uiScriptPathWin)) {
-    Write-Host "interface-ui.sh not found." -ForegroundColor Red
-    exit 1
-}
-
-$initScriptPathWin = Join-Path $PSScriptRoot "foxterm-bash-init.sh"
-if (-not (Test-Path $initScriptPathWin)) {
-    Write-Host "foxterm-bash-init.sh not found." -ForegroundColor Red
-    exit 1
-}
-
-$tmpUiWin = $null
-$tmpInitWin = $null
-try {
-    $tmpUiWin = Convert-ToRuntimeLfFile -sourcePath $uiScriptPathWin -targetName "foxterm-interface-ui-runtime.sh"
-    $tmpInitWin = Convert-ToRuntimeLfFile -sourcePath $initScriptPathWin -targetName "foxterm-bash-init-runtime.sh"
-} catch {
-    Write-Host "Cannot prepare interface runtime scripts." -ForegroundColor Red
-    exit 1
-}
-
-$uiScriptPathUnix = $null
-$initScriptPathUnix = $null
-$cmdDirUnix = $null
-try {
-    $uiScriptPathUnix = (& $bash -lc "cygpath -u '$tmpUiWin'" 2>$null | Select-Object -First 1).Trim()
-    $initScriptPathUnix = (& $bash -lc "cygpath -u '$tmpInitWin'" 2>$null | Select-Object -First 1).Trim()
-    $cmdDirUnix = (& $bash -lc "cygpath -u '$PSScriptRoot'" 2>$null | Select-Object -First 1).Trim()
-} catch {
-    $uiScriptPathUnix = $null
-    $initScriptPathUnix = $null
-    $cmdDirUnix = $null
-}
-
-if ([string]::IsNullOrWhiteSpace($uiScriptPathUnix) -or
-    [string]::IsNullOrWhiteSpace($initScriptPathUnix) -or
-    [string]::IsNullOrWhiteSpace($cmdDirUnix)) {
-    Write-Host "Cannot resolve runtime paths in bash." -ForegroundColor Red
-    exit 1
-}
-
-$env:FOXTERM_CMD_PATH_WIN = $PSScriptRoot
-$env:FOXTERM_CMD_PATH_UNIX = $cmdDirUnix
-
-$ifaceTheme = "orange"
-$themeFile = Join-Path $PSScriptRoot "theme.txt"
-if (Test-Path $themeFile) {
-    $ifaceTheme = ((Get-Content -Path $themeFile -Raw -ErrorAction SilentlyContinue).Trim()).ToLower()
-    if ([string]::IsNullOrWhiteSpace($ifaceTheme)) { $ifaceTheme = "orange" }
-}
-if ($ifaceTheme -eq "noir") {
-    $tmuxStatusStyle = "bg=#0a0a0a,fg=#909090"
-    $tmuxStatusLeft = " #[fg=#909090,bold]FOXTERM #[fg=#707070]| #[fg=#c8c8c8]console+ui "
-    $tmuxStatusRight = "#[fg=#707070]%H:%M "
-    $tmuxPaneBorder = "fg=#404040"
-    $tmuxPaneActive = "fg=#c8c8c8"
-} else {
-    $tmuxStatusStyle = "bg=#0b1220,fg=#7aa2f7"
-    $tmuxStatusLeft = " #[fg=#7aa2f7,bold]FOXTERM #[fg=#9aa5ce]| #[fg=#46d9ff]console+ui "
-    $tmuxStatusRight = "#[fg=#9aa5ce]%H:%M "
-    $tmuxPaneBorder = "fg=#334466"
-    $tmuxPaneActive = "fg=#46d9ff"
-}
-
-if ($Terminal) {
-    & $bash -lc ("bash " + (To-BashSingleQuoted $uiScriptPathUnix))
-    exit $LASTEXITCODE
-}
-
-$leftPaneCmd = "export FOXTERM_CMD_PATH_WIN=" + (To-BashSingleQuoted $PSScriptRoot) +
-    "; export FOXTERM_CMD_PATH_UNIX=" + (To-BashSingleQuoted $cmdDirUnix) +
-    "; bash --noprofile --rcfile " + (To-BashSingleQuoted $initScriptPathUnix) + " -i"
-
-$rightPaneCmd = "export FOXTERM_CMD_PATH_WIN=" + (To-BashSingleQuoted $PSScriptRoot) +
-    "; export FOXTERM_CMD_PATH_UNIX=" + (To-BashSingleQuoted $cmdDirUnix) +
-    "; bash " + (To-BashSingleQuoted $uiScriptPathUnix)
-
-$tmuxCommand = @(
-    "if ! command -v tmux >/dev/null 2>&1; then",
-    "  echo 'tmux is not installed in this bash environment.';",
-    "  echo 'Use: interface -TwoWindows (fallback mode)';",
-    "  echo 'Or install tmux and run interface again.';",
-    "  read -r _;",
-    "  exit 1;",
-    "fi;",
-    "if tmux has-session -t foxiface 2>/dev/null; then tmux kill-session -t foxiface; fi;",
-    "tmux new-session -d -s foxiface " + (To-BashSingleQuoted $leftPaneCmd) + ";",
-    "tmux split-window -h -t foxiface:0 " + (To-BashSingleQuoted $rightPaneCmd) + ";",
-    "tmux set-option -t foxiface -g mouse on;",
-    "tmux set-option -t foxiface -g status on;",
-    "tmux set-option -t foxiface -g status-style '$tmuxStatusStyle';",
-    "tmux set-option -t foxiface -g status-left '$tmuxStatusLeft';",
-    "tmux set-option -t foxiface -g status-right '$tmuxStatusRight';",
-    "tmux set-option -t foxiface -g pane-border-style '$tmuxPaneBorder';",
-    "tmux set-option -t foxiface -g pane-active-border-style '$tmuxPaneActive';",
-    "tmux select-pane -t foxiface:0.0;",
-    "tmux attach-session -t foxiface;"
-) -join " "
-
-if (-not $TwoWindows) {
-    & $bash -lc $tmuxCommand
-    exit $LASTEXITCODE
-}
-
-$mintty = Find-MinttyCandidate
-if ([string]::IsNullOrWhiteSpace($mintty)) {
-    Write-Host "mintty.exe not found." -ForegroundColor Red
-    Write-Host "Use interface -Terminal or install mintty."
-    exit 1
-}
-
-$consoleArgs = @(
-    "-t", "FoxTerminal-console",
-    "-o", "Sixel=true",
-    "-e", $bash, "--noprofile", "--rcfile", $initScriptPathUnix, "-i"
-)
-
-$uiBashCommand = "export FOXTERM_CMD_PATH_WIN=" + (To-BashSingleQuoted $PSScriptRoot) +
-    "; export FOXTERM_CMD_PATH_UNIX=" + (To-BashSingleQuoted $cmdDirUnix) +
-    "; bash " + (To-BashSingleQuoted $uiScriptPathUnix)
-
-$uiArgs = @(
-    "-t", "FoxTerminal-ui",
-    "-o", "Sixel=true",
-    "--hold=always",
-    "-e", $bash, "-lc", $uiBashCommand
-)
-
-Start-Process -FilePath $mintty -ArgumentList $consoleArgs -WorkingDirectory (Get-Location).Path | Out-Null
-Start-Sleep -Milliseconds 150
-Start-Process -FilePath $mintty -ArgumentList $uiArgs -WorkingDirectory (Get-Location).Path | Out-Null
+Show-SplitKeys
+Write-Host (Color-Text $p.accent2 "Options")
+Write-Host "  interface -Split        try to split from the CLI"
+Write-Host "  interface -TwoWindows   open a second Ghostty window"
+Write-Host "  interface -Keys         keybinds only"
+Write-Host "  interface -Gui          Windows GUI split (no Ghostty needed)"
+Write-Host ""

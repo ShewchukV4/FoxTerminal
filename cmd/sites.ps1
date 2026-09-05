@@ -58,43 +58,6 @@ function Get-FlatSites {
     return @($flat)
 }
 
-function Find-BashCandidate {
-    $candidates = @(
-        "C:\cygwin64\bin\bash.exe",
-        "C:\cygwin\bin\bash.exe",
-        "C:\msys64\usr\bin\bash.exe",
-        "C:\Program Files\Git\bin\bash.exe",
-        "C:\Program Files\Git\usr\bin\bash.exe"
-    )
-    foreach ($path in $candidates) {
-        if (Test-Path $path) { return $path }
-    }
-    return $null
-}
-
-function Convert-ToRuntimeLfFile([string]$sourcePath, [string]$targetName) {
-    $targetPath = Join-Path $env:TEMP $targetName
-    $content = [System.IO.File]::ReadAllText($sourcePath)
-    $content = $content -replace "`r`n", "`n"
-    $content = $content -replace "`r", "`n"
-    $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
-    [System.IO.File]::WriteAllText($targetPath, $content, $utf8NoBom)
-    return $targetPath
-}
-
-function To-BashSingleQuoted([string]$value) {
-    return "'" + ($value -replace "'", "'\''") + "'"
-}
-
-function Is-MinttySession {
-    if ($env:TERM_PROGRAM -eq "mintty") { return $true }
-    if ($env:MSYSTEM) { return $true }
-    if ($env:TERM -and $env:TERM -like "xterm*") {
-        if ($env:SHELL -or $env:OSTYPE) { return $true }
-    }
-    return $false
-}
-
 function Resolve-SiteUrl([string]$url) {
     if ($url -notmatch '^https?://' -and $url -notmatch '^[A-Za-z]:\\') {
         $sitesDir = Join-Path (Split-Path $PSScriptRoot -Parent) "sites"
@@ -267,26 +230,10 @@ function Save-SitesCatalog([hashtable]$catalog) {
         categories = @($catalog.categories)
     }
     $json = $payload | ConvertTo-Json -Depth 8
-    [System.IO.File]::WriteAllText($path, $json, [System.Text.Encoding]::UTF8)
-}
-
-function Try-RunMinttyUi {
-    if (-not (Is-MinttySession)) { return $false }
-
-    $uiScriptPathWin = Join-Path $PSScriptRoot "sites-ui.sh"
-    if (-not (Test-Path $uiScriptPathWin)) { return $false }
-
-    $bash = Find-BashCandidate
-    if ([string]::IsNullOrWhiteSpace($bash)) { return $false }
-
-    $tmpUiWin = Convert-ToRuntimeLfFile -sourcePath $uiScriptPathWin -targetName "foxterm-sites-ui-runtime.sh"
-    $uiScriptPathUnix = (& $bash -lc "cygpath -u '$tmpUiWin'" 2>$null | Select-Object -First 1).Trim()
-    if ([string]::IsNullOrWhiteSpace($uiScriptPathUnix)) { return $false }
-
-    $env:FOXTERM_SITES_FILE_WIN = Get-SitesFilePath
-    $env:FOXTERM_CMD_PATH_WIN   = $PSScriptRoot
-    & $bash -lc ("bash " + (To-BashSingleQuoted $uiScriptPathUnix))
-    return $true
+    $utf8 = New-Object System.Text.UTF8Encoding($false)
+    [System.IO.File]::WriteAllText($path, $json, $utf8)
+    $catalogJs = Join-Path (Split-Path $path -Parent) "hub\catalog.js"
+    [System.IO.File]::WriteAllText($catalogJs, ("window.FOX_SITES = {0};`n" -f $json), $utf8)
 }
 
 function New-SiteFolder([string]$name) {
@@ -467,10 +414,6 @@ try {
     if ($catalog.categories.Count -eq 0) {
         Write-Host "No sites configured in $(Get-SitesFilePath)." -ForegroundColor Yellow
         exit 1
-    }
-
-    if (Try-RunMinttyUi) {
-        exit $LASTEXITCODE
     }
 
     Select-SitesCatalog

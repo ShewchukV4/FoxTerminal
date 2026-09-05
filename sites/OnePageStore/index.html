@@ -3,61 +3,119 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Onepagestore</title>
+  <title>Fox Den — merch</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/css/style.css">
-</head> 
+</head>
 <body>
-<div class="info-box">
-  <h1>Great Shop</h1>
-  <div class="grid-content">
-    <div class="item">
-      <h2>Convenience</h2>
-      <p>Our store offers convenient shopping experience.</p>
-    </div>
-    <div class="item">
-      <h2>Reliability</h2>
-      <p>Your product will be safe and reliable.</p>
-    </div>
-    <div class="item">
-      <h2>Delivery Speed</h2>
-      <p>Our store will deliver your order to you quickly and immediately.</p>      
-    </div>
+  <div class="orbs" aria-hidden="true">
+    <div class="orb orb-a"></div>
+    <div class="orb orb-b"></div>
   </div>
 
-  <button class="pushable">
-    <span class="front">
-      <p> Get Started </p>
-    </span>
-  </button>
-</div>
+  <a class="skip" href="#catalog" data-i18n="skip">До каталогу</a>
 
-<div class="shop-Container">
-  <div class="item">
-    <h2>Product 1</h2>
-    <p>Description of product 1.</p>
-  </div>
-  <div class="item">
-    <h2>Product 2</h2>
-    <p>Description of product 2.</p>
-  </div>
-  <div class="item">
-    <h2>Product 3</h2>
-    <p>Description of product 3.</p>
-  </div>
-  <div class="item">
-    <h2>Product 4</h2>
-    <p>Description of product 4.</p>
-  </div>
-  <div class="item">
-    <h2>Product 5</h2>
-    <p>Description of product 5.</p>
-    <div class="item-button">
-      <h3>info</h3>
+  <header class="nav">
+    <a class="brand" href="#top">
+      <svg width="32" height="32" viewBox="0 0 54 54" fill="none" aria-hidden="true">
+        <path d="M8 25 L15 3 L23 23 Z" fill="currentColor" opacity="0.9"/>
+        <path d="M46 25 L39 3 L31 23 Z" fill="currentColor" opacity="0.9"/>
+        <ellipse cx="27" cy="32" rx="18" ry="16" fill="currentColor" opacity="0.82"/>
+        <circle cx="21" cy="29" r="2.5" fill="#0a0610"/>
+        <circle cx="33" cy="29" r="2.5" fill="#0a0610"/>
+      </svg>
+      <span>Fox Den</span>
+    </a>
+    <nav class="nav-links">
+      <a href="#catalog" data-i18n="navShop">Каталог</a>
+      <a href="#about" data-i18n="navAbout">Про демо</a>
+      <a href="../hub/index.html">Hub</a>
+    </nav>
+    <div class="nav-actions">
+      <button class="ghost" type="button" id="lang-toggle">EN</button>
+      <button class="cart-btn" type="button" id="cart-open" aria-controls="cart-drawer">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 8h12l1 12H5L6 8z"/><path d="M9 8V7a3 3 0 0 1 6 0v1"/></svg>
+        <span data-i18n="cart">Кошик</span>
+        <b id="cart-count" hidden>0</b>
+      </button>
     </div>
-    <div class="item-button-block">
-      <p>More Info</p>
+  </header>
+
+  <main id="top">
+    <section class="hero">
+      <p class="eyebrow" data-i18n="eyebrow">локальне демо · без оплати</p>
+      <h1 data-i18n="heroTitle">Мерч FoxTerminal, який ніхто не відправить.</h1>
+      <p class="lede" data-i18n="heroLede">Вітрина-пісочниця: стікери, принти й дрібниці з екосистеми. Кошик живе лише в браузері.</p>
+      <div class="hero-actions">
+        <a class="btn primary" href="#catalog" data-i18n="ctaShop">Дивитись каталог</a>
+        <button class="btn" type="button" id="lucky-btn" data-i18n="ctaLucky">Мені пощастить</button>
+      </div>
+    </section>
+
+    <section class="trust" aria-label="Переваги">
+      <article>
+        <h2 data-i18n="trust1t">Миттєво</h2>
+        <p data-i18n="trust1d">Усе локально. Жодних серверів і кошиків «на потім».</p>
+      </article>
+      <article>
+        <h2 data-i18n="trust2t">Безпечно</h2>
+        <p data-i18n="trust2d">Оплати немає. Checkout лише показує тост.</p>
+      </article>
+      <article>
+        <h2 data-i18n="trust3t">Fox-стиль</h2>
+        <p data-i18n="trust3d">Ті самі кольори, що й Hub і FoxTerminal.</p>
+      </article>
+    </section>
+
+    <section class="catalog" id="catalog">
+      <div class="catalog-head">
+        <div>
+          <h2 data-i18n="catalogTitle">Каталог</h2>
+          <p data-i18n="catalogSub">Вісім позицій. Фільтр за типом.</p>
+        </div>
+        <div class="filters" role="tablist" aria-label="Категорії">
+          <button class="chip active" type="button" data-filter="all" data-i18n="all">Усе</button>
+          <button class="chip" type="button" data-filter="wear" data-i18n="wear">Носити</button>
+          <button class="chip" type="button" data-filter="desk" data-i18n="desk">На стіл</button>
+          <button class="chip" type="button" data-filter="print" data-i18n="print">Принт</button>
+        </div>
+      </div>
+      <div class="grid" id="product-grid"></div>
+    </section>
+
+    <section class="about" id="about">
+      <h2 data-i18n="aboutTitle">Це не магазин</h2>
+      <p data-i18n="aboutBody">OnePageStore — пісочниця в Fox Hub. Товари вигадані, ціни умовні, доставки немає. Ідеально, щоб покрутити вітрину, кошик і фільтри без бекенду.</p>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    Fox Den · FoxTerminal sandbox
+  </footer>
+
+  <aside class="drawer" id="cart-drawer" hidden>
+    <div class="drawer-panel" role="dialog" aria-labelledby="cart-title">
+      <header>
+        <h2 id="cart-title" data-i18n="cartTitle">Кошик</h2>
+        <button class="icon-btn" type="button" id="cart-close" aria-label="Закрити" data-i18n-aria="close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </header>
+      <div class="drawer-body" id="cart-body"></div>
+      <footer class="drawer-foot">
+        <div class="total">
+          <span data-i18n="total">Разом</span>
+          <strong id="cart-total">0 ₴</strong>
+        </div>
+        <button class="btn primary" type="button" id="checkout-btn" data-i18n="checkout">Оформити (демо)</button>
+      </footer>
     </div>
-  </div>
-</div>
+  </aside>
+
+  <div class="toast" id="toast" hidden></div>
+
+  <script src="assets/js/main.js"></script>
 </body>
 </html>

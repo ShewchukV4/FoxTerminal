@@ -5,6 +5,8 @@ param(
     [string]$OutPath
 )
 
+. "$PSScriptRoot\hk_lib.ps1"
+
 $lines = [System.Collections.Generic.List[string]]::new()
 
 if (Test-Path -LiteralPath $JsonPath) {
@@ -20,10 +22,10 @@ if (Test-Path -LiteralPath $JsonPath) {
 
         foreach ($b in $data.bindings) {
             $name   = if ($b.name)         { $b.name }         else { "" }
-            $oKey   = if ($b.open_key)     { $b.open_key }     else { "" }
+            $oKey   = if ($b.open_key)     { ConvertTo-AhkHotkey ([string]$b.open_key) }     else { "" }
             $oTgt   = if ($b.open_target)  { $b.open_target }  else { "" }
             $oAct   = if ($b.open_action)  { $b.open_action }  else { "url" }
-            $cKey   = if ($b.close_key)    { $b.close_key }    else { "" }
+            $cKey   = if ($b.close_key)    { ConvertTo-AhkHotkey ([string]$b.close_key) }    else { "" }
             $cMatch = if ($b.close_match)  { $b.close_match }  else { "" }
             # Skip entries without an open key
             if ($oKey -ne "") {

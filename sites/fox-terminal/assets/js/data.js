@@ -43,8 +43,9 @@ window.FOX_DATA = {
       title: "Ядро",
       icon: "⚡",
       cmds: [
-        { name: "foxhelp", usage: "foxhelp", desc: "Інтерактивне меню допомоги з усіма командами" },
+        { name: "foxhelp", usage: "foxhelp", desc: "У терміналі — меню допомоги; на FoxOS шпалерах — command picker (WALLPAPER / TERMINAL)" },
         { name: "foxdeps", usage: "foxdeps [-Check] [-Install]", desc: "Перевірка та авто-встановлення залежностей" },
+        { name: "foxtest", usage: "foxtest [-List] [-Only <names>] [-Group all|info|tui|bat]", desc: "Прогін усіх команд: що працює, що намалювалось, що зламалось" },
         { name: "foxreset", usage: "foxreset [-Git] [-NoGit]", desc: "Жорсткий reset кешів і prompt" },
         { name: "build", usage: "build [-list|-restore <name>]", desc: "Знімки/відновлення стану FoxTerminal" },
         { name: "foxpack", usage: "foxpack [-Full] [-OutPath path] [-Open]", desc: "Пакування конфігів/команд для backup або share" },
@@ -53,7 +54,7 @@ window.FOX_DATA = {
         { name: "apps", usage: "apps", desc: "Каталог локальних застосунків і швидкого запуску" },
         { name: "appbind", usage: "appbind", desc: "Прив'язки застосунків до коротких alias" },
         { name: "foxauth", usage: "foxauth", desc: "Сервісна авторизація/стан auth-модулів" },
-        { name: "clear", usage: "clear", desc: "Очистити екран" },
+        { name: "clear", usage: "clear", desc: "Очистити екран (pinned wai лишається)" },
         { name: "texit", usage: "texit", desc: "Примусовий вихід з процесу терміналу" }
       ]
     },
@@ -95,7 +96,7 @@ window.FOX_DATA = {
         { name: "bbind", usage: "bbind", desc: "Alias для ff або custom .bat" },
         { name: "blist", usage: "blist", desc: "Список alias (bindings.json)" },
         { name: "bdel", usage: "bdel <alias>", desc: "Видалити alias/binding" },
-        { name: "ser", usage: "ser <terms>", desc: "Google search у Firefox" }
+        { name: "ser", usage: "ser <terms>", desc: "Google search у Firefox; також з рядка на FoxOS шпалерах" }
       ]
     },
     {
@@ -113,7 +114,7 @@ window.FOX_DATA = {
       title: "Нотатки",
       icon: "📝",
       cmds: [
-        { name: "wai", usage: "wai", desc: "Де ти в notes + список файлів" },
+        { name: "wai", usage: "wai [-pin|-unpin]", desc: "Де ти в notes + список файлів. -pin тримає зверху" },
         { name: "go", usage: "go <path>", desc: "Змінити папку в notes" },
         { name: "up", usage: "up", desc: "Піднятись на рівень вище у notes" },
         { name: "nfile", usage: "nfile <name.ext>", desc: "Створити файл" },
@@ -148,7 +149,7 @@ window.FOX_DATA = {
         { name: "fday", usage: "fday [location]", desc: "Daily summary: time+weather+wifi+ip" },
         { name: "ftime", usage: "ftime", desc: "Поточний час/таймблок для status-репортів" },
         { name: "disk", usage: "disk", desc: "Disk usage по дисках" },
-        { name: "sixel", usage: "sixel", desc: "Перевірка SIXEL/графічної підтримки терміналу" }
+        { name: "sixel", usage: "sixel [-Test]", desc: "Перевірка Kitty graphics у Ghostty (chafa / timg)" }
       ]
     },
     {
@@ -156,11 +157,12 @@ window.FOX_DATA = {
       title: "Terminal",
       icon: "🧱",
       cmds: [
-        { name: "chek", usage: "chek", desc: "Поточний backend терміналу" },
-        { name: "term", usage: "term [-Set auto|windows|mintty|cygwin]", desc: "Перемикач backend через меню" },
-        { name: "interface", usage: "interface [-TwoWindows] [-Gui]", desc: "tmux split UI / GUI split" },
-        { name: "interface-deps", usage: "interface-deps", desc: "Перевірка/встановлення залежностей interface mode" },
-        { name: "interface-gui", usage: "interface-gui", desc: "GUI launcher для interface-поділу" }
+        { name: "chek", usage: "chek", desc: "Перевірка Ghostty-сесії, shell і оточення" },
+        { name: "term", usage: "term [-Status|-Apply|-Edit|-New|-Doctor]", desc: "Менеджер Ghostty-конфіга FoxTerminal" },
+        { name: "interface", usage: "interface [-Split down|right] [-Keys] [-Gui]", desc: "Нативні Ghostty splits + список keybinds" },
+        { name: "foxdeps", usage: "foxdeps [-Install]", desc: "Ghostty, Nerd Font, Oh My Posh та інші залежності" },
+        { name: "foxtest", usage: "foxtest [-Group info]", desc: "Перевірка, що всі команди справді працюють у Ghostty" },
+        { name: "interface-gui", usage: "interface-gui", desc: "GUI launcher для Windows-поділу (fallback)" }
       ]
     },
     {
@@ -175,6 +177,8 @@ window.FOX_DATA = {
         { name: "arthas", usage: "arthas", desc: "Контрастний dark preset стилю Arthas" },
         { name: "apple", usage: "apple", desc: "Світлий Apple-style preset" },
         { name: "spider", usage: "spider", desc: "Noir-only: Spider-Noir панель + system info" },
+        { name: "shader", usage: "shader [on|off|status|toggle]", desc: "Ghostty glass-шейдери під тему; shader off вимикає" },
+        { name: "foxos", usage: "foxos [on|off|status|apply]", desc: "Живі ASCII-шпалери, desk, rig і рядок команд; foxos off відновлює стіл" },
         { name: "frederik", usage: "frederik", desc: "Фірмовий візуальний preset Frederik mode" }
       ]
     },
@@ -222,14 +226,38 @@ window.FOX_DATA = {
     { keys: "Shift+Alt+F", action: "Firefox / bring to front", color: "#5a8cff" },
     { keys: "Shift+Alt+M", action: "YouTube Music", color: "#24d6c8" },
     { keys: "Shift+Alt+Space", action: "Показати FoxTerminal", color: "#7c5cff" },
-    { keys: "Shift+Ctrl+Space", action: "Сховати FoxTerminal (фон)", color: "#888888" }
+    { keys: "Shift+Ctrl+Space", action: "Сховати FoxTerminal (фон)", color: "#888888" },
+    { keys: "Shift+Alt+T", action: "Показати FoxTerminal", color: "#7c5cff" },
+    { keys: "Shift+Ctrl+Alt+T", action: "Закрити FoxTerminal", color: "#e05a5a" }
   ],
 
   backends: [
-    { name: "Windows Terminal", desc: "Основний FoxTerminal profile з Oh My Posh", tag: "default" },
-    { name: "FoxTerminalApp", desc: "Власний Avalonia PTY термінал (.NET 9)", tag: "app" },
-    { name: "mintty / Cygwin", desc: "interface mode, tmux split, SIXEL", tag: "unix" },
-    { name: "MSYS2 / Git Bash", desc: "bash scripts, sites-ui.sh TUI", tag: "bash" }
+    { name: "Ghostty", desc: "Єдиний термінал FoxTerminal: GPU-рендер, splits, quick terminal", tag: "only" },
+    { name: "winghostty", desc: "Windows-збірка Ghostty + PowerShell 5.1/7 і Oh My Posh", tag: "windows" },
+    { name: "Ghostty (Linux/macOS)", desc: "Офіційна збірка + bash bootstrap і pwsh для команд", tag: "unix" },
+    { name: "FoxTerminalApp", desc: "Legacy Avalonia PTY термінал, більше не потрібен", tag: "legacy" }
+  ],
+
+  ghostty: [
+    { name: "Quick terminal", keys: "ctrl+`", desc: "Quake-стиль drop-down згори екрана, 45% висоти, автоприховування" },
+    { name: "Resize split", keys: "ctrl+alt+стрілки", desc: "Змінити розмір активної панелі на 40 пікселів" },
+    { name: "Splits", keys: "ctrl+shift+enter / j / l", desc: "Нативний поділ вікна без tmux; неактивні панелі затемнені до 85%" },
+    { name: "Split zoom", keys: "ctrl+shift+z", desc: "Розгорнути панель на все вікно і повернути назад" },
+    { name: "Equalize splits", keys: "ctrl+shift+e", desc: "Вирівняти розміри всіх панелей" },
+    { name: "Jump to prompt", keys: "ctrl+shift+↑ / ↓", desc: "Стрибок між промптами через OSC 133 shell integration" },
+    { name: "Scrollback search", keys: "ctrl+shift+f", desc: "Пошук по історії з підсвіткою у палітрі FoxNight" },
+    { name: "Command palette", keys: "ctrl+shift+p", desc: "Усі команди FoxTerminal у палітрі: foxhelp, chek, term, sw, friend" },
+    { name: "Scrollback → file", keys: "ctrl+shift+u", desc: "Вивантажити весь буфер у файл і відкрити його" },
+    { name: "Terminal inspector", keys: "ctrl+shift+i", desc: "Live-дебагер VT: escape-послідовності, комірки, шрифти, рендер" },
+    { name: "Live config reload", keys: "ctrl+shift+,", desc: "Застосувати зміни конфіга без перезапуску терміналу" },
+    { name: "Kitty graphics", keys: "—", desc: "Картинки прямо в терміналі через chafa/timg, 320 MB ліміт" },
+    { name: "Command notifications", keys: "—", desc: "Desktop-нотифікація, коли довга команда завершилась у фоні" },
+    { name: "Progress bars", keys: "—", desc: "OSC 9;4 прогрес у заголовку вікна й на таскбарі" },
+    { name: "Blur + opacity", keys: "—", desc: "background-opacity 0.92 з 20px blur позаду вікна" },
+    { name: "Ligatures", keys: "—", desc: "calt + liga на Nerd Font, font-thicken для чіткого тексту" },
+    { name: "Clipboard protection", keys: "—", desc: "Підтвердження перед вставкою підозрілого багаторядкового тексту" },
+    { name: "SSH terminfo", keys: "—", desc: "ssh-terminfo автоматично ставить xterm-ghostty на віддаленому хості" },
+    { name: "Window state", keys: "—", desc: "window-save-state always — сесія відновлюється після рестарту" }
   ],
 
   stats: [

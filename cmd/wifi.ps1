@@ -1,5 +1,7 @@
 param()
 
+. "$PSScriptRoot\foxauth.ps1"
+
 function Get-WifiInfo {
     $raw = netsh wlan show interfaces 2>$null
     if (-not $raw) { return $null }
@@ -34,14 +36,18 @@ function Get-FrequencyLabel([int]$channel) {
     return "6 GHz"
 }
 
+$p = Get-ThemePalette
+$wifi = Get-FoxIcon 0xF1EB
+
 $info = Get-WifiInfo
 if (-not $info) {
-    Write-Host "Wi-Fi info not available."
+    Write-Host (Color-Text $p.dim ("  " + $wifi + "  Wi-Fi info not available."))
     exit 1
 }
 
 if ($info.State -and $info.State -notmatch 'connected') {
-    Write-Host "Wi-Fi: $($info.State)"
+    Write-Host (Color-Text $p.accent2 ("  " + $wifi + "  Wi-Fi: ")) -NoNewline
+    Write-Host (Color-Text $p.text $info.State)
     exit 0
 }
 
@@ -54,20 +60,26 @@ $rxLabel = if ($null -ne $info.Rx) { $info.Rx } else { "?" }
 $txLabel = if ($null -ne $info.Tx) { $info.Tx } else { "?" }
 $barLen = 20
 
-Write-Host "Wi-Fi connection"
-Write-Host ("  SSID:    {0}" -f $ssidLabel)
-Write-Host ("  Signal:  {0}%" -f $signal)
-Write-Host ("  Channel: {0} ({1})" -f $channelLabel, $freq)
-Write-Host ("  Radio:   {0}" -f $radioLabel)
-Write-Host ("  Rx/Tx:   {0}/{1} Mbps" -f $rxLabel, $txLabel)
+Write-Host ""
+Write-Host (Color-Text $p.accent ("  " + $wifi + "  Wi-Fi"))
+Write-Host (Color-Text $p.dim "  SSID     ") -NoNewline
+Write-Host (Color-Text $p.text $ssidLabel)
+Write-Host (Color-Text $p.dim "  Signal   ") -NoNewline
+Write-Host (Color-Text $p.accent2 ("{0}%" -f $signal))
+Write-Host (Color-Text $p.dim "  Channel  ") -NoNewline
+Write-Host (Color-Text $p.text ("{0} ({1})" -f $channelLabel, $freq))
+Write-Host (Color-Text $p.dim "  Radio    ") -NoNewline
+Write-Host (Color-Text $p.text $radioLabel)
+Write-Host (Color-Text $p.dim "  Rx/Tx    ") -NoNewline
+Write-Host (Color-Text $p.text ("{0}/{1} Mbps" -f $rxLabel, $txLabel))
 Write-Host ""
 
 $fill = [Math]::Round(($signal / 100) * $barLen)
 $fill = [Math]::Max(0, [Math]::Min($barLen, $fill))
-$bar = "[" + ("=" * $fill) + (" " * ($barLen - $fill)) + "]"
-
-if ($signal -le 40) { $color = "Red" }
-elseif ($signal -le 70) { $color = "Yellow" }
-else { $color = "Green" }
-
-Write-Host ("Signal {0,3}% {1}" -f $signal, $bar) -ForegroundColor $color
+$barOn = [string][char]0x2588
+$barOff = [string][char]0x2591
+Write-Host (Color-Text $p.dim "  ") -NoNewline
+Write-Host (Color-Text $p.accent ($barOn * $fill)) -NoNewline
+Write-Host (Color-Text $p.dim ($barOff * ($barLen - $fill))) -NoNewline
+Write-Host (Color-Text $p.accent2 ("  {0}%" -f $signal))
+Write-Host ""

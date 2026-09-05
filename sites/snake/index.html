@@ -3,16 +3,22 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>FoxSnake – Змійка</title>
-<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600;800&display=swap" rel="stylesheet">
+<title>Serpent Fox — змійка</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="./assets/css/style.css">
+<link rel="stylesheet" href="../shared/fox-ui.css">
 </head>
 <body>
+<div class="orbs" aria-hidden="true"><div class="orb orb-a"></div><div class="orb orb-b"></div><div class="orb orb-c"></div></div>
 <canvas id="particle-canvas"></canvas>
+
+<div class="chrome">
+  <a class="hub-link" href="../hub/index.html">← Hub</a>
+</div>
 
 <div class="app">
   <header>
-    <div class="logo">FOX<span>SNAKE</span></div>
+    <div class="logo">SERPENT <span>FOX</span></div>
     <div class="tagline">КЛАСИЧНА ЗМІЙКА · БАГАТО РЕЖИМІВ · ПОВНЕ НАЛАШТУВАННЯ</div>
   </header>
 
@@ -61,7 +67,7 @@
 
         <!-- OVERLAY -->
         <div class="game-overlay show" id="game-overlay">
-          <div class="overlay-title" id="overlay-title">FOX SNAKE</div>
+          <div class="overlay-title" id="overlay-title">SERPENT FOX</div>
           <div class="overlay-stats" id="overlay-stats" style="display:none">
             <div>
               <div class="ov-stat-val" id="ov-score">0</div>

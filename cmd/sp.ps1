@@ -1,6 +1,8 @@
 param(
     [Parameter(ValueFromRemainingArguments = $true)]
-    [string[]]$Args
+    # Defaults to an empty array on purpose: with no default this is $null when the
+    # command is run bare, and StrictMode turns $null.Count into a hard error.
+    [string[]]$Args = @()
 )
 
 Set-StrictMode -Version Latest

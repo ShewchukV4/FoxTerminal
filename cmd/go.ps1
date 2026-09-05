@@ -12,15 +12,19 @@ $paths = Initialize-NotesPaths $PSScriptRoot $env:FOXTERM_USER
 $cwd = Get-NoteSessionCwd $paths.NotesRoot $paths.FilesHome
 
 if ($Args.Count -eq 0) {
-    Write-Host "Usage: go <folder> or go path/to/folder" -ForegroundColor Yellow
-    Write-Host ("Current: notes/" + $paths.User + "/" + (Get-NotesRelPath $cwd $paths.NotesRoot))
+    $p = Get-ThemePalette
+    $folder = Get-FoxIcon 0xF07B
+    Write-Host (Color-Text $p.dim ("  " + $folder + "  Usage: go <folder> or go path/to/folder"))
+    Write-Host (Color-Text $p.accent ("  " + (Get-FoxIcon 0xF041) + "  ")) -NoNewline
+    Write-Host (Color-Text $p.text ("notes/" + $paths.User + "/" + (Get-NotesRelPath $cwd $paths.NotesRoot)))
     return
 }
 
 $dest = ($Args -join " ").Trim()
 $target = Resolve-NotesGoTarget $cwd $paths.NotesRoot $dest
 if ($null -eq $target) {
-    Write-Host "Folder not found." -ForegroundColor Yellow
+    $p = Get-ThemePalette
+    Write-Host (Color-Text $p.dim ("  " + (Get-FoxIcon 0xF07B) + "  Folder not found."))
     return
 }
 

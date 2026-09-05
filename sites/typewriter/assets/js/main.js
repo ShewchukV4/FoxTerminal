@@ -2416,7 +2416,7 @@ window.openShareFromResult = openShareFromResult;
 
 function copyShareText() {
   const r = lastResult;
-  const text = `⌨️ TypeMaster результат\n🚀 ${r.wpm} WPM | 🎯 ${r.acc}% точність | ⚡ x${r.combo} комбо\n${r.rank || ''}\ntypemaster.app`;
+  const text = `Key Rush · ${r.wpm} WPM · ${r.acc}% · x${r.combo}\n${r.rank || ''}`;
   navigator.clipboard.writeText(text).then(() => showToast('📋 Скопійовано!'));
 }
 window.copyShareText = copyShareText;
@@ -2434,7 +2434,7 @@ function downloadShareCard() {
   grad.addColorStop(0,accent); grad.addColorStop(0.5,'#f5a623'); grad.addColorStop(1,'#ff4d6d');
   ctx.fillStyle = grad; ctx.fillRect(0,0,500,4);
   ctx.fillStyle = accent; ctx.font = 'bold 22px monospace';
-  ctx.fillText('TYPEMASTER', 30, 50);
+  ctx.fillText('KEY RUSH', 30, 50);
   ctx.fillStyle = '#f5a623'; ctx.font = '18px monospace';
   ctx.fillText('results', 200, 50);
   ctx.fillStyle = '#e8e8f0'; ctx.font = 'bold 52px monospace';
@@ -2452,7 +2452,7 @@ function downloadShareCard() {
   ctx.fillStyle = '#5a5a7a'; ctx.font = '13px monospace';
   ctx.fillText(lastResult.rank || '', 30, 195);
   const link = document.createElement('a');
-  link.download = 'typemaster-result.png';
+  link.download = 'key-rush-result.png';
   link.href = canvas.toDataURL();
   link.click();
   showToast('💾 Картку збережено!');

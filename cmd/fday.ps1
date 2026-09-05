@@ -3,14 +3,15 @@ param(
     [string[]]$Args
 )
 
+. "$PSScriptRoot\foxauth.ps1"
+
+$p = Get-ThemePalette
 $root = $PSScriptRoot
-Write-Host "FoxTerminal day"
+Write-Host ""
+Write-Host (Color-Text $p.accent ("  " + (Get-FoxIcon 0xF073) + "  FoxTerminal day"))
 Write-Host ""
 
 & "$root\ftime.ps1"
-Write-Host ""
 & "$root\weather.ps1" @Args
-Write-Host ""
 & "$root\wifi.ps1"
-Write-Host ""
 & "$root\ip.ps1"

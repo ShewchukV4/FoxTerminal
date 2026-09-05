@@ -6,6 +6,9 @@
   --text: #f4e7d0;
   --muted: #a78b66;
   --gold: #dc8e43;
+  --accent: #dc8e43;
+  --accent2: #76a95b;
+  --accent3: #b93632;
   --green: #76a95b;
   --red: #b93632;
   --blue: #6aaed6;
@@ -32,15 +35,7 @@ body {
 }
 
 body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  background-image:
-    linear-gradient(135deg, rgba(118, 169, 91, 0.06) 25%, transparent 25%),
-    linear-gradient(225deg, rgba(185, 54, 50, 0.06) 25%, transparent 25%);
-  background-size: 58px 58px;
-  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.82), transparent);
+  display: none;
 }
 
 button,
@@ -77,7 +72,7 @@ input {
   z-index: 2;
   width: min(1220px, calc(100% - 28px));
   margin: 0 auto;
-  padding: 30px 0 56px;
+  padding: 52px 0 56px;
 }
 
 .panel {
@@ -110,9 +105,10 @@ input {
 .hero h1 {
   margin-top: 8px;
   font-family: var(--font-title);
-  font-size: clamp(2.5rem, 8vw, 6.3rem);
-  line-height: 0.95;
-  text-shadow: 0 0 34px rgba(220, 142, 67, 0.22);
+  font-size: clamp(2.2rem, 5vw, 3.4rem);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  text-shadow: none;
 }
 
 .hero h1 span {
@@ -204,8 +200,11 @@ input {
 .actions button {
   min-height: 46px;
   padding: 10px 16px;
-  color: var(--gold);
+  color: #1a1208;
   font-weight: 800;
+  background: linear-gradient(135deg, var(--gold), #b56e28);
+  border-color: transparent;
+  box-shadow: 0 12px 28px rgba(220, 142, 67, 0.28);
 }
 
 .main-grid {

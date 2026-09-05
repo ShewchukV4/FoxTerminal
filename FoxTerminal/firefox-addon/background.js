@@ -186,12 +186,116 @@ function toHttpUrl(value) {
   return "";
 }
 
-async function openBrowserTab(url) {
+async function openBrowserTab(url, options = {}) {
   if (!browser.tabs || !browser.tabs.create) {
     throw new Error("Firefox tabs API is unavailable.");
   }
-  await browser.tabs.create({ url });
-  return { ok: true, output: `Opened: ${url}` };
+  const targetUrl = String(url || "");
+  const reuseExisting = options.reuseExisting === true;
+  if (reuseExisting && browser.tabs.query && browser.tabs.update) {
+    const focused = await focusExistingTabByUrlOrLabel({
+      url: targetUrl,
+      label: options.label || "",
+      createIfMissing: false
+    });
+    if (focused && focused.ok && focused.focused) {
+      return focused;
+    }
+  }
+  await browser.tabs.create({ url: targetUrl });
+  return { ok: true, output: `Opened: ${targetUrl}` };
+}
+
+function isLikelySiteHomeUrl(url) {
+  try {
+    const parsed = new URL(String(url || ""));
+    return parsed.pathname === "/" || parsed.pathname === "";
+  } catch (_) {
+    return false;
+  }
+}
+
+async function focusExistingTabByUrlOrLabel(options = {}) {
+  if (!browser.tabs || !browser.tabs.query || !browser.tabs.update) {
+    throw new Error("Firefox tabs API is unavailable.");
+  }
+
+  const label = String(options.label || "").trim();
+  const url = String(options.url || "").trim();
+  const createIfMissing = options.createIfMissing === true;
+  const destinations = [];
+
+  if (label) {
+    const byLabel = findDestinationByLabel(label);
+    if (byLabel) {
+      destinations.push(byLabel);
+    }
+  }
+  if (url) {
+    const byUrl = getDestinationCatalog().find((item) => urlMatchesDestination(url, item));
+    if (byUrl && !destinations.some((item) => item.label === byUrl.label)) {
+      destinations.push(byUrl);
+    }
+  }
+
+  const tabs = await browser.tabs.query({});
+  let matched = [];
+
+  if (destinations.length > 0) {
+    matched = tabs.filter((tab) => destinations.some((item) => urlMatchesDestination(tab.url, item)));
+  } else if (url) {
+    let host = "";
+    try {
+      host = new URL(url).hostname.replace(/^www\./i, "").toLowerCase();
+    } catch (_) {
+      host = "";
+    }
+    matched = tabs.filter((tab) => {
+      const tabHost = hostFromUrl(tab.url);
+      return host && (tabHost === host || tabHost.endsWith(`.${host}`));
+    });
+  }
+
+  matched.sort((a, b) => {
+    if (Boolean(a.active) !== Boolean(b.active)) {
+      return a.active ? -1 : 1;
+    }
+    return Number(b.lastAccessed || 0) - Number(a.lastAccessed || 0);
+  });
+
+  const target = matched.find((tab) => typeof tab.id === "number");
+  if (target) {
+    await browser.tabs.update(target.id, { active: true });
+    if (typeof target.windowId === "number" && browser.windows && browser.windows.update) {
+      try {
+        await browser.windows.update(target.windowId, { focused: true });
+      } catch (_) {
+        // ignore
+      }
+    }
+    const name = (destinations[0] && destinations[0].label) || target.title || target.url;
+    return {
+      ok: true,
+      focused: true,
+      output: `Перейшов на вже відкриту вкладку: ${name}`
+    };
+  }
+
+  if (createIfMissing && url && toHttpUrl(url)) {
+    await browser.tabs.create({ url: toHttpUrl(url), active: true });
+    return {
+      ok: true,
+      focused: false,
+      output: `Не знайшов існуючу вкладку — відкрив нову: ${url}`
+    };
+  }
+
+  const wanted = label || url || "сайт";
+  return {
+    ok: true,
+    focused: false,
+    output: `Немає вже відкритої вкладки для «${wanted}». Скажи «відкрий ${wanted}», якщо треба нову.`
+  };
 }
 
 function buildGoogleSearchUrl(query) {
@@ -204,6 +308,10 @@ function buildWikipediaSearchUrl(query) {
 
 function buildYouTubeSearchUrl(query) {
   return `https://www.youtube.com/results?search_query=${encodeURIComponent(String(query || "").trim())}`;
+}
+
+function buildYouTubeMusicSearchUrl(query) {
+  return `https://music.youtube.com/search?q=${encodeURIComponent(String(query || "").trim())}`;
 }
 
 function buildGitHubSearchUrl(query) {
@@ -364,10 +472,21 @@ function buildRunCommand(command, args) {
 
 const KNOWN_DESTINATIONS = [
   {
+    label: "YouTube Music",
+    url: "https://music.youtube.com/",
+    domains: ["music.youtube.com"],
+    aliases: [
+      "youtube music", "yt music", "ytm", "you tube music",
+      "ютуб мюзік", "ютуб музика", "ютуб music", "ютюб мюзік", "ютюб музика",
+      "ютубмюзік", "ютубмузика", "музыка ютуб", "музика ютуб", "music youtube"
+    ]
+  },
+  {
     label: "YouTube",
     url: "https://www.youtube.com/",
     domains: ["youtube.com", "youtu.be"],
-    aliases: ["youtube", "yt", "ютуб", "ютубі", "ютубом", "ютюб", "ютцб", "you tube", "ю туб"]
+    excludeHosts: ["music.youtube.com"],
+    aliases: ["youtube", "yt", "ютуб", "ютубі", "ютубом", "ютюб", "ютцб", "ютуію", "you tube", "ю туб"]
   },
   {
     label: "Telegram",
@@ -412,6 +531,246 @@ const KNOWN_DESTINATIONS = [
     aliases: ["pornhub", "порнхаб", "порн хаб", "porn hub"]
   }
 ];
+
+/** User-taught site aliases (Frederik memory). Learned first so they override builtins. */
+let learnedDestinationsCache = [];
+
+function normalizeBrandTypos(value) {
+  let text = normalizeNaturalText(value);
+  const replacements = [
+    [/ютуію/g, "ютуб"],
+    [/ютуби/g, "ютуб"],
+    [/ютюб/g, "ютуб"],
+    [/ютцб/g, "ютуб"],
+    [/ю туб/g, "ютуб"],
+    [/мюзік/g, "music"],
+    [/музік/g, "music"],
+    [/мюзик/g, "music"],
+    [/музика/g, "music"],
+    [/музыка/g, "music"],
+    [/музичн\w*/g, "music"]
+  ];
+  for (const [pattern, repl] of replacements) {
+    text = text.replace(pattern, repl);
+  }
+  return text;
+}
+
+function wantsYoutubeMusic(normalizedText) {
+  const text = normalizeBrandTypos(normalizedText);
+  const padded = ` ${text} `;
+  if (/(?:^|\s)(?:ytm|youtube music|yt music|ютуб music|music youtube)(?:\s|$)/u.test(text)) {
+    return true;
+  }
+  const hasYt =
+    padded.includes(" youtube ") ||
+    padded.includes(" yt ") ||
+    padded.includes(" ютуб ") ||
+    padded.includes(" ютюб ") ||
+    text.includes("youtube") ||
+    text.includes("ютуб");
+  const hasMusic = padded.includes(" music ") || text.includes("music");
+  return hasYt && hasMusic;
+}
+
+function getDestinationCatalog() {
+  return learnedDestinationsCache.concat(KNOWN_DESTINATIONS);
+}
+
+function hostFromUrl(url) {
+  try {
+    return new URL(String(url || "")).hostname.replace(/^www\./i, "").toLowerCase();
+  } catch (_) {
+    return "";
+  }
+}
+
+function urlMatchesDestination(url, item) {
+  if (!item) {
+    return false;
+  }
+  const host = hostFromUrl(url);
+  if (!host) {
+    return false;
+  }
+  const excluded = Array.isArray(item.excludeHosts) ? item.excludeHosts : [];
+  if (excluded.some((ex) => host === String(ex).toLowerCase() || host.endsWith(`.${String(ex).toLowerCase()}`))) {
+    return false;
+  }
+  const domains = Array.isArray(item.domains) ? item.domains : [];
+  return domains.some((domain) => {
+    const d = String(domain || "").replace(/^www\./i, "").toLowerCase();
+    if (!d) {
+      return false;
+    }
+    return host === d || host.endsWith(`.${d}`);
+  });
+}
+
+async function loadLearnedDestinations() {
+  try {
+    const stored = await browser.storage.local.get("learnedDestinations");
+    learnedDestinationsCache = Array.isArray(stored.learnedDestinations)
+      ? stored.learnedDestinations.filter((item) => item && item.url && item.label)
+      : [];
+  } catch (_) {
+    learnedDestinationsCache = [];
+  }
+  return learnedDestinationsCache;
+}
+
+async function writeLearnedDestinations(items) {
+  learnedDestinationsCache = Array.isArray(items) ? items : [];
+  await browser.storage.local.set({ learnedDestinations: learnedDestinationsCache });
+  return learnedDestinationsCache;
+}
+
+function buildAliasesForLabel(label, extra = []) {
+  const aliases = [];
+  const push = (value) => {
+    const normalized = normalizeNaturalText(value);
+    if (normalized && !aliases.includes(normalized)) {
+      aliases.push(normalized);
+    }
+  };
+  push(label);
+  for (const item of extra) {
+    push(item);
+  }
+  const compact = normalizeNaturalText(label).replace(/\s+/g, "");
+  if (compact) {
+    push(compact);
+  }
+  return aliases;
+}
+
+function inferLabelFromTab(tab) {
+  const url = String((tab && tab.url) || "");
+  const host = hostFromUrl(url);
+  if (host === "music.youtube.com") {
+    return "YouTube Music";
+  }
+  if (host.includes("youtube.com") || host === "youtu.be") {
+    return "YouTube";
+  }
+  const known = getDestinationCatalog().find((item) => urlMatchesDestination(url, item));
+  if (known) {
+    return known.label;
+  }
+  const title = String((tab && tab.title) || "").trim();
+  if (title && title.length <= 48 && !/^http/i.test(title)) {
+    return title;
+  }
+  return host || "Saved site";
+}
+
+async function rememberActiveTabAs(nameHint) {
+  if (!browser.tabs || !browser.tabs.query) {
+    throw new Error("Firefox tabs API is unavailable.");
+  }
+  const [activeTab] = await browser.tabs.query({ active: true, currentWindow: true });
+  if (!activeTab || !isSavableTabUrl(activeTab.url)) {
+    throw new Error("Немає активної вкладки, яку можна запам'ятати.");
+  }
+
+  const hint = String(nameHint || "").trim();
+  const hintNormalized = normalizeBrandTypos(hint);
+  let label = hint;
+  const knownFromHint = hint ? detectKnownDestination(hintNormalized) : null;
+  if (knownFromHint) {
+    label = knownFromHint.label;
+  } else if (!label) {
+    label = inferLabelFromTab(activeTab);
+  } else {
+    // Title-case lightly for custom names.
+    label = hint.replace(/\s+/g, " ").trim().slice(0, 80);
+  }
+
+  let homeUrl = String(activeTab.url);
+  try {
+    const parsed = new URL(homeUrl);
+    // Prefer site home for reopen, keep path if it is a product root (e.g. / or /channel)
+    if (parsed.hostname.replace(/^www\./i, "").toLowerCase() === "music.youtube.com") {
+      homeUrl = "https://music.youtube.com/";
+    } else if (/youtube\.com$/i.test(parsed.hostname) && !/music\.youtube\.com/i.test(parsed.hostname)) {
+      // If user teaches "youtube music" while somehow on youtube.com, still honor explicit Music label.
+      if (normalizeNaturalText(label) === "youtube music") {
+        homeUrl = "https://music.youtube.com/";
+      } else if (parsed.pathname === "/" || parsed.pathname === "") {
+        homeUrl = `${parsed.protocol}//${parsed.hostname}/`;
+      }
+    } else if (parsed.pathname === "/" || parsed.pathname === "") {
+      homeUrl = `${parsed.protocol}//${parsed.hostname}/`;
+    }
+  } catch (_) {
+    // keep raw url
+  }
+
+  const domains = [];
+  const host = hostFromUrl(homeUrl);
+  if (host) {
+    domains.push(host);
+  }
+
+  const aliases = buildAliasesForLabel(label, [
+    hint,
+    hintNormalized,
+    activeTab.title,
+    host
+  ]);
+
+  // Ensure music-specific aliases when teaching YouTube Music.
+  if (normalizeNaturalText(label) === "youtube music") {
+    for (const alias of [
+      "youtube music", "ytm", "yt music", "ютуб мюзік", "ютуб музика", "ютуб music", "ютюб мюзік"
+    ]) {
+      if (!aliases.includes(normalizeNaturalText(alias))) {
+        aliases.push(normalizeNaturalText(alias));
+      }
+    }
+  }
+
+  const entry = {
+    label,
+    url: homeUrl,
+    domains,
+    aliases,
+    excludeHosts: [],
+    sourceUrl: String(activeTab.url),
+    sourceTitle: String(activeTab.title || "").slice(0, 200),
+    updatedAt: Date.now(),
+    learned: true
+  };
+
+  const items = (await loadLearnedDestinations()).slice();
+  const labelKey = normalizeNaturalText(label);
+  const existingIndex = items.findIndex((item) => normalizeNaturalText(item.label) === labelKey);
+  if (existingIndex >= 0) {
+    const prev = items[existingIndex];
+    const mergedAliases = buildAliasesForLabel(label, [].concat(prev.aliases || [], aliases));
+    items[existingIndex] = {
+      ...prev,
+      ...entry,
+      aliases: mergedAliases,
+      createdAt: prev.createdAt || entry.updatedAt
+    };
+  } else {
+    entry.createdAt = entry.updatedAt;
+    items.unshift(entry);
+  }
+
+  // Keep memory bounded.
+  await writeLearnedDestinations(items.slice(0, 80));
+
+  // Also pin in saved tabs UI for discoverability.
+  try {
+    await saveActiveTabPin(label);
+  } catch (_) {
+    // optional
+  }
+
+  return entry;
+}
 
 function normalizeNaturalText(value) {
   return String(value || "")
@@ -510,98 +869,110 @@ function fuzzyWordMatches(word, candidate) {
   return levenshteinDistance(w, c, maxDistance) <= maxDistance;
 }
 
+function scoreAliasAgainstText(normalizedText, words, alias) {
+  const normalizedAlias = normalizeNaturalText(alias);
+  if (!normalizedAlias) {
+    return 0;
+  }
+
+  if (hasWholePhrase(normalizedText, normalizedAlias)) {
+    // Longer exact phrases beat short ones ("youtube music" > "youtube").
+    return 1 + Math.min(normalizedAlias.length, 40) / 100;
+  }
+
+  const aliasWords = tokenizeNaturalWords(normalizedAlias);
+  if (aliasWords.length === 1) {
+    for (const word of words) {
+      if (fuzzyWordMatches(word, aliasWords[0])) {
+        return 0.84 + Math.min(aliasWords[0].length, 20) / 200;
+      }
+    }
+    return 0;
+  }
+
+  let matchedWords = 0;
+  for (const aliasWord of aliasWords) {
+    if (words.some((word) => fuzzyWordMatches(word, aliasWord))) {
+      matchedWords += 1;
+    }
+  }
+  const phraseScore = matchedWords / aliasWords.length;
+  if (phraseScore >= 0.8) {
+    return phraseScore + Math.min(normalizedAlias.length, 40) / 100;
+  }
+  return 0;
+}
+
+function suppressGenericYoutube(hits) {
+  if (!Array.isArray(hits) || hits.length < 2) {
+    return hits;
+  }
+  const hasMusic = hits.some((item) => item.label === "YouTube Music");
+  if (!hasMusic) {
+    return hits;
+  }
+  return hits.filter((item) => item.label !== "YouTube");
+}
+
 function detectKnownDestination(normalizedText) {
-  const words = tokenizeNaturalWords(normalizedText);
+  const text = normalizeBrandTypos(normalizedText);
+  const words = tokenizeNaturalWords(text);
   let bestMatch = null;
 
-  for (const item of KNOWN_DESTINATIONS) {
-    for (const alias of item.aliases) {
-      const normalizedAlias = normalizeNaturalText(alias);
-      if (!normalizedAlias) {
-        continue;
-      }
-
-      if (hasWholePhrase(normalizedText, normalizedAlias)) {
-        return item;
-      }
-
-      const aliasWords = tokenizeNaturalWords(normalizedAlias);
-      if (aliasWords.length === 1) {
-        for (const word of words) {
-          if (fuzzyWordMatches(word, aliasWords[0])) {
-            if (!bestMatch || bestMatch.score < 0.85) {
-              bestMatch = { item, score: 0.85 };
-            }
-          }
-        }
-        continue;
-      }
-
-      let matchedWords = 0;
-      for (const aliasWord of aliasWords) {
-        const hasNearWord = words.some((word) => fuzzyWordMatches(word, aliasWord));
-        if (hasNearWord) {
-          matchedWords += 1;
-        }
-      }
-      const phraseScore = matchedWords / aliasWords.length;
-      if (phraseScore >= 0.8 && (!bestMatch || bestMatch.score < phraseScore)) {
-        bestMatch = { item, score: phraseScore };
+  for (const item of getDestinationCatalog()) {
+    for (const alias of item.aliases || []) {
+      const score = scoreAliasAgainstText(text, words, alias);
+      if (score > 0 && (!bestMatch || score > bestMatch.score)) {
+        bestMatch = { item, score };
       }
     }
   }
+
+  if (wantsYoutubeMusic(text)) {
+    const music = getDestinationCatalog().find((item) => item.label === "YouTube Music");
+    if (music) {
+      return music;
+    }
+  }
+
   return bestMatch ? bestMatch.item : null;
 }
 
 function detectAllKnownDestinations(normalizedText) {
-  const words = tokenizeNaturalWords(normalizedText);
+  const text = normalizeBrandTypos(normalizedText);
+  const words = tokenizeNaturalWords(text);
   const hits = [];
 
   function destinationAlreadyAdded(label) {
     return hits.some((item) => item.label === label);
   }
 
-  for (const item of KNOWN_DESTINATIONS) {
+  for (const item of getDestinationCatalog()) {
     if (destinationAlreadyAdded(item.label)) {
       continue;
     }
 
-    let matched = false;
-    for (const alias of item.aliases) {
-      const normalizedAlias = normalizeNaturalText(alias);
-      if (!normalizedAlias) {
-        continue;
-      }
-
-      if (hasWholePhrase(normalizedText, normalizedAlias)) {
-        matched = true;
-        break;
-      }
-
-      const aliasWords = tokenizeNaturalWords(normalizedAlias);
-      if (aliasWords.length === 1) {
-        matched = words.some((word) => fuzzyWordMatches(word, aliasWords[0]));
-      } else {
-        let matchedWords = 0;
-        for (const aliasWord of aliasWords) {
-          if (words.some((word) => fuzzyWordMatches(word, aliasWord))) {
-            matchedWords += 1;
-          }
-        }
-        matched = matchedWords / aliasWords.length >= 0.8;
-      }
-
-      if (matched) {
-        break;
+    let bestScore = 0;
+    for (const alias of item.aliases || []) {
+      const score = scoreAliasAgainstText(text, words, alias);
+      if (score > bestScore) {
+        bestScore = score;
       }
     }
 
-    if (matched) {
+    if (bestScore > 0) {
       hits.push(item);
     }
   }
 
-  return hits;
+  if (wantsYoutubeMusic(text)) {
+    const music = getDestinationCatalog().find((item) => item.label === "YouTube Music");
+    if (music && !destinationAlreadyAdded(music.label)) {
+      hits.unshift(music);
+    }
+  }
+
+  return suppressGenericYoutube(hits);
 }
 
 function stripOpenIntentPrefix(input) {
@@ -813,7 +1184,7 @@ function parseCountedOpenAndMaybeClose(input) {
 
 function findDestinationByLabel(label) {
   const normalizedLabel = normalizeNaturalText(label);
-  return KNOWN_DESTINATIONS.find((item) => normalizeNaturalText(item.label) === normalizedLabel) || null;
+  return getDestinationCatalog().find((item) => normalizeNaturalText(item.label) === normalizedLabel) || null;
 }
 
 function getSourceLabelFromEntry(entry) {
@@ -854,9 +1225,12 @@ function hasAnyLoosePhrase(text, phrases) {
 }
 
 function detectSearchScope(input) {
-  const lower = String(input || "").toLowerCase();
+  const lower = normalizeBrandTypos(input);
   if (hasAnyLoosePhrase(lower, ["вікіпедії", "вікіпедія", "вікі", "википедии", "wikipedia", "wiki"]) || /вікіпед|википед/i.test(lower)) {
     return "wikipedia";
+  }
+  if (wantsYoutubeMusic(lower)) {
+    return "youtube-music";
   }
   if (hasAnyLoosePhrase(lower, ["ютубі", "ютюбі", "ютуб", "ютюб", "youtube", "yt"])) {
     return "youtube";
@@ -900,6 +1274,12 @@ function buildSearchRequest(scope, query) {
     return {
       interpretation: "search on YouTube",
       request: { type: "openTab", url: buildYouTubeSearchUrl(query), source: "youtube-search" }
+    };
+  }
+  if (scope === "youtube-music") {
+    return {
+      interpretation: "search on YouTube Music",
+      request: { type: "openTab", url: buildYouTubeMusicSearchUrl(query), source: "youtube-music-search" }
     };
   }
   if (scope === "github") {
@@ -1221,7 +1601,192 @@ function formatRequestPreview(request) {
     const args = Array.isArray(request.args) ? request.args : [];
     return `${request.command || "cmd"} ${args.join(" ")}`.trim();
   }
+  if (request.type === "rememberAlias") {
+    return `remember as ${request.name || "active tab"}`.trim();
+  }
+  if (request.type === "focusExistingTab") {
+    return `focus existing ${request.label || request.url || "tab"}`.trim();
+  }
   return "unknown";
+}
+
+function looksLikeRememberIntent(input) {
+  const raw = String(input || "").toLowerCase();
+  const lower = normalizeNaturalText(input);
+  if (!raw && !lower) {
+    return false;
+  }
+  // Apostrophes become spaces in normalizeNaturalText ("запам'ятай" -> "запам ятай").
+  return /запам.{0,4}ят|запамят|remember|вивчи|завчи|зафіксуй|save\s+this|save\s+tab|learn\s+this|learn\s+tab/iu.test(raw) ||
+    /запам\s*ят|запамят|remember|вивчи|завчи|зафіксуй/u.test(lower) ||
+    /збережи\s+(?:це|її|вкладк|tab|this)/u.test(lower);
+}
+
+function extractRememberName(input) {
+  const text = String(input || "").trim();
+  if (!text) {
+    return "";
+  }
+
+  const patterns = [
+    /вкладк[ауіи]?\s+(.+?)\s+(?:запам\S{0,3}ят\w*|запамят\w*|remember|вивчи|завчи|збережи|зафіксуй)/iu,
+    /(?:запам\S{0,3}ятай|запамятай|remember|вивчи|завчи|збережи|зафіксуй)\s+(?:.*?\s+)?(?:як|as|що\s+це|що\s+таке)\s+(.+)$/iu,
+    /(?:запам\S{0,3}ятай|запамятай|remember)\s+(?:що\s+)?(.+)$/iu
+  ];
+
+  let raw = "";
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match && match[1]) {
+      raw = match[1];
+      break;
+    }
+  }
+
+  if (!raw) {
+    // "запам'ятай її" with name earlier: "відкрита ... youtube music"
+    const before = text.split(/(?:запам\S{0,3}ят\w*|запамят\w*|remember|вивчи|збережи)/iu)[0] || "";
+    const tabMatch = before.match(/вкладк[ауіи]?\s+(.+)$/iu);
+    if (tabMatch && tabMatch[1]) {
+      raw = tabMatch[1];
+    }
+  }
+
+  let name = normalizeBrandTypos(raw)
+    .replace(/\b(?:в\s+мене|зараз|відкрита|відкриту|відкритий|це|її|будь\s*ласка|пліз|please|як|as|що\s+таке|що\s+це|вкладк\w*|tab|active|current|цю|цей|ця)\b/gu, " ")
+    .replace(/(?:^|\s)(?:в\s+мене|зараз|відкрита|відкриту|відкритий|це|її|як|as|що\s+таке|що\s+це|вкладк\w*|tab|цю|цей|ця)(?=\s|$)/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  // Drop trailing filler left from "запам'ятай її"
+  name = name.replace(/(?:^|\s)(?:її|its|it)$/u, "").trim();
+  return name.slice(0, 80);
+}
+
+function parseRememberIntent(input) {
+  const text = String(input || "").trim();
+  if (!text || !looksLikeRememberIntent(text)) {
+    return null;
+  }
+  const name = extractRememberName(text);
+  return {
+    interpretation: name ? `remember active tab as ${name}` : "remember active tab",
+    confidence: 0.99,
+    request: { type: "rememberAlias", name }
+  };
+}
+
+function looksLikeForceNewTabIntent(input) {
+  const raw = String(input || "").toLowerCase();
+  if (!raw) {
+    return false;
+  }
+
+  // "не відкривай нову … перейди на існуючу" is focus, not force-new.
+  const wantsExistingInstead =
+    /не\s+відкривай\s+нов|не\s+відкривати\s+нов|don't\s+open\s+(a\s+)?new|do\s+not\s+open\s+(a\s+)?new|no\s+new\s+tab/i.test(raw) &&
+    /існуюч|вже\s+відкрит|already\s+open|existing|перейд/i.test(raw) &&
+    !/(?:^|[\s,])(?:а\s+)?не\s+перейд/i.test(raw) &&
+    !/а\s+не\s+(?:на\s+)?(?:вже\s+)?існуюч/i.test(raw);
+  if (wantsExistingInstead) {
+    return false;
+  }
+
+  return /створи\s+нову|відкрий\s+нову|відкрити\s+нову|окрему\s+вкладк|ще\s+одну\s+вкладк|force\s+new|another\s+tab/i.test(raw) ||
+    /(?:^|[\s,])(?:а\s+)?не\s+перейд/i.test(raw) ||
+    /не\s+(?:переходь|переходити)\s+на/i.test(raw) ||
+    /а\s+не\s+(?:на\s+)?(?:вже\s+)?існуюч/i.test(raw) ||
+    /not\s+(?:to\s+)?(?:the\s+)?existing|don't\s+switch|do\s+not\s+switch/i.test(raw);
+}
+
+function looksLikeFocusExistingIntent(input) {
+  const raw = String(input || "").toLowerCase();
+  const lower = normalizeNaturalText(input);
+  if (!raw) {
+    return false;
+  }
+  // Explicit "create NEW tab / don't switch to existing" wins.
+  if (looksLikeForceNewTabIntent(input)) {
+    return false;
+  }
+  const avoidNew =
+    /не\s+відкривай\s+нов|не\s+відкривати\s+нов|не\s+треба\s+нов|без\s+нової|без\s+нової\s+вкладк|don't\s+open\s+(a\s+)?new|do\s+not\s+open\s+(a\s+)?new|no\s+new\s+tab/i.test(raw);
+  const useExisting =
+    /існуюч|вже\s+відкрит|вже\s+є|уже\s+відкрит|already\s+open|existing|opened\s+tab|вже\s+існуюч/i.test(raw) ||
+    /існуюч|вже відкрит|already open|existing/i.test(lower);
+  // Ignore negated "не перейди".
+  const switchVerb =
+    /(?<!не\s)(?:перейд|переключ)|(?:^|\s)(?:switch|focus|активуй)|покажи\s+існуюч|go\s+to\s+existing/i.test(raw);
+  return (avoidNew && (useExisting || switchVerb || Boolean(detectKnownDestination(normalizeBrandTypos(input))))) ||
+    (switchVerb && useExisting) ||
+    (avoidNew && useExisting);
+}
+
+function parseForceNewTabIntent(input) {
+  const text = String(input || "").trim();
+  if (!text || !looksLikeForceNewTabIntent(text)) {
+    return null;
+  }
+  const dest = resolveFocusDestination(text);
+  if (!dest) {
+    return null;
+  }
+  return {
+    interpretation: `open new ${dest.label}`,
+    confidence: 0.99,
+    request: {
+      type: "openTab",
+      url: dest.url,
+      source: dest.label,
+      reuseExisting: false
+    }
+  };
+}
+
+function resolveFocusDestination(input) {
+  const text = normalizeBrandTypos(input);
+  let dest = detectKnownDestination(text);
+  if (dest) {
+    return dest;
+  }
+  if (wantsYoutubeMusic(text) || /(?:^|\s)(?:music|мюзік|музика|музыка|ytm)(?:\s|$)/u.test(` ${text} `)) {
+    dest = getDestinationCatalog().find((item) => item.label === "YouTube Music") || null;
+    if (dest) {
+      return dest;
+    }
+  }
+  return null;
+}
+
+function parseFocusExistingTabIntent(input) {
+  const text = String(input || "").trim();
+  if (!text || !looksLikeFocusExistingIntent(text)) {
+    return null;
+  }
+  const dest = resolveFocusDestination(text);
+  if (!dest) {
+    return {
+      interpretation: "focus existing tab (unspecified)",
+      confidence: 0.9,
+      request: {
+        type: "focusExistingTab",
+        label: "",
+        url: "",
+        createIfMissing: false
+      }
+    };
+  }
+  const avoidNew = /не\s+відкривай\s+нов|не\s+відкривати\s+нов|don't\s+open\s+(a\s+)?new|do\s+not\s+open/i.test(text);
+  return {
+    interpretation: `focus existing ${dest.label}`,
+    confidence: 0.99,
+    request: {
+      type: "focusExistingTab",
+      label: dest.label,
+      url: dest.url,
+      createIfMissing: !avoidNew
+    }
+  };
 }
 
 function parseAiCommandInput(rawInput) {
@@ -1251,8 +1816,23 @@ function parseAiCommandInput(rawInput) {
   const implicitDirectIntent = words.length > 0 && words.length <= 3;
   const closeIntent = parseCloseIntent(input);
   const clearHistoryIntent = parseClearHistoryIntent(input);
+  const rememberIntent = parseRememberIntent(input);
+  const forceNewIntent = parseForceNewTabIntent(input);
+  const focusExistingIntent = parseFocusExistingTabIntent(input);
   const scopedContent = parseScopedContentSearch(input);
   const searchIntent = scopedContent || parseSearchIntent(input);
+
+  if (rememberIntent) {
+    return rememberIntent;
+  }
+
+  if (forceNewIntent) {
+    return forceNewIntent;
+  }
+
+  if (focusExistingIntent) {
+    return focusExistingIntent;
+  }
 
   if (/(side\s*terminal|sidebar|terminal panel|боков(ий|а)\s+термінал|бокова\s+панель)/i.test(lower)) {
     return {
@@ -1453,6 +2033,22 @@ async function executeRequest(request) {
     return cleanActivePage();
   }
 
+  if (request.type === "rememberAlias") {
+    const entry = await rememberActiveTabAs(request.name || "");
+    return {
+      ok: true,
+      output: `Запам'ятав «${entry.label}» → ${entry.url}\nТепер можна сказати: відкрий ${entry.label}`
+    };
+  }
+
+  if (request.type === "focusExistingTab") {
+    return focusExistingTabByUrlOrLabel({
+      label: request.label || "",
+      url: request.url || "",
+      createIfMissing: request.createIfMissing === true
+    });
+  }
+
   if (request.type === "closeActiveTab") {
     if (!browser.tabs || !browser.tabs.query || !browser.tabs.remove) {
       throw new Error("Firefox tabs API is unavailable.");
@@ -1521,24 +2117,21 @@ async function executeRequest(request) {
       throw new Error("Firefox tabs API is unavailable.");
     }
     const labels = Array.isArray(request.labels) ? request.labels : [];
-    const domains = [];
+    const destinations = [];
     for (const label of labels) {
       const item = findDestinationByLabel(label);
-      if (item && Array.isArray(item.domains)) {
-        domains.push(...item.domains);
+      if (item) {
+        destinations.push(item);
       }
     }
 
-    if (domains.length === 0) {
+    if (destinations.length === 0) {
       throw new Error("No destination domains found to close.");
     }
 
     const tabs = await browser.tabs.query({});
     const matched = tabs
-      .filter((tab) => {
-        const url = String(tab.url || "").toLowerCase();
-        return domains.some((domain) => url.includes(domain.toLowerCase()));
-      })
+      .filter((tab) => destinations.some((item) => urlMatchesDestination(tab.url, item)))
       .sort((a, b) => Number(a.index || 0) - Number(b.index || 0));
 
     if (matched.length === 0) {
@@ -1593,7 +2186,18 @@ async function executeRequest(request) {
     if (!url) {
       throw new Error("Cannot open tab: invalid URL.");
     }
-    return openBrowserTab(url);
+    let reuseExisting;
+    if (request.reuseExisting === false) {
+      reuseExisting = false;
+    } else if (request.reuseExisting === true) {
+      reuseExisting = true;
+    } else {
+      reuseExisting = isLikelySiteHomeUrl(url);
+    }
+    return openBrowserTab(url, {
+      reuseExisting,
+      label: request.source || request.label || ""
+    });
   }
 
   if (request.type === "openManyTabs") {
@@ -1651,6 +2255,21 @@ function parseHighConfidenceAiIntent(rawInput) {
   const input = String(rawInput || "").trim();
   if (!input) {
     return null;
+  }
+
+  const rememberIntent = parseRememberIntent(input);
+  if (rememberIntent) {
+    return rememberIntent;
+  }
+
+  const forceNewIntent = parseForceNewTabIntent(input);
+  if (forceNewIntent) {
+    return forceNewIntent;
+  }
+
+  const focusExistingIntent = parseFocusExistingTabIntent(input);
+  if (focusExistingIntent) {
+    return focusExistingIntent;
   }
 
   const clearHistoryIntent = parseClearHistoryIntent(input);
@@ -1718,7 +2337,7 @@ function scorePlan(parsed) {
     return parsed.confidence;
   }
   const type = parsed.request.type;
-  if (type === "clearHistory" || type === "cleanPage" || type === "closeActiveTab" || type === "closeTabsByDestination") {
+  if (type === "clearHistory" || type === "cleanPage" || type === "closeActiveTab" || type === "closeTabsByDestination" || type === "rememberAlias" || type === "focusExistingTab") {
     return 0.93;
   }
   if (type === "actionPlan") {
@@ -1785,17 +2404,25 @@ function parseNoopIntent(input) {
 }
 
 function pickBestAiPlan(input, heuristicPlan, ollamaPlan) {
+  // Memory / assistant meta-intents must never become Google.
+  if (heuristicPlan && heuristicPlan.request && heuristicPlan.request.type === "rememberAlias") {
+    return { parsed: heuristicPlan, engine: "heuristic" };
+  }
+  if (heuristicPlan && heuristicPlan.request && heuristicPlan.request.type === "focusExistingTab") {
+    return { parsed: heuristicPlan, engine: "heuristic" };
+  }
+
   // LLM-first: trust Ollama whenever it produced a non-junk plan.
-  if (ollamaPlan && !isWeakGooglePlan(ollamaPlan, input) && !isDuckySpamPlan(ollamaPlan)) {
+  if (ollamaPlan && !isWeakGooglePlan(ollamaPlan, input) && !isDuckySpamPlan(ollamaPlan) && !isCommandLikeSearchJunk(ollamaPlan, input)) {
     return { parsed: ollamaPlan, engine: "ollama" };
   }
-  if (heuristicPlan && !isWeakGooglePlan(heuristicPlan, input) && !isDuckySpamPlan(heuristicPlan)) {
+  if (heuristicPlan && !isWeakGooglePlan(heuristicPlan, input) && !isDuckySpamPlan(heuristicPlan) && !isCommandLikeSearchJunk(heuristicPlan, input)) {
     return { parsed: heuristicPlan, engine: "heuristic-fallback" };
   }
-  if (ollamaPlan) {
+  if (ollamaPlan && !isCommandLikeSearchJunk(ollamaPlan, input)) {
     return { parsed: ollamaPlan, engine: "ollama" };
   }
-  if (heuristicPlan) {
+  if (heuristicPlan && !isWeakGooglePlan(heuristicPlan, input) && !isCommandLikeSearchJunk(heuristicPlan, input)) {
     return { parsed: heuristicPlan, engine: "heuristic-fallback" };
   }
   // Never auto-google unknown phrases — that looks "stupid".
@@ -1806,6 +2433,23 @@ function pickBestAiPlan(input, heuristicPlan, ollamaPlan) {
     },
     engine: "fallback"
   };
+}
+
+function isCommandLikeSearchJunk(parsed, input) {
+  if (!parsed || !parsed.request) {
+    return true;
+  }
+  if (!looksLikeFocusExistingIntent(input) && !looksLikeRememberIntent(input)) {
+    return false;
+  }
+  const type = parsed.request.type;
+  if (type === "googleSearch") {
+    return true;
+  }
+  if (type === "openTab" && /(?:\/search|\/results\?)/i.test(String(parsed.request.url || ""))) {
+    return true;
+  }
+  return false;
 }
 
 async function runAiCommand(rawInput) {
@@ -1822,6 +2466,45 @@ async function runAiCommand(rawInput) {
       interpretation: `${noop.interpretation} [noop]`,
       request: noop.request,
       output: "Ох, ок. Нічого не роблю."
+    };
+  }
+
+  // "Запам'ятай цю вкладку як YouTube Music" — deterministic memory.
+  const rememberIntent = parseRememberIntent(input);
+  if (rememberIntent) {
+    const preview = formatRequestPreview(rememberIntent.request);
+    const response = await executeRequest(rememberIntent.request);
+    return {
+      ok: true,
+      interpretation: `${rememberIntent.interpretation} [memory]`,
+      request: rememberIntent.request,
+      output: `Виконано: ${preview}${response.output ? `\n${response.output}` : ""}`
+    };
+  }
+
+  // "Не відкривай нову — перейди на вже існуючу"
+  const focusExistingIntent = parseFocusExistingTabIntent(input);
+  if (focusExistingIntent) {
+    const preview = formatRequestPreview(focusExistingIntent.request);
+    const response = await executeRequest(focusExistingIntent.request);
+    return {
+      ok: true,
+      interpretation: `${focusExistingIntent.interpretation} [focus]`,
+      request: focusExistingIntent.request,
+      output: `Виконано: ${preview}${response.output ? `\n${response.output}` : ""}`
+    };
+  }
+
+  // "Створи нову вкладку ... а не перейди на існуючу"
+  const forceNewIntent = parseForceNewTabIntent(input);
+  if (forceNewIntent) {
+    const preview = formatRequestPreview(forceNewIntent.request);
+    const response = await executeRequest(forceNewIntent.request);
+    return {
+      ok: true,
+      interpretation: `${forceNewIntent.interpretation} [new-tab]`,
+      request: forceNewIntent.request,
+      output: `Виконано: ${preview}${response.output ? `\n${response.output}` : ""}`
     };
   }
 
@@ -1881,18 +2564,22 @@ async function runAiCommand(rawInput) {
 }
 
 const OLLAMA_MODEL = "gemma3:4b";
-const OLLAMA_SYSTEM_PROMPT = `You are FoxTerminal, a smart browser agent. Understand ANY Ukrainian/Russian/English request and convert it into browser actions. Output ONLY valid JSON.
+const OLLAMA_SYSTEM_PROMPT = `You are Frederik, FoxTerminal's smart browser assistant. Understand Ukrainian/Russian/English and convert into browser actions. Output ONLY valid JSON.
 
 Schema:
 {"interpretation":"short","confidence":0.0,"steps":[STEP,...]}
 
 STEP one of:
 {"action":"search","engine":"youtube","query":"..."}
+{"action":"search","engine":"youtube-music","query":"..."}
 {"action":"search","engine":"wikipedia","query":"..."}
 {"action":"search","engine":"github","query":"..."}
 {"action":"search","engine":"google","query":"..."}
 {"action":"open","url":"https://...","count":1}
-{"action":"close","target":"youtube|telegram|github|chatgpt|deepseek|pornhub|gmail|active","index":2}
+{"action":"open","url":"https://music.youtube.com/","count":1,"reuseExisting":false}
+{"action":"remember","name":"YouTube Music"}
+{"action":"focus","target":"youtube music","createIfMissing":false}
+{"action":"close","target":"youtube|youtube music|telegram|github|chatgpt|deepseek|pornhub|gmail|active","index":2}
 {"action":"close_keep","keepIndex":1}
 {"action":"clear_history","period":"all|today|hour|week"}
 {"action":"clean_page"}
@@ -1901,18 +2588,22 @@ STEP one of:
 {"action":"noop"}
 
 Mindset:
+- You are an assistant, NOT a search box. Never google the user's command text.
 - Understand intent, not keywords.
-- Do the action. Never search "how to clear history" and never google a close/open command.
-- If user says do nothing / не роби нічого => noop (empty steps also mean noop).
+- If user asks to remember/save/learn the current tab (запам'ятай, remember, вивчи) => remember. Use name from phrase, else empty name.
+- If user says don't open a new tab / switch to existing / перейди на вже існуючу => focus (createIfMissing false).
+- If user says create/open a NEW tab / а не перейди на існуючу => open with reuseExisting false.
+- "youtube music" / "ютуб мюзік" / ytm => https://music.youtube.com/ (NOT youtube.com).
+- Regular youtube / ютуб => https://www.youtube.com/
+- Do the action. Never search "how to clear history" and never google a close/open/remember/focus command.
+- If user says do nothing / не роби нічого => noop.
 - Multi-step phrases ("і потім", "then") => multiple steps in order.
 - "N вкладок з X" => open url with count N.
-- "закрий другу вкладку з телеграмом" => close target telegram index 2.
-- "закрий все крім першої вкладки" => close_keep keepIndex 1 (NOT close youtube/active).
 - Inflected words: ютубом/ютубі = youtube, телеграмі = telegram.
-- Typos OK: найди, ютцб, діпсік, чат джпт.
-- Keep user topic language (айзека, лампа), do not invent unrelated names.
+- Typos OK: найди, ютцб, ютуію, мюзік, діпсік.
 - Prefer https URLs.
 Known homes:
+youtube music=https://music.youtube.com/
 youtube=https://www.youtube.com/
 telegram=https://web.telegram.org/
 github=https://github.com/
@@ -1924,6 +2615,16 @@ pornhub=https://www.pornhub.com/
 Examples:
 User: очисти історію за сьогодні
 {"interpretation":"clear history today","confidence":0.99,"steps":[{"action":"clear_history","period":"today"}]}
+User: відкрий ютуб мюзік
+{"interpretation":"open youtube music","confidence":0.97,"steps":[{"action":"open","url":"https://music.youtube.com/","count":1}]}
+User: в мене зараз відкрита вкладка ютуб мюзік запам'ятай її
+{"interpretation":"remember active as youtube music","confidence":0.99,"steps":[{"action":"remember","name":"YouTube Music"}]}
+User: не відкривай нову вкладку ютуб мюзік а перейди на вже існуючу
+{"interpretation":"focus existing youtube music","confidence":0.99,"steps":[{"action":"focus","target":"youtube music","createIfMissing":false}]}
+User: створи нову вкладку ютуб мюзік а не перейди на вже існуючу
+{"interpretation":"open new youtube music","confidence":0.99,"steps":[{"action":"open","url":"https://music.youtube.com/","count":1,"reuseExisting":false}]}
+User: запам'ятай цю вкладку як youtube music
+{"interpretation":"remember active as youtube music","confidence":0.99,"steps":[{"action":"remember","name":"YouTube Music"}]}
 User: відкрий в ютубі відео про айзека
 {"interpretation":"youtube search","confidence":0.95,"steps":[{"action":"search","engine":"youtube","query":"айзека"}]}
 User: найди статтю в вікіпедії про айзека
@@ -1976,6 +2677,11 @@ function buildSearchUrlByEngine(engine, query) {
     case "youtube":
     case "yt":
       return buildYouTubeSearchUrl(query);
+    case "youtube-music":
+    case "youtubemusic":
+    case "ytm":
+    case "yt-music":
+      return buildYouTubeMusicSearchUrl(query);
     case "github":
     case "gh":
       return buildGitHubSearchUrl(query);
@@ -2002,7 +2708,7 @@ function mapOllamaStepToRequest(step) {
     if (engine === "chatgpt" || engine === "gpt") {
       return { type: "askChatGpt", query };
     }
-    if (!["youtube", "yt", "wikipedia", "wiki", "github", "gh", "google"].includes(engine)) {
+    if (!["youtube", "yt", "youtube-music", "youtubemusic", "ytm", "yt-music", "wikipedia", "wiki", "github", "gh", "google"].includes(engine)) {
       const knownEngine = detectKnownDestination(normalizeNaturalText(engine));
       if (knownEngine) {
         return { type: "openTab", url: knownEngine.url, source: knownEngine.label };
@@ -2028,11 +2734,13 @@ function mapOllamaStepToRequest(step) {
       const known = detectKnownDestination(normalizeNaturalText(url.replace(/^www\./i, "")));
       url = known ? known.url : (toHttpUrl(url) || buildDuckyOpenUrl(url));
     } else {
-      // Normalize known destinations to canonical URLs.
+      // Normalize known destinations to canonical URLs — keep Music separate from YouTube.
       try {
         const host = new URL(url).hostname.replace(/^www\./i, "").toLowerCase();
         if (host.includes("deepseek")) {
           url = "https://chat.deepseek.com/";
+        } else if (host === "music.youtube.com" || host.endsWith(".music.youtube.com")) {
+          url = "https://music.youtube.com/";
         } else if (host.includes("youtube") && !/\/results/i.test(url)) {
           url = "https://www.youtube.com/";
         } else if (host.includes("telegram") || host === "t.me") {
@@ -2048,14 +2756,38 @@ function mapOllamaStepToRequest(step) {
       count = 1;
     }
     count = Math.min(count, 10);
+    const reuseExisting = step.reuseExisting === false ? false : (step.reuseExisting === true ? true : undefined);
     if (count === 1) {
-      return { type: "openTab", url, source: "ollama-open" };
+      const req = { type: "openTab", url, source: "ollama-open" };
+      if (typeof reuseExisting === "boolean") {
+        req.reuseExisting = reuseExisting;
+      }
+      return req;
     }
     const entries = [];
     for (let i = 0; i < count; i += 1) {
       entries.push({ url, source: "ollama-open" });
     }
     return { type: "openManyTabs", entries };
+  }
+
+  if (action === "remember" || action === "learn" || action === "save_alias" || action === "memorize") {
+    return {
+      type: "rememberAlias",
+      name: String(step.name || step.label || step.as || step.query || "").trim()
+    };
+  }
+
+  if (action === "focus" || action === "switch" || action === "focus_existing" || action === "switch_tab" || action === "activate") {
+    const target = String(step.target || step.name || step.label || step.url || "").trim();
+    const known = target ? detectKnownDestination(normalizeBrandTypos(target)) : null;
+    const createIfMissing = step.createIfMissing === true;
+    return {
+      type: "focusExistingTab",
+      label: (known && known.label) || target,
+      url: (known && known.url) || (toHttpUrl(target) || ""),
+      createIfMissing
+    };
   }
 
   if (action === "close_keep" || action === "close-keep" || action === "close_all_except") {
@@ -2134,6 +2866,36 @@ function repairOllamaSteps(userInput, stepsRaw) {
   const lower = input.toLowerCase();
   let steps = Array.isArray(stepsRaw) ? stepsRaw.map((step) => ({ ...step })) : [];
 
+  // Remember / teach alias must never become google.
+  const rememberIntent = parseRememberIntent(input);
+  if (rememberIntent) {
+    return [{
+      action: "remember",
+      name: rememberIntent.request.name || ""
+    }];
+  }
+
+  // Focus existing tab must never become search.
+  const focusExistingIntent = parseFocusExistingTabIntent(input);
+  if (focusExistingIntent) {
+    return [{
+      action: "focus",
+      target: focusExistingIntent.request.label || focusExistingIntent.request.url || "",
+      createIfMissing: focusExistingIntent.request.createIfMissing === true
+    }];
+  }
+
+  // Force brand-new tab.
+  const forceNewIntent = parseForceNewTabIntent(input);
+  if (forceNewIntent) {
+    return [{
+      action: "open",
+      url: forceNewIntent.request.url,
+      count: 1,
+      reuseExisting: false
+    }];
+  }
+
   // Force-correct "close all except ..." if model closed a site instead.
   const keepExcept = parseKeepTabExceptIntent(input);
   if (keepExcept) {
@@ -2145,11 +2907,34 @@ function repairOllamaSteps(userInput, stepsRaw) {
 
   // Short known destination phrases (incl. typos) => open site.
   const knownShort = detectKnownDestination(normalizeNaturalText(input));
-  if (knownShort && tokenizeNaturalWords(normalizeNaturalText(input)).length <= 3 && !SEARCH_KEYWORD_RE.test(input)) {
+  if (knownShort && tokenizeNaturalWords(normalizeNaturalText(input)).length <= 4 && !SEARCH_KEYWORD_RE.test(input)) {
     const hasContentCue = hasAnyLoosePhrase(lower, ["відео", "статтю", "про", "шо таке", "що таке"]);
     if (!hasContentCue) {
       return [{ action: "open", url: knownShort.url, count: 1 }];
     }
+  }
+
+  // Prefer YouTube Music over YouTube when both are implied.
+  if (wantsYoutubeMusic(input)) {
+    const onlyOpensYoutubeHome =
+      steps.length === 1 &&
+      String(steps[0].action || "").toLowerCase() === "open" &&
+      /youtube\.com\/?$/i.test(String(steps[0].url || "")) &&
+      !/music\.youtube\.com/i.test(String(steps[0].url || ""));
+    if (onlyOpensYoutubeHome || steps.length === 0) {
+      return [{ action: "open", url: "https://music.youtube.com/", count: 1 }];
+    }
+    steps = steps.map((step) => {
+      if (
+        String(step.action || "").toLowerCase() === "open" &&
+        /youtube\.com/i.test(String(step.url || "")) &&
+        !/music\.youtube\.com/i.test(String(step.url || "")) &&
+        !/\/results/i.test(String(step.url || ""))
+      ) {
+        return { ...step, url: "https://music.youtube.com/" };
+      }
+      return step;
+    });
   }
 
   // "відкрий N вкладок з ютубом і потім закрий"
@@ -2311,6 +3096,44 @@ function convertOllamaPlan(plan, userInput = "") {
   };
 }
 
+async function buildAiUserPrompt(userInput) {
+  const input = String(userInput || "").trim();
+  const lines = [`User request: ${input}`];
+
+  try {
+    if (browser.tabs && browser.tabs.query) {
+      const [activeTab] = await browser.tabs.query({ active: true, currentWindow: true });
+      if (activeTab) {
+        lines.push(
+          `Active tab: title=${JSON.stringify(String(activeTab.title || "").slice(0, 120))} url=${JSON.stringify(String(activeTab.url || "").slice(0, 300))}`
+        );
+      }
+      const tabs = await browser.tabs.query({ currentWindow: true });
+      const brief = tabs
+        .filter((tab) => isSavableTabUrl(tab.url))
+        .slice(0, 8)
+        .map((tab, index) => `${index + 1}. ${String(tab.title || "").slice(0, 60)} | ${String(tab.url || "").slice(0, 120)}`)
+        .join("\n");
+      if (brief) {
+        lines.push(`Open tabs:\n${brief}`);
+      }
+    }
+  } catch (_) {
+    // context is best-effort
+  }
+
+  if (learnedDestinationsCache.length > 0) {
+    const learned = learnedDestinationsCache
+      .slice(0, 12)
+      .map((item) => `- ${item.label} => ${item.url}`)
+      .join("\n");
+    lines.push(`Learned sites:\n${learned}`);
+  }
+
+  lines.push("Return JSON plan only.");
+  return lines.join("\n\n");
+}
+
 async function askOllamaForPlan(userInput) {
   // Proxy through Native Host so Firefox does not need direct localhost access,
   // and Ollama can be auto-started without opening anything manually.
@@ -2318,7 +3141,7 @@ async function askOllamaForPlan(userInput) {
     type: "ollamaChat",
     model: OLLAMA_MODEL,
     system: OLLAMA_SYSTEM_PROMPT,
-    user: String(userInput || "").trim()
+    user: await buildAiUserPrompt(userInput)
   });
 
   if (!response || response.ok !== true) {
@@ -3199,6 +4022,18 @@ browser.runtime.onMessage.addListener((message) => {
     return runAiCommand(message.input);
   }
 
+  if (message.type === "getAiChatHistory") {
+    return getAiChatHistory();
+  }
+
+  if (message.type === "clearAiChatHistory") {
+    return clearAiChatHistory();
+  }
+
+  if (message.type === "runAiChat") {
+    return runAiChat(message.input);
+  }
+
   if (message.type === "getTranslateSettings") {
     return getTranslateSettings();
   }
@@ -3291,3 +4126,245 @@ if (browser.omnibox && browser.omnibox.onInputEntered) {
 
 warmupOllama();
 restoreBrowserChromeTheme();
+loadLearnedDestinations().catch(() => {});
+
+const OLLAMA_CHAT_SYSTEM_PROMPT = `You are Frederik — FoxTerminal's helpful browser assistant.
+If asked who you are / your name: say you are Frederik (local assistant in FoxTerminal via Ollama).
+Reply in the user's language (usually Ukrainian). Output ONLY valid JSON.
+
+Two modes:
+1) Browser action:
+{"mode":"action","interpretation":"short","confidence":0.0,"steps":[STEP,...]}
+2) Conversation / answer / search advice:
+{"mode":"chat","reply":"helpful markdown-free answer"}
+
+STEP same as FoxTerminal agent:
+search/open/remember/focus/close/close_keep/clear_history/clean_page/open_sidebar/ask/noop
+open may include "reuseExisting":false for a brand-new tab.
+
+Rules:
+- Browser control (open/close/focus/remember tabs) => mode action.
+- Questions, explanations, brainstorming, "що таке", how-to text => mode chat.
+- "створи нову вкладку X а не перейди на існуючу" => open with reuseExisting false.
+- "не відкривай нову / перейди на існуючу" => focus.
+- Never google the raw command text for actions.
+- Keep chat replies concise (2-8 sentences) unless user asks for detail.
+- If useful, suggest a follow-up action in the reply text.`;
+
+const AI_CHAT_HISTORY_KEY = "aiChatHistory";
+const AI_CHAT_HISTORY_LIMIT = 120;
+
+async function getAiChatHistory() {
+  try {
+    const stored = await browser.storage.local.get(AI_CHAT_HISTORY_KEY);
+    return Array.isArray(stored[AI_CHAT_HISTORY_KEY]) ? stored[AI_CHAT_HISTORY_KEY] : [];
+  } catch (_) {
+    return [];
+  }
+}
+
+async function writeAiChatHistory(messages) {
+  const next = Array.isArray(messages) ? messages.slice(-AI_CHAT_HISTORY_LIMIT) : [];
+  await browser.storage.local.set({ [AI_CHAT_HISTORY_KEY]: next });
+  return next;
+}
+
+async function clearAiChatHistory() {
+  await browser.storage.local.set({ [AI_CHAT_HISTORY_KEY]: [] });
+  return [];
+}
+
+async function appendAiChatMessage(role, content, meta = null) {
+  const history = await getAiChatHistory();
+  const entry = {
+    id: `m-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`,
+    role: role === "assistant" ? "assistant" : "user",
+    content: String(content || "").slice(0, 8000),
+    ts: Date.now()
+  };
+  if (meta && typeof meta === "object") {
+    entry.meta = meta;
+  }
+  history.push(entry);
+  await writeAiChatHistory(history);
+  return entry;
+}
+
+function formatChatHistoryForPrompt(history) {
+  return (Array.isArray(history) ? history : [])
+    .slice(-10)
+    .map((item) => `${item.role === "assistant" ? "Assistant" : "User"}: ${String(item.content || "").slice(0, 500)}`)
+    .join("\n");
+}
+
+async function runDeterministicChatAction(input) {
+  const text = String(input || "").trim();
+  if (!text) {
+    return null;
+  }
+  const forceNew = parseForceNewTabIntent(text);
+  if (forceNew) {
+    return forceNew;
+  }
+  const focusExisting = parseFocusExistingTabIntent(text);
+  if (focusExisting) {
+    return focusExisting;
+  }
+  const remember = parseRememberIntent(text);
+  if (remember) {
+    return remember;
+  }
+  const keepExcept = parseKeepTabExceptIntent(text);
+  if (keepExcept) {
+    return keepExcept;
+  }
+  const clearHistory = parseClearHistoryIntent(text);
+  if (clearHistory) {
+    return clearHistory;
+  }
+  const noop = parseNoopIntent(text);
+  if (noop) {
+    return noop;
+  }
+  return null;
+}
+
+async function runAiChat(rawInput) {
+  const input = String(rawInput || "").trim();
+  if (!input) {
+    throw new Error("Порожнє повідомлення.");
+  }
+
+  await appendAiChatMessage("user", input);
+
+  const deterministic = await runDeterministicChatAction(input);
+  if (deterministic && deterministic.request) {
+    const result = await executeRequest(deterministic.request);
+    const reply = result && result.output
+      ? result.output
+      : `Зробив: ${deterministic.interpretation || formatRequestPreview(deterministic.request)}`;
+    await appendAiChatMessage("assistant", reply, {
+      mode: "action",
+      interpretation: deterministic.interpretation || ""
+    });
+    return {
+      ok: true,
+      mode: "action",
+      reply,
+      interpretation: deterministic.interpretation || "",
+      request: deterministic.request
+    };
+  }
+
+  const history = await getAiChatHistory();
+  const historyBlock = formatChatHistoryForPrompt(history.slice(0, -1));
+  let contextBlock = "";
+  try {
+    contextBlock = await buildAiUserPrompt(input);
+  } catch (_) {
+    contextBlock = `User request: ${input}`;
+  }
+
+  const userPrompt = [
+    historyBlock ? `Recent chat:\n${historyBlock}` : "Recent chat: (empty)",
+    contextBlock,
+    "Decide mode=action or mode=chat. JSON only."
+  ].join("\n\n");
+
+  let content = "";
+  let ollamaError = "";
+  try {
+    const response = await browser.runtime.sendNativeMessage(HOST_NAME, {
+      type: "ollamaChat",
+      model: OLLAMA_MODEL,
+      system: OLLAMA_CHAT_SYSTEM_PROMPT,
+      user: userPrompt,
+      numPredict: 500
+    });
+    if (!response || response.ok !== true) {
+      throw new Error((response && response.error) || "Native Ollama bridge failed.");
+    }
+    content = String(response.content || "");
+  } catch (error) {
+    ollamaError = error && error.message ? error.message : String(error);
+  }
+
+  const parsed = extractJsonObject(content) || {};
+  const mode = String(parsed.mode || "").toLowerCase();
+
+  if (mode === "action" || Array.isArray(parsed.steps)) {
+    const plan = convertOllamaPlan(parsed, input);
+    if (plan && plan.request && !isCommandLikeSearchJunk(plan, input) && !isWeakGooglePlan(plan, input) && !isDuckySpamPlan(plan)) {
+      const result = await executeRequest(plan.request);
+      const reply = [
+        plan.interpretation ? `Зробив: ${plan.interpretation}` : "Зробив дію.",
+        result && result.output ? result.output : ""
+      ].filter(Boolean).join("\n");
+      await appendAiChatMessage("assistant", reply, {
+        mode: "action",
+        interpretation: plan.interpretation || "",
+        engine: "ollama"
+      });
+      return {
+        ok: true,
+        mode: "action",
+        reply,
+        interpretation: plan.interpretation || "",
+        request: plan.request
+      };
+    }
+  }
+
+  let reply = String(parsed.reply || "").trim();
+  if (!reply && content && !parsed.mode) {
+    // Model returned plain text.
+    reply = content.trim();
+  }
+  if (!reply) {
+    // Heuristic browser fallback for short open phrases.
+    let heuristic = null;
+    try {
+      heuristic = parseHighConfidenceAiIntent(input) || parseAiCommandInput(input);
+    } catch (_) {
+      heuristic = null;
+    }
+    if (
+      heuristic &&
+      heuristic.request &&
+      heuristic.request.type !== "googleSearch" &&
+      !isWeakGooglePlan(heuristic, input) &&
+      !isCommandLikeSearchJunk(heuristic, input)
+    ) {
+      const result = await executeRequest(heuristic.request);
+      reply = result && result.output
+        ? result.output
+        : `Зробив: ${heuristic.interpretation || formatRequestPreview(heuristic.request)}`;
+      await appendAiChatMessage("assistant", reply, {
+        mode: "action",
+        interpretation: heuristic.interpretation || "",
+        engine: "heuristic"
+      });
+      return {
+        ok: true,
+        mode: "action",
+        reply,
+        interpretation: heuristic.interpretation || "",
+        request: heuristic.request
+      };
+    }
+    reply = ollamaError
+      ? `Не зміг відповісти через Ollama (${ollamaError}). Спробуй ще раз або перевір, що Ollama запущена.`
+      : "Не зрозумів запит. Можеш уточнити або сказати дію для браузера.";
+  }
+
+  await appendAiChatMessage("assistant", reply, {
+    mode: "chat",
+    engine: ollamaError ? "fallback" : "ollama"
+  });
+  return {
+    ok: true,
+    mode: "chat",
+    reply,
+    interpretation: "chat"
+  };
+}

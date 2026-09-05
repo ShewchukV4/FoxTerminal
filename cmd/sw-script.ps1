@@ -59,11 +59,21 @@ function Format-Uptime([TimeSpan]$span) {
 
 $cpu = Get-CimInstance Win32_Processor | Select-Object -First 1
 $gpu = Get-CimInstance Win32_VideoController | Select-Object -First 1
+$script:SwOs = Get-CimInstance Win32_OperatingSystem
+$script:SwOsAt = Get-Date
 $apps = Get-InstalledAppCount
 
 $res = "N/A"
 if ($gpu -and $gpu.CurrentHorizontalResolution -and $gpu.CurrentVerticalResolution) {
     $res = "$($gpu.CurrentHorizontalResolution)x$($gpu.CurrentVerticalResolution)"
+}
+
+function Get-SwOsCached {
+    if (-not $script:SwOs -or -not $script:SwOsAt -or ((Get-Date) - $script:SwOsAt).TotalSeconds -gt 15) {
+        $script:SwOs = Get-CimInstance Win32_OperatingSystem
+        $script:SwOsAt = Get-Date
+    }
+    return $script:SwOs
 }
 
 function Enable-VT {
@@ -173,14 +183,26 @@ function Get-AsciiArtData([string]$path, [int]$targetWidth, [char]$esc, [double]
 }
 
 $foxRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+try { $script:SwWinW = $host.UI.RawUI.WindowSize.Width } catch { $script:SwWinW = 120 }
+if ($script:SwWinW -le 0) { $script:SwWinW = 120 }
+# Side-by-side art+info needs ~40 columns for the stats; below that, stack them.
+$script:SwCompact = $script:SwWinW -lt 88
 if ($script:SpiderMode) {
     $defaultImagePath = Join-Path $foxRoot "FoxTerminal\assets\spider-noir.png"
-    try { $spiderWinW = $host.UI.RawUI.WindowSize.Width } catch { $spiderWinW = 120 }
-    if ($spiderWinW -le 0) { $spiderWinW = 120 }
-    $artTargetWidth = [Math]::Min(112, [Math]::Max(88, $spiderWinW - 16))
+    $artTargetWidth = [Math]::Min(112, [Math]::Max(36, $script:SwWinW - 8))
 } else {
-    $defaultImagePath = "C:\Users\dmytr\.cursor\projects\c-Users-dmytr-Desktop-FireFoxBot\assets\c__Users_dmytr_AppData_Roaming_Cursor_User_workspaceStorage_73229aac142b6c316796ae936ef792fe_images_image-09a73897-eaff-441b-94d6-e769a3f93cf5.png"
-    $artTargetWidth = 90
+    $bundledFox = Join-Path $foxRoot "FoxTerminal\assets\fox.png"
+    $legacyFox = "C:\Users\dmytr\.cursor\projects\c-Users-dmytr-Desktop-FireFoxBot\assets\c__Users_dmytr_AppData_Roaming_Cursor_User_workspaceStorage_73229aac142b6c316796ae936ef792fe_images_image-09a73897-eaff-441b-94d6-e769a3f93cf5.png"
+    if (Test-Path -LiteralPath $bundledFox) {
+        $defaultImagePath = $bundledFox
+    } else {
+        $defaultImagePath = $legacyFox
+    }
+    if ($script:SwCompact) {
+        $artTargetWidth = [Math]::Max(28, [Math]::Min(56, $script:SwWinW - 2))
+    } else {
+        $artTargetWidth = [Math]::Max(40, [Math]::Min(90, $script:SwWinW - 40))
+    }
 }
 $imagePath = $defaultImagePath
 foreach ($arg in $SwArgs) {
@@ -190,7 +212,8 @@ foreach ($arg in $SwArgs) {
 $useColorArt = $false
 if ($script:SpiderMode) { $useColorArt = $true }
 if ($SwArgs -contains "color") { $useColorArt = $true }
-if ($env:WT_SESSION -or $env:ANSICON -or $env:ConEmuANSI -eq "ON" -or $env:FOXTERM -eq "1") { $useColorArt = $true }
+# Ghostty is truecolor everywhere, so FOXTERM/GHOSTTY markers are enough.
+if ($env:GHOSTTY_RESOURCES_DIR -or $env:FOXTERM -eq "1" -or ($env:TERM -like "*ghostty*") -or ($env:TERM_PROGRAM -like "*ghostty*")) { $useColorArt = $true }
 if ($SwArgs -contains "mono") { $useColorArt = $false }
 if (-not $useColorArt) {
     Enable-VT
@@ -212,7 +235,22 @@ function Get-ThemePath {
     return (Join-Path $PSScriptRoot "theme.txt")
 }
 
+function Save-Theme([string]$name) {
+    if (Get-Command Save-ActiveTheme -ErrorAction SilentlyContinue) {
+        Save-ActiveTheme $name
+        return
+    }
+    $path = Get-ThemePath
+    $name | Set-Content -Path $path -Encoding UTF8
+    if (Get-Command Clear-FoxThemeCache -ErrorAction SilentlyContinue) {
+        Clear-FoxThemeCache
+    }
+}
+
 function Load-Theme {
+    if (Get-Command Get-ActiveThemeName -ErrorAction SilentlyContinue) {
+        return (Get-ActiveThemeName)
+    }
     $path = Get-ThemePath
     if (-not (Test-Path $path)) { return "orange" }
     $name = (Get-Content -Path $path -Raw -ErrorAction SilentlyContinue).Trim()
@@ -259,14 +297,6 @@ function Apply-NoirTerminalOsc {
 
 function Noir-FgReset {
     return "$esc[39m"
-}
-
-function Save-Theme([string]$name) {
-    $path = Get-ThemePath
-    $name | Set-Content -Path $path -Encoding UTF8
-    if (Get-Command Clear-FoxThemeCache -ErrorAction SilentlyContinue) {
-        Clear-FoxThemeCache
-    }
 }
 
 function Sync-SwThemeFromDisk {
@@ -751,12 +781,41 @@ function Colorize-ArtLine([string]$line, [object[]]$colors, [char]$esc, [int]$li
 }
 
 $labelWidth = 10
+function Get-SwLabelIcon([string]$text) {
+    $key = $text.Trim().TrimEnd(":")
+    $code = switch ($key) {
+        "User"       { 0xF007 }
+        "Style"      { 0xF1FC }
+        "OS"         { 0xF17A }
+        "Kernel"     { 0xF013 }
+        "Uptime"     { 0xF017 }
+        "Packages"   { 0xF187 }
+        "Shell"      { 0xF120 }
+        "Resolution" { 0xF0B2 }
+        "Terminal"   { 0xF2D0 }
+        "CPU"        { 0xF2DB }
+        "GPU"        { 0xF26C }
+        "Memory"     { 0xF1C0 }
+        "WiFi"       { 0xF1EB }
+        default      { 0 }
+    }
+    if ($code -eq 0) { return "" }
+    if (Get-Command Get-FoxIcon -ErrorAction SilentlyContinue) {
+        return (Get-FoxIcon $code)
+    }
+    return [string][char]$code
+}
+
 function Make-Label([string]$text) {
+    $glyph = Get-SwLabelIcon $text
+    $prefix = if ($glyph) {
+        if ($useColorInfo) { (Colorize-LabelGradient $glyph $esc) + "  " } else { $glyph + "  " }
+    } else { "" }
     $pad = " " * ([Math]::Max(0, $labelWidth - $text.Length))
     if ($useColorInfo) {
-        return (Colorize-LabelGradient $text $esc) + $pad
+        return $prefix + (Colorize-LabelGradient $text $esc) + $pad
     }
-    return $text + $pad
+    return $prefix + $text + $pad
 }
 
 function Colorize-GrayGradient([string]$text, [char]$esc) {
@@ -975,6 +1034,16 @@ function Build-FoxBannerLines {
 }
 
 function Write-FoxBanner {
+    try { $w = $host.UI.RawUI.WindowSize.Width } catch { $w = 80 }
+    if ($w -le 0) { $w = 80 }
+    if ($script:SwCompact -or $w -lt 64) {
+        $tag = "[ FoxTerminal ]"
+        $pad = [Math]::Max(0, [int](($w - $tag.Length) / 2))
+        $line = (' ' * $pad) + $tag
+        if ($useColorInfo) { Write-Host (Colorize-LabelGradient $line $esc) } else { Write-Host $line }
+        Write-Host ''
+        return
+    }
     $lines = Build-FoxBannerLines
     try { $w = $host.UI.RawUI.WindowSize.Width } catch { $w = 80 }
     if ($w -le 0) { $w = 80 }
@@ -1030,7 +1099,7 @@ function Write-CenteredLine([string]$text) {
 }
 
 function Get-SwSystemInfo {
-    $os = Get-CimInstance Win32_OperatingSystem
+    $os = Get-SwOsCached
     $memTotal = [Math]::Round($os.TotalVisibleMemorySize / 1024)
     $memFree = [Math]::Round($os.FreePhysicalMemory / 1024)
     $memUsed = [Math]::Max(0, $memTotal - $memFree)
@@ -1078,7 +1147,7 @@ function Render-SpiderPanel {
 
 function Render-Info {
     Sync-SwThemeFromDisk
-    $os = Get-CimInstance Win32_OperatingSystem
+    $os = Get-SwOsCached
     $memTotal = [Math]::Round($os.TotalVisibleMemorySize / 1024)
     $memFree = [Math]::Round($os.FreePhysicalMemory / 1024)
     $memUsed = [Math]::Max(0, $memTotal - $memFree)
@@ -1113,6 +1182,25 @@ function Render-Info {
         Clear-Host
     }
     Write-FoxBanner
+
+    try { $winW = $host.UI.RawUI.WindowSize.Width } catch { $winW = $script:SwWinW }
+    if ($winW -le 0) { $winW = $script:SwWinW }
+    $stack = $script:SwCompact -or $winW -lt ($artWidth + 36)
+
+    if ($stack) {
+        for ($i = 0; $i -lt $artRaw.Count; $i++) {
+            $leftRaw = $artRaw[$i]
+            $leftColors = if ($i -lt $artColors.Count) { $artColors[$i] } else { @() }
+            $left = if ($useColorArt) { Colorize-ArtLine $leftRaw $leftColors $esc $i $artRaw.Count } else { $leftRaw }
+            Write-CenteredLine $left
+        }
+        Write-Host ''
+        $compactInfo = $info | Where-Object { $_ -match 'User:|Style:|OS:|Uptime:|CPU:|GPU:|Memory:|WiFi:' }
+        foreach ($row in $compactInfo) { Write-CenteredLine $row }
+        Write-Host ''
+        return @{ WiFiY = -1; WiFiX = 0 }
+    }
+
     $lines = [Math]::Max($artRaw.Count, $info.Count)
     $infoStart = [Math]::Max(0, [int][Math]::Floor(($artRaw.Count - $info.Count) / 2))
     $wifiLineY = $null

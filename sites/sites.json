@@ -36,6 +36,12 @@
           "name": "UI Forge Guide",
           "url": "./web-ui-guide/index.html",
           "description": "Гайд по HTML/CSS/JS, патерни, cursor effects, приклади"
+        },
+        {
+          "id": "kadr",
+          "name": "Кадр",
+          "url": "./kadr/index.html",
+          "description": "Фільми й серіали з TMDB: оцінки 1–10, обкладинки, підбірка з величезного каталогу"
         }
       ]
     },
@@ -113,9 +119,9 @@
       "sites": [
         {
           "id": "OnePageStore",
-          "name": "Onepage Store",
+          "name": "Fox Den",
           "url": "./OnePageStore/index.html",
-          "description": "One-page storefront demo (local)"
+          "description": "Fox Den — демо вітрина мерчу FoxTerminal з кошиком"
         }
       ]
     }

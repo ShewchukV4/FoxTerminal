@@ -921,13 +921,16 @@ try {
                     throw "ollamaChat requires user prompt."
                 }
 
-                $format = if ($null -ne $message.format -and [string]$message.format -ne "") { [string]$message.format } else { "json" }
+                $formatValue = "json"
+                if ($null -ne $message.PSObject.Properties["format"] -and -not [string]::IsNullOrWhiteSpace([string]$message.format)) {
+                    $formatValue = [string]$message.format
+                }
                 $temperature = 0
-                if ($null -ne $message.temperature) {
+                if ($null -ne $message.PSObject.Properties["temperature"]) {
                     try { $temperature = [double]$message.temperature } catch { $temperature = 0 }
                 }
                 $numPredict = 260
-                if ($null -ne $message.numPredict) {
+                if ($null -ne $message.PSObject.Properties["numPredict"]) {
                     try { $numPredict = [int]$message.numPredict } catch { $numPredict = 260 }
                 }
                 if ($numPredict -lt 64) { $numPredict = 64 }
@@ -946,12 +949,12 @@ try {
                         @{ role = "user"; content = $userPrompt }
                     )
                 }
-                if ($format -ne "none" -and $format -ne "text") {
-                    $payload.format = $format
+                if ($formatValue -ne "none" -and $formatValue -ne "text") {
+                    $payload["format"] = $formatValue
                 }
 
                 $timeoutSec = 90
-                if ($null -ne $message.timeoutSec) {
+                if ($null -ne $message.PSObject.Properties["timeoutSec"]) {
                     try { $timeoutSec = [int]$message.timeoutSec } catch { $timeoutSec = 90 }
                 }
                 if ($timeoutSec -lt 30) { $timeoutSec = 30 }

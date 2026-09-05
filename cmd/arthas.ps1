@@ -48,10 +48,25 @@ function Resolve-ArthasImagePath([string]$variant) {
     return $null
 }
 
+function Soften-ArthasHighlight([int]$r, [int]$g, [int]$b) {
+    # Only crush near-white speculars. Midtones stay as in the photo.
+    $max = [Math]::Max($r, [Math]::Max($g, $b))
+    if ($max -le 210) { return @($r, $g, $b) }
+    $t = ($max - 210) / 45.0
+    $cap = 198.0
+    $scale = (($max * (1.0 - $t)) + ($cap * $t)) / $max
+    return @(
+        [Math]::Min(205, [int]($r * $scale)),
+        [Math]::Min(205, [int]($g * $scale)),
+        [Math]::Min(205, [int]($b * $scale))
+    )
+}
+
 function Get-ArthasAsciiArtData([string]$path, [int]$targetWidth, [double]$charAspect) {
     try { Add-Type -AssemblyName System.Drawing | Out-Null } catch { return $null }
     if (-not (Test-Path -LiteralPath $path)) { return $null }
     $img = [System.Drawing.Image]::FromFile($path)
+    $bmp = $null
     try {
         $aspect = $img.Height / [double]$img.Width
         $targetHeight = [int][Math]::Max(18, [Math]::Round($targetWidth * $aspect * $charAspect))
@@ -61,30 +76,67 @@ function Get-ArthasAsciiArtData([string]$path, [int]$targetWidth, [double]$charA
         $g.DrawImage($img, 0, 0, $targetWidth, $targetHeight)
         $g.Dispose()
 
+        # Classic ASCII ramp (same as before). Density carries the face.
         $chars = ' .''`^",:;Il!i~+_-?][}{1)(|\/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$'
-        $lines = New-Object System.Collections.Generic.List[string]
-        $colors = New-Object System.Collections.Generic.List[object]
+        $lums = New-Object System.Collections.Generic.List[double]
+        $pix = New-Object System.Collections.Generic.List[object]
         for ($y = 0; $y -lt $bmp.Height; $y++) {
-            $line = ""
-            $lineColors = New-Object System.Collections.Generic.List[object]
             for ($x = 0; $x -lt $bmp.Width; $x++) {
                 $c = $bmp.GetPixel($x, $y)
                 $lum = ($c.R * 0.299 + $c.G * 0.587 + $c.B * 0.114)
                 if ($c.A -lt 16) {
+                    $pix.Add($null)
+                    $lums.Add(-1)
+                    continue
+                }
+                $pix.Add(@($c.R, $c.G, $c.B, $lum))
+                $lums.Add($lum)
+            }
+        }
+
+        # Stretch contrast so eyes / hair / armor separate from midtones.
+        $valid = @($lums | Where-Object { $_ -ge 0 })
+        $lo = 20.0
+        $hi = 235.0
+        if ($valid.Count -gt 20) {
+            $sorted = $valid | Sort-Object
+            $lo = $sorted[[Math]::Max(0, [int]($sorted.Count * 0.05))]
+            $hi = $sorted[[Math]::Min($sorted.Count - 1, [int]($sorted.Count * 0.97))]
+            if (($hi - $lo) -lt 40) { $lo = 20.0; $hi = 235.0 }
+        }
+
+        $lines = New-Object System.Collections.Generic.List[string]
+        $colors = New-Object System.Collections.Generic.List[object]
+        $i = 0
+        for ($y = 0; $y -lt $bmp.Height; $y++) {
+            $line = ""
+            $lineColors = New-Object System.Collections.Generic.List[object]
+            for ($x = 0; $x -lt $bmp.Width; $x++) {
+                $p = $pix[$i]
+                $i++
+                if ($null -eq $p) {
                     $line += " "
                     $lineColors.Add($null)
                     continue
                 }
-                $brightness = [Math]::Pow($lum / 255.0, 0.72)
+                $norm = ($p[3] - $lo) / ($hi - $lo)
+                if ($norm -lt 0) { $norm = 0 }
+                if ($norm -gt 1) { $norm = 1 }
+                $brightness = [Math]::Pow($norm, 0.72)
+                # Soft ceiling so speculars stay dense but not pure-white blobs.
+                if ($brightness -gt 0.92) {
+                    $brightness = 0.92 + (($brightness - 0.92) * 0.35)
+                }
                 $idx = [int]([Math]::Round($brightness * ($chars.Length - 1)))
                 $line += $chars[$idx]
-                $lineColors.Add(@($c.R, $c.G, $c.B))
+                $lineColors.Add((Soften-ArthasHighlight $p[0] $p[1] $p[2]))
             }
             $lines.Add($line)
             $colors.Add($lineColors.ToArray())
         }
         return @{ Lines = $lines.ToArray(); Colors = $colors.ToArray() }
     } finally {
+        if ($null -ne $bmp) { $bmp.Dispose() }
         $img.Dispose()
     }
 }
@@ -142,9 +194,12 @@ function Render-ArthasPanel([string]$themeName, [hashtable]$artData) {
         $missing = Color-Text $palette.accent2 "[arthas image not found]"
         Write-Host (Get-CenteredLine $missing $w)
     } else {
+        $artW = $artData.Lines[0].Length
+        $pad = [Math]::Max(0, [int](($w - $artW) / 2))
+        $padStr = " " * $pad
         for ($i = 0; $i -lt $artData.Lines.Count; $i++) {
             $line = Colorize-ArthasAsciiLine $artData.Lines[$i] $artData.Colors[$i]
-            Write-Host (Get-CenteredLine $line $w)
+            Write-Host ($padStr + $line)
         }
     }
 
@@ -155,7 +210,11 @@ function Render-ArthasPanel([string]$themeName, [hashtable]$artData) {
 }
 
 function Save-ThemeName([string]$themeName) {
-    $themeName | Set-Content -Path $themePath -Encoding UTF8
+    if (Get-Command Save-ActiveTheme -ErrorAction SilentlyContinue) {
+        Save-ActiveTheme $themeName
+    } else {
+        $themeName | Set-Content -Path $themePath -Encoding UTF8
+    }
 }
 
 function Apply-ArthasTheme([string]$themeName, [switch]$RedrawPrompt) {

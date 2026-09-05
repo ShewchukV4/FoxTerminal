@@ -79,8 +79,10 @@ function Show-Status {
     Write-Host "  Shift+Ctrl+Y     -> Close YouTube tab"
     Write-Host "  Shift+Alt+F      -> Firefox"
     Write-Host "  Shift+Alt+M      -> YouTube Music"
-    Write-Host "  Shift+Alt+Space  -> Show FoxTerminal"
-    Write-Host "  Shift+Ctrl+Space -> Hide FoxTerminal"
+    Write-Host "  Shift+Alt+Space     -> Show FoxTerminal"
+    Write-Host "  Shift+Ctrl+Space    -> Hide FoxTerminal"
+    Write-Host "  Shift+Alt+T         -> Show FoxTerminal"
+    Write-Host "  Shift+Ctrl+Alt+T    -> Close FoxTerminal"
 }
 
 if ($Status)  { Show-Status;   exit }

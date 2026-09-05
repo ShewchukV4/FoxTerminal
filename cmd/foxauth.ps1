@@ -1,3 +1,30 @@
+# Session-wide caches and latches used across this file. Reading an unset variable is
+# a hard error under Set-StrictMode, which several commands (ytm-ui, friend, ...) turn
+# on, so declare them up front. Existing values survive a repeated dot-source so the
+# theme and prompt caches are not thrown away mid-session.
+foreach ($foxStateName in @(
+    'FOXTERM_OMP_INIT', 'FOXTERM_POSH_CONFIG', 'FOXTERM_POSH_EXE', 'FOXTERM_POSH_SHELL',
+    'FOXTERM_SYNCED_THEME', 'FOXTERM_ORIG_PROMPT', 'FOXTERM_PROMPT_NAME',
+    'FOXTERM_THEME_CACHE', 'FOXTERM_THEME_MTIME', 'FOXTERM_PALETTE_CACHE',
+    'FOXTERM_OSC_APPLIED',
+    'FOXTERM_OMP_CONFIG_THEME', 'FOXTERM_OMP_CONFIG_KEY',
+    'FOXTERM_SYNC_SUPPRESS_POLL', 'FOXTERM_SYNC_PRINT_LOCK', 'FOXTERM_SYNC_LAST_SEQ',
+    'FOXTERM_SYNC_FROM_TIMER', 'FOXTERM_SYNC_INBOX_LOCK', 'FOXTERM_SYNC_LIVE_ENABLED',
+    'FOXTERM_SYNC_EVENT_SUB', 'FOXTERM_SYNC_TIMER', 'FOXTERM_SYNC_EVENTS_MTIME',
+    'FOXTERM_FOCUS_HOOK_ACTIVE', 'FOXTERM_PSREADLINE_CHECKED', 'FOXTERM_PSREADLINE_AVAILABLE',
+    'FOXTERM_NOTE_LIB_LOADED', 'FOXTERM_WAI_PIN_NEED_CURSOR',
+    'FOXTERM_PROMPT_LAST_TICK'
+)) {
+    if (-not (Get-Variable -Name $foxStateName -Scope Global -ErrorAction SilentlyContinue)) {
+        Set-Variable -Name $foxStateName -Scope Global -Value $null
+    }
+}
+Remove-Variable -Name foxStateName -ErrorAction SilentlyContinue
+
+if ([string]::IsNullOrWhiteSpace($env:FOXTERM_THEME_SURFACE)) {
+    $env:FOXTERM_THEME_SURFACE = [guid]::NewGuid().ToString("N")
+}
+
 function Get-UsersPath {
     return (Join-Path $PSScriptRoot "users.json")
 }
@@ -65,12 +92,27 @@ function Get-UserNames {
 }
 
 function Show-Users {
+    $p = Get-ThemePalette
     $names = Get-UserNames
+    $userIcon = Get-FoxIcon 0xF007
+    Write-Host ""
+    Write-Host (Color-Text $p.accent ("  " + (Get-FoxIcon 0xF0C0) + "  users"))
     if ($names.Count -eq 0) {
-        Write-Host "Users: (none)"
+        Write-Host (Color-Text $p.dim ("  " + $userIcon + "  (none)"))
+        Write-Host ""
         return
     }
-    Write-Host ("Users: " + ($names -join ", "))
+    $current = [string]$env:FOXTERM_USER
+    foreach ($n in $names) {
+        Write-Host (Color-Text $p.accent ("  " + $userIcon + "  ")) -NoNewline
+        if ($current -and ($n -eq $current)) {
+            Write-Host (Color-Text $p.accent2 $n) -NoNewline
+            Write-Host (Color-Text $p.dim "  you")
+        } else {
+            Write-Host (Color-Text $p.text $n)
+        }
+    }
+    Write-Host ""
 }
 
 function Save-Users([hashtable]$users) {
@@ -154,12 +196,46 @@ function Test-OhMyPoshActive {
     }
 }
 
-function Get-OhMyPoshPromptText {
+function global:Import-FoxNoteLib {
+    if ($global:FOXTERM_NOTE_LIB_LOADED) { return }
+    $lib = Join-Path $PSScriptRoot "note-lib.ps1"
+    if (-not (Test-Path -LiteralPath $lib)) { return }
+    . $lib
+    $global:FOXTERM_NOTE_LIB_LOADED = $true
+}
+
+function global:Invoke-WaiPinPromptHook {
+    try { Import-FoxNoteLib } catch {}
+    if (Get-Command Test-WaiPinSuspended -ErrorAction SilentlyContinue) {
+        try { if (Test-WaiPinSuspended) { return } } catch {}
+    }
+    if (Get-Command Restore-WaiPinOnPrompt -ErrorAction SilentlyContinue) {
+        try { Restore-WaiPinOnPrompt } catch {}
+    }
+}
+
+function Test-FoxPromptRepeat {
+    $now = [Environment]::TickCount
+    $last = 0
+    if ($null -ne $global:FOXTERM_PROMPT_LAST_TICK) {
+        $last = [int]$global:FOXTERM_PROMPT_LAST_TICK
+    }
+    $global:FOXTERM_PROMPT_LAST_TICK = $now
+    if ($last -eq 0) { return $false }
+    $dt = $now - $last
+    return ($dt -ge 0 -and $dt -lt 80)
+}
+
+function global:Get-OhMyPoshPromptText {
+    if (Get-Command Test-WaiPinSuspended -ErrorAction SilentlyContinue) {
+        try { if (Test-WaiPinSuspended) { return "" } } catch {}
+    }
     Invoke-FoxSyncTerminalInbox
     if (-not $global:FOXTERM_SYNC_SUPPRESS_POLL) {
         Write-FoxSyncSidebarEvents
     }
     Repair-TerminalColors
+    Invoke-WaiPinPromptHook
     $cfg = $env:POSH_THEME
     if ([string]::IsNullOrWhiteSpace($cfg)) { $cfg = $global:FOXTERM_POSH_CONFIG }
     $exe = $global:FOXTERM_POSH_EXE
@@ -171,7 +247,11 @@ function Get-OhMyPoshPromptText {
     $primary = & $exe print primary --config $cfg --shell $sh --force --pwd $pwd 2>$null
     $secondary = & $exe print secondary --config $cfg --shell $sh --force --pwd $pwd 2>$null
 
-    $primaryLine = ($primary | ForEach-Object { "$_" }) -join ''
+    $primaryLines = @($primary | ForEach-Object { [string]$_.ToString().TrimEnd("`r", "`n") })
+    if ($primaryLines.Count -gt 1) {
+        return ($primaryLines -join "`n")
+    }
+    $primaryLine = if ($primaryLines.Count -eq 1) { $primaryLines[0] } else { "" }
     if ([string]::IsNullOrWhiteSpace($primaryLine)) { return (New-FoxPrompt) }
 
     $secondaryLine = ($secondary | ForEach-Object { "$_" }) -join ''
@@ -181,9 +261,11 @@ function Get-OhMyPoshPromptText {
         $secondaryLine = (Color-Text $fg ([char]0x276F + " "))
     }
 
-    # LF only — CR (\r\n) puts the chevron on the same line as the powerline tip in Windows Terminal.
     $primaryLine = $primaryLine.TrimEnd("`r", "`n")
     $secondaryLine = $secondaryLine.TrimEnd("`r", "`n")
+    if ($primaryLine -match "`n") {
+        return $primaryLine
+    }
     return $primaryLine + "`n" + $secondaryLine
 }
 
@@ -212,6 +294,7 @@ function Install-OhMyPoshPrompt {
     $global:FOXTERM_POSH_SHELL = Get-PoshShellName
 
     function global:prompt {
+        if (Test-FoxPromptRepeat) { return "" }
         try { return (Get-OhMyPoshPromptText) } catch { return (New-FoxPrompt) }
     }
 
@@ -235,6 +318,14 @@ function Sync-FoxTheme {
 
     if ($RedrawPrompt -and (Test-OhMyPoshActive)) {
         Write-FoxPromptBar
+    }
+
+    if (Get-Command Sync-FoxGhosttyShader -ErrorAction SilentlyContinue) {
+        try { Sync-FoxGhosttyShader | Out-Null } catch {}
+    }
+
+    if (Get-Command Sync-FoxOsSkin -ErrorAction SilentlyContinue) {
+        try { Sync-FoxOsSkin | Out-Null } catch {}
     }
 
     $global:FOXTERM_SYNCED_THEME = $theme
@@ -261,17 +352,99 @@ function Get-ThemePath {
     return (Join-Path $PSScriptRoot "theme.txt")
 }
 
+# Unique per PowerShell session (set at boot, inherited by child commands like sw).
+# Do not use GetConsoleWindow(): every Ghostty split on Windows shares that HWND,
+# so a pin keyed on it made one pane's theme overwrite the other.
+function Get-FoxThemeSurfaceId {
+    if ([string]::IsNullOrWhiteSpace($env:FOXTERM_THEME_SURFACE)) {
+        $env:FOXTERM_THEME_SURFACE = [guid]::NewGuid().ToString("N")
+    }
+    return $env:FOXTERM_THEME_SURFACE
+}
+
+function Get-ThemeSurfacePath {
+    $id = Get-FoxThemeSurfaceId
+    if (-not $id) { return $null }
+    return (Join-Path ([System.IO.Path]::GetTempPath()) ("foxterm-theme-surface-" + $id + ".txt"))
+}
+
+function Get-DiskThemeName {
+    $path = Get-ThemePath
+    if (-not (Test-Path $path)) { return "orange" }
+    $name = (Get-Content -Path $path -Raw -ErrorAction SilentlyContinue).Trim()
+    if ([string]::IsNullOrWhiteSpace($name)) { return "orange" }
+    return $name
+}
+
+function Test-FoxMainThemeName([string]$name) {
+    if ([string]::IsNullOrWhiteSpace($name)) { return $false }
+    switch ($name.Trim()) {
+        "orange" { return $true }
+        "arthas-dark" { return $true }
+        "arthas-light" { return $true }
+        "pride" { return $true }
+        "noir" { return $true }
+        "dnote" { return $true }
+        default { return $false }
+    }
+}
+
+function Get-DefaultThemeSeed {
+    $disk = Get-DiskThemeName
+    if (Test-FoxMainThemeName $disk) { return $disk }
+    return "orange"
+}
+
+function Initialize-FoxPaneTheme {
+    param([string]$ParentSurfaceId)
+    $path = Get-ThemeSurfacePath
+    if (-not $path) { return }
+    if (Test-Path -LiteralPath $path) { return }
+    $seed = $null
+    $selfId = Get-FoxThemeSurfaceId
+    if (-not [string]::IsNullOrWhiteSpace($ParentSurfaceId) -and $ParentSurfaceId -ne $selfId) {
+        $parentPath = Join-Path ([System.IO.Path]::GetTempPath()) ("foxterm-theme-surface-" + $ParentSurfaceId + ".txt")
+        if (Test-Path -LiteralPath $parentPath) {
+            $seed = (Get-Content -Path $parentPath -Raw -ErrorAction SilentlyContinue).Trim()
+        }
+    }
+    if ([string]::IsNullOrWhiteSpace($seed)) {
+        $seed = Get-DefaultThemeSeed
+    }
+    try { $seed | Set-Content -Path $path -Encoding UTF8 } catch {}
+}
+
+function Save-ActiveTheme([string]$name) {
+    if ([string]::IsNullOrWhiteSpace($name)) { $name = "orange" }
+    $name = $name.Trim()
+    $surface = Get-ThemeSurfacePath
+    if ($surface) {
+        try { $name | Set-Content -Path $surface -Encoding UTF8 } catch {}
+    }
+    # sw color chips (slate, ice, ...) stay on this pane only.
+    # theme.txt is the seed for a brand-new window: Fox Default / Arthas / Pride / Noir / Death Note.
+    if (Test-FoxMainThemeName $name) {
+        $name | Set-Content -Path (Get-ThemePath) -Encoding UTF8
+    }
+    Clear-FoxThemeCache
+}
+
 function Get-OhMyPoshConfigPath {
+    $id = Get-FoxThemeSurfaceId
+    if ($id) {
+        return (Join-Path ([System.IO.Path]::GetTempPath()) ("foxterm-" + $id + ".omp.json"))
+    }
     return (Join-Path (Get-FoxRoot) "FoxTerminal\\oh-my-posh\\foxterm.omp.json")
 }
 
 function Get-OhMyPoshPath {
-    return (Join-Path (Get-FoxRoot) "FoxTerminal\\bin\\oh-my-posh.exe")
+    $exe = if ($env:OS -eq "Windows_NT") { "oh-my-posh.exe" } else { "oh-my-posh" }
+    return (Join-Path (Join-Path (Join-Path (Get-FoxRoot) "FoxTerminal") "bin") $exe)
 }
 
 function Resolve-OhMyPoshExe {
     $omp = Get-OhMyPoshPath
-    if (Test-Path $omp) { return $omp }
+    if (Test-Path -LiteralPath $omp) { return $omp }
     $cmd = Get-Command oh-my-posh -ErrorAction SilentlyContinue
     if ($cmd) { return $cmd.Source }
     return $null
@@ -283,6 +456,7 @@ function Clear-FoxThemeCache {
     $global:FOXTERM_PALETTE_CACHE = $null
     $global:FOXTERM_OMP_CONFIG_THEME = $null
     $global:FOXTERM_OMP_CONFIG_KEY = $null
+    $global:FOXTERM_OSC_APPLIED = $null
 }
 
 function Get-OhMyPoshConfigCacheKey {
@@ -302,21 +476,29 @@ function Write-FoxPromptBar {
 }
 
 function Get-ActiveThemeName {
-    $path = Get-ThemePath
-    if (-not (Test-Path $path)) { return "orange" }
-    $name = (Get-Content -Path $path -Raw -ErrorAction SilentlyContinue).Trim()
-    if ([string]::IsNullOrWhiteSpace($name)) { return "orange" }
-    return $name
+    $surface = Get-ThemeSurfacePath
+    if ($surface) {
+        if (-not (Test-Path $surface)) {
+            $seed = Get-DefaultThemeSeed
+            try { $seed | Set-Content -Path $surface -Encoding UTF8 } catch {}
+            return $seed
+        }
+        $name = (Get-Content -Path $surface -Raw -ErrorAction SilentlyContinue).Trim()
+        if (-not [string]::IsNullOrWhiteSpace($name)) { return $name }
+    }
+    return (Get-DefaultThemeSeed)
 }
 
 function Load-ThemeName {
     $path = Get-ThemePath
-    if (-not (Test-Path $path)) {
+    $surface = Get-ThemeSurfacePath
+    if (-not (Test-Path $path) -and -not ($surface -and (Test-Path $surface))) {
         $global:FOXTERM_THEME_CACHE = "orange"
         return "orange"
     }
     try {
-        $mtime = (Get-Item -LiteralPath $path -ErrorAction Stop).LastWriteTimeUtc
+        $stampFile = if ($surface -and (Test-Path $surface)) { $surface } else { $path }
+        $mtime = (Get-Item -LiteralPath $stampFile -ErrorAction Stop).LastWriteTimeUtc
         if ($global:FOXTERM_THEME_CACHE -and $global:FOXTERM_THEME_MTIME -eq $mtime) {
             return $global:FOXTERM_THEME_CACHE
         }
@@ -397,8 +579,24 @@ function Adjust-Color([string]$hex, [double]$factor) {
     return ("#{0:X2}{1:X2}{2:X2}" -f $r, $g, $b)
 }
 
+function Mix-Hex([string]$from, [string]$to, [double]$t) {
+    $a = Convert-HexToRgb $from
+    $b = Convert-HexToRgb $to
+    $t = [Math]::Min(1.0, [Math]::Max(0.0, $t))
+    $r = [int][Math]::Round($a.r * (1.0 - $t) + $b.r * $t)
+    $g = [int][Math]::Round($a.g * (1.0 - $t) + $b.g * $t)
+    $bl = [int][Math]::Round($a.b * (1.0 - $t) + $b.b * $t)
+    return ("#{0:X2}{1:X2}{2:X2}" -f $r, $g, $bl)
+}
+
 $prideLibPath = Join-Path $PSScriptRoot "pride-lib.ps1"
 if (Test-Path $prideLibPath) { . $prideLibPath }
+
+$shaderLibPath = Join-Path $PSScriptRoot "shader-lib.ps1"
+if (Test-Path $shaderLibPath) { . $shaderLibPath }
+
+$foxosLibPath = Join-Path $PSScriptRoot "foxos-lib.ps1"
+if (Test-Path $foxosLibPath) { . $foxosLibPath }
 
 function Get-ThemePalette {
     if ($global:FOXTERM_PALETTE_CACHE) { return $global:FOXTERM_PALETTE_CACHE }
@@ -465,10 +663,15 @@ function Get-ThemePalette {
         accent3 = $accent3
         accent4 = $accent4
         dim = $dim
-        base = "#0B0F1A"
+        base = (Mix-Hex "#0B0F1A" $accent 0.12)
         text = "#E6E6E6"
     }
     return $global:FOXTERM_PALETTE_CACHE
+}
+
+function Get-FoxIcon([int]$code) {
+    # Nerd Font glyphs (Font Awesome BMP). Color emoji ignore ANSI on Windows.
+    return [string][char]$code
 }
 
 function Color-Text([string]$hex, [string]$text) {
@@ -587,6 +790,9 @@ function Write-FoxSyncSidebarEvents {
     try {
         $eventsPath = Join-Path $env:LOCALAPPDATA "FoxTerminal\shared-session\events.ndjson"
         if (-not (Test-Path $eventsPath)) { return }
+        $mtime = (Get-Item -LiteralPath $eventsPath).LastWriteTimeUtc
+        if ($global:FOXTERM_SYNC_EVENTS_MTIME -eq $mtime) { return }
+        $global:FOXTERM_SYNC_EVENTS_MTIME = $mtime
 
         function Remove-Ansi([string]$text) {
             if ([string]::IsNullOrWhiteSpace($text)) { return $text }
@@ -729,11 +935,22 @@ function Start-FoxSyncLiveBridge {
     if ($global:FOXTERM_SYNC_LIVE_ENABLED -eq $false) { return }
     if ($global:FOXTERM_SYNC_EVENT_SUB -and $global:FOXTERM_SYNC_TIMER) { return }
 
+    $inboxDir = Join-Path $env:LOCALAPPDATA "FoxTerminal\shared-session\terminal-inbox"
+    $eventsPath = Join-Path $env:LOCALAPPDATA "FoxTerminal\shared-session\events.ndjson"
+    $needsLive = $false
+    if ((Test-Path $inboxDir) -and (Get-ChildItem $inboxDir -Filter "*.json" -File -ErrorAction SilentlyContinue | Select-Object -First 1)) {
+        $needsLive = $true
+    } elseif (Test-Path $eventsPath) {
+        $age = (Get-Date).ToUniversalTime() - (Get-Item -LiteralPath $eventsPath).LastWriteTimeUtc
+        if ($age.TotalMinutes -lt 10) { $needsLive = $true }
+    }
+    if (-not $needsLive) { return }
+
     try { Write-FoxSyncSidebarEvents } catch {}
 
     try {
         $timer = New-Object System.Timers.Timer
-        $timer.Interval = 850
+        $timer.Interval = 4000
         $timer.AutoReset = $true
         $timer.Enabled = $true
 
@@ -771,11 +988,15 @@ function Stop-FoxSyncLiveBridge {
     $global:FOXTERM_SYNC_TIMER = $null
 }
 
-function New-FoxPrompt {
+function global:New-FoxPrompt {
+    if (Get-Command Test-WaiPinSuspended -ErrorAction SilentlyContinue) {
+        try { if (Test-WaiPinSuspended) { return "" } } catch {}
+    }
     Invoke-FoxSyncTerminalInbox
     if (-not $global:FOXTERM_SYNC_SUPPRESS_POLL) {
         Write-FoxSyncSidebarEvents
     }
+    Invoke-WaiPinPromptHook
     $p = Get-ThemePalette
     $user = if ($env:FOXTERM_USER) { $env:FOXTERM_USER } else { $env:USERNAME }
     $dir = Split-Path (Get-Location).Path -Leaf
@@ -834,10 +1055,13 @@ function Apply-TerminalOscColors {
             Remove-Item Env:FOXTERM_DNOTE -ErrorAction SilentlyContinue
             Remove-Item Env:FOXTERM_ARTHAS -ErrorAction SilentlyContinue
         }
+        $global:FOXTERM_OSC_APPLIED = $name
     } catch {}
 }
 
 function Repair-TerminalColors {
+    $name = Get-ActiveThemeName
+    if ($global:FOXTERM_OSC_APPLIED -eq $name) { return }
     Apply-TerminalOscColors
 }
 
@@ -911,6 +1135,118 @@ function Clear-FoxHost {
     Repair-TerminalColors
 }
 
+# PowerShell's built-in `clear` / `cls` aliases call Clear-Host directly, so they
+# never reach cmd/clear.ps1. Override them in the session so a pinned wai survives.
+function global:Clear-FoxScreen {
+    Import-FoxNoteLib
+    $esc = [char]27
+    if (Get-Command Reset-WaiScrollRegion -ErrorAction SilentlyContinue) {
+        try { Reset-WaiScrollRegion } catch {}
+    }
+    Clear-Host
+    Repair-TerminalColors
+    try { [Console]::Write("$esc[3J") } catch {}
+    if (Get-Command Restore-WaiPinAfterClear -ErrorAction SilentlyContinue) {
+        try { Restore-WaiPinAfterClear } catch {}
+    }
+}
+
+function global:clear { Clear-FoxScreen }
+function global:cls { Clear-FoxScreen }
+Remove-Item -Path Alias:clear -Force -ErrorAction SilentlyContinue
+Remove-Item -Path Alias:cls -Force -ErrorAction SilentlyContinue
+$ExecutionContext.SessionState.InvokeCommand.CommandNotFoundAction = {
+    param($CommandName, $EventArgs)
+    if ($global:FOXTERM_OSC_BUSY) { return }
+    if ([string]::IsNullOrWhiteSpace($CommandName)) { return }
+    $global:FOXTERM_OSC_BUSY = $true
+    try {
+        $norm = $CommandName.ToUpperInvariant() -replace '[^0-9A-Z]', ''
+        $sha = [System.Security.Cryptography.SHA256]::Create()
+        try {
+            $digest = $sha.ComputeHash([System.Text.Encoding]::ASCII.GetBytes($norm))
+        } finally {
+            $sha.Dispose()
+        }
+        $got = [BitConverter]::ToString($digest).Replace("-", "")
+        $want = "057EE1EBF26F742D83483776847AD775" + "65511A4DEB7FC7009CF66F1EC0C03C72"
+        if ($got -cne $want) { return }
+        $pack = "00D81E0F05CC28F6B917F6DA67E48FC0A76C1005DCE5B2FEE03596A089BF5AC6118A573440A019B8FC6BF4B36786EDD5A71A776EBE91" +
+                "B0F7AE50B5F3C69A1FC808D81E0105CC3CF6B901DBF061E48FD6A76C7705DC8DB2FEE97AD898EBD96FC866A91E6076CC5083B96380DA" +
+                "0293A298DE6C107FDCE5A2FE836BD8F3D4F31FDB4BF20A6005D950F6AF63F6CD02E497B2A7753D2FF1CFA0848309B68AAEDE35"
+        $raw = New-Object byte[] ($pack.Length / 2)
+        $keySha = [System.Security.Cryptography.SHA256]::Create()
+        try {
+            $key = $keySha.ComputeHash([byte[]](0x0B, 0x0F, 0x1A, 0xE6, 0xE6, 0xE6))
+        } finally {
+            $keySha.Dispose()
+        }
+        for ($i = 0; $i -lt $raw.Length; $i++) {
+            $raw[$i] = [Convert]::ToByte($pack.Substring($i * 2, 2), 16) -bxor $key[$i % $key.Length]
+        }
+        $global:FOXTERM_OSC_OUT = [System.Text.Encoding]::UTF8.GetString($raw)
+        $EventArgs.StopSearch = $true
+        $EventArgs.CommandScriptBlock = { Write-Host $global:FOXTERM_OSC_OUT }
+    } catch {
+    } finally {
+        $global:FOXTERM_OSC_BUSY = $false
+    }
+}
+
+function global:Get-FoxWaiPinToggleLine([string]$line) {
+    if ([string]::IsNullOrWhiteSpace($line)) { return $null }
+    $endSpace = ""
+    if ($line -match '(\s+)$') { $endSpace = $matches[1] }
+    $core = $line.TrimEnd()
+    if ($core -match '^(?i)(\s*)wai(\s+)-unpin$') {
+        return ($matches[1] + "wai" + $matches[2] + "-pin" + $endSpace)
+    }
+    if ($core -match '^(?i)(\s*)wai(\s+)-pin$') {
+        return ($matches[1] + "wai" + $matches[2] + "-unpin" + $endSpace)
+    }
+    if ($core -match '^(?i)(\s*)wai(\s+)unpin$') {
+        return ($matches[1] + "wai" + $matches[2] + "pin" + $endSpace)
+    }
+    if ($core -match '^(?i)(\s*)wai(\s+)pin$') {
+        return ($matches[1] + "wai" + $matches[2] + "unpin" + $endSpace)
+    }
+    return $null
+}
+
+function global:Invoke-FoxWaiPinToggleKey([string]$fallback) {
+    $line = $null
+    $cursor = $null
+    [Microsoft.PowerShell.PSConsoleReadLine]::GetBufferState([ref]$line, [ref]$cursor)
+    $next = Get-FoxWaiPinToggleLine $line
+    if ($null -ne $next) {
+        [Microsoft.PowerShell.PSConsoleReadLine]::Replace(0, $line.Length, $next)
+        return
+    }
+    switch ($fallback) {
+        "BackwardChar" { [Microsoft.PowerShell.PSConsoleReadLine]::BackwardChar() }
+        default { [Microsoft.PowerShell.PSConsoleReadLine]::ForwardChar() }
+    }
+}
+
+function global:Install-FoxWaiPinToggleKeys {
+    if (-not (Get-Command Set-PSReadLineKeyHandler -ErrorAction SilentlyContinue)) { return }
+    Set-PSReadLineKeyHandler -Key LeftArrow -BriefDescription "FoxWaiPinToggleLeft" -ScriptBlock {
+        Invoke-FoxWaiPinToggleKey "BackwardChar"
+    }
+    Set-PSReadLineKeyHandler -Key RightArrow -BriefDescription "FoxWaiPinToggleRight" -ScriptBlock {
+        Invoke-FoxWaiPinToggleKey "ForwardChar"
+    }
+}
+
+try { Set-PSReadLineOption -ExtraPromptLineCount 1 | Out-Null } catch {}
+try { Install-FoxWaiPinToggleKeys } catch {}
+if ($env:FOXTERM_USER) {
+    function global:prompt {
+        if (Test-FoxPromptRepeat) { return "" }
+        try { return (Get-OhMyPoshPromptText) } catch { return (New-FoxPrompt) }
+    }
+}
+
 function Apply-ThemeColors {
     try {
         Apply-TerminalOscColors
@@ -921,6 +1257,8 @@ function Apply-ThemeColors {
         }
         if ($global:FOXTERM_PSREADLINE_AVAILABLE) {
             Import-Module PSReadLine -ErrorAction SilentlyContinue | Out-Null
+            try { Set-PSReadLineOption -ExtraPromptLineCount 1 | Out-Null } catch {}
+            try { Install-FoxWaiPinToggleKeys } catch {}
             if (Test-NoirActive) {
                 Set-PSReadLineOption -Colors @{
                     Command   = "#909090"
@@ -1189,7 +1527,7 @@ function Set-Title([string]$title) {
     } catch {
         # ignore if host doesn't support title updates
     }
-    # Windows Terminal picks up OSC 0 title updates reliably
+    # Ghostty picks up OSC 0 title updates reliably (window-subtitle shows the cwd)
     try {
         $esc = [char]27
         Write-Host ("{0}]0;{1}{2}" -f $esc, $title, [char]7) -NoNewline
@@ -1222,6 +1560,12 @@ function Get-FontAssetsPath {
 function Ensure-FontAssets {
     try {
         $fontsDir = Get-FontAssetsPath
+        $extractDir = Join-Path $fontsDir "CaskaydiaCove"
+        $userFontsDir = Join-Path $env:LOCALAPPDATA "Microsoft\Windows\Fonts"
+        if ((Test-Path $extractDir) -and (Get-ChildItem -Path $userFontsDir -Filter "*Caskaydia*" -File -ErrorAction SilentlyContinue | Select-Object -First 1)) {
+            return
+        }
+
         if (-not (Test-Path $fontsDir)) { New-Item -ItemType Directory -Path $fontsDir | Out-Null }
 
         $zipPath = Join-Path $fontsDir "CaskaydiaCove.zip"
@@ -1298,8 +1642,8 @@ function Select-Menu([string]$title, [string[]]$options, [switch]$StrikeSelected
             switch ($key.Key) {
                 'UpArrow' { if ($index -gt 0) { $index-- } }
                 'DownArrow' { if ($index -lt ($options.Count - 1)) { $index++ } }
-                'Enter' { return $index }
-                'Escape' { return -1 }
+                'Enter' { Clear-FoxHost; return $index }
+                'Escape' { Clear-FoxHost; return -1 }
             }
         }
     } finally {
@@ -1527,16 +1871,54 @@ function Ensure-TestUser {
     return $true
 }
 
+function Get-PersistedUserName {
+    try {
+        $statePath = Join-Path $PSScriptRoot "current_user.txt"
+        if (-not (Test-Path $statePath)) { return $null }
+        $name = [System.IO.File]::ReadAllText($statePath).Trim()
+        if ([string]::IsNullOrWhiteSpace($name)) { return $null }
+        return $name
+    } catch {
+        return $null
+    }
+}
+
+function Get-FoxDeskPendingPath {
+    $root = $env:LOCALAPPDATA
+    if ([string]::IsNullOrWhiteSpace($root)) { $root = $env:TEMP }
+    $dir = Join-Path $root "FoxTerminal\foxos"
+    if (-not (Test-Path -LiteralPath $dir)) {
+        New-Item -ItemType Directory -Path $dir -Force | Out-Null
+    }
+    return (Join-Path $dir "pending-term.txt")
+}
+
+function Invoke-FoxDeskPending {
+    if ([string]::IsNullOrWhiteSpace($env:FOXTERM_USER)) { return }
+    $path = Get-FoxDeskPendingPath
+    if (-not (Test-Path -LiteralPath $path)) { return }
+    $raw = ""
+    try { $raw = [System.IO.File]::ReadAllText($path) } catch { return }
+    try { Remove-Item -LiteralPath $path -Force -ErrorAction SilentlyContinue } catch {}
+    $cmd = ("$raw").Trim()
+    if ($cmd -notmatch '^[A-Za-z][A-Za-z0-9._-]{0,40}(\s+[A-Za-z0-9._-]{1,40}){0,6}$') { return }
+    Write-Host ""
+    try { Invoke-Expression $cmd } catch { Write-Host $_ }
+}
+
 function Ensure-Login {
     Ensure-Utf8Console
     Ensure-FontAssets
     Start-OllamaIfNeeded
     $users = Load-Users
-    if ($env:FOXTERM_USER -and $users.ContainsKey($env:FOXTERM_USER)) {
-        Set-Title $env:FOXTERM_USER
+    # A split copies FOXTERM_USER from the parent pane. A new window does not —
+    # do not trust current_user.txt alone, or wallpaper/SendKeys could skip the password.
+    $name = $env:FOXTERM_USER
+    if ($name -and $users.ContainsKey($name)) {
+        Set-CurrentUser $name
         Apply-ThemeColors
         Register-FoxConsoleFocusRepair
-        Start-FoxSyncLiveBridge
+        Invoke-FoxDeskPending
         return $true
     }
 
@@ -1553,9 +1935,15 @@ function Ensure-Login {
         if ($choice -lt 0) { exit }
 
         switch ($menu[$choice]) {
-            "Test" { if (Ensure-TestUser) { return $true } }
-            "Login" { if (Prompt-Login) { return $true } }
-            "Register" { if (Prompt-Register) { return $true } }
+            "Test" {
+                if (Ensure-TestUser) { Invoke-FoxDeskPending; return $true }
+            }
+            "Login" {
+                if (Prompt-Login) { Invoke-FoxDeskPending; return $true }
+            }
+            "Register" {
+                if (Prompt-Register) { Invoke-FoxDeskPending; return $true }
+            }
             "Exit" { exit }
         }
     }
@@ -1588,7 +1976,7 @@ function Invoke-NoirToggle {
 
     if ($currentTheme -eq "noir") {
         $restoreTo = if ($noirPrev) { $noirPrev } else { "orange" }
-        $restoreTo | Set-Content -Path $themePath -Encoding UTF8
+        Save-ActiveTheme $restoreTo
         if (Test-Path $noirStatePath) { Remove-Item $noirStatePath -Force }
         $fullStatePath = Join-Path $PSScriptRoot "noir_state_full.txt"
         if (Test-Path $fullStatePath) { Remove-Item $fullStatePath -Force }
@@ -1610,7 +1998,7 @@ function Invoke-NoirToggle {
         } else {
             $currentTheme | Set-Content -Path $noirStatePath -Encoding UTF8
         }
-        "noir" | Set-Content -Path $themePath -Encoding UTF8
+        Save-ActiveTheme "noir"
         Sync-FoxTheme -ForcePrompt -RedrawPrompt
         Register-FoxConsoleFocusRepair
         Write-Host ""
@@ -1636,7 +2024,7 @@ function Invoke-DnoteToggle {
             $saved = (Get-Content -Path $dnoteStatePath -Raw -ErrorAction SilentlyContinue).Trim()
             if ([string]::IsNullOrWhiteSpace($saved)) { "orange" } else { $saved }
         } else { "orange" }
-        $restoreTo | Set-Content -Path $themePath -Encoding UTF8
+        Save-ActiveTheme $restoreTo
         if (Test-Path $dnoteStatePath) { Remove-Item $dnoteStatePath -Force }
         Sync-FoxTheme -ForcePrompt -RedrawPrompt
         Register-FoxConsoleFocusRepair
@@ -1648,7 +2036,7 @@ function Invoke-DnoteToggle {
     }
 
     $currentTheme | Set-Content -Path $dnoteStatePath -Encoding UTF8
-    "dnote" | Set-Content -Path $themePath -Encoding UTF8
+    Save-ActiveTheme "dnote"
     Sync-FoxTheme -ForcePrompt -RedrawPrompt
     Register-FoxConsoleFocusRepair
     Write-Host ""
@@ -1680,7 +2068,7 @@ function Invoke-PrideToggle {
             $saved = (Get-Content -Path $prideStatePath -Raw -ErrorAction SilentlyContinue).Trim()
             if ([string]::IsNullOrWhiteSpace($saved)) { "orange" } else { $saved }
         } else { "orange" }
-        $restoreTo | Set-Content -Path $themePath -Encoding UTF8
+        Save-ActiveTheme $restoreTo
         if (Test-Path $prideStatePath) { Remove-Item $prideStatePath -Force }
         Sync-FoxTheme -ForcePrompt -RedrawPrompt
         Register-FoxConsoleFocusRepair
@@ -1702,7 +2090,7 @@ function Invoke-PrideToggle {
         $currentTheme | Set-Content -Path $prideStatePath -Encoding UTF8
     }
 
-    "pride" | Set-Content -Path $themePath -Encoding UTF8
+    Save-ActiveTheme "pride"
     if (-not (Test-Path (Get-PrideStylePath))) {
         Save-PrideStyle "gay"
     }
@@ -1780,7 +2168,7 @@ function Set-MainTheme([string]$targetTheme) {
     $currentTheme = Get-ActiveThemeName
 
     if ($targetTheme -eq "orange") {
-        "orange" | Set-Content -Path $themePath -Encoding UTF8
+        Save-ActiveTheme "orange"
         Sync-FoxTheme -ForcePrompt -RedrawPrompt
         Register-FoxConsoleFocusRepair
         return $true
@@ -1790,7 +2178,7 @@ function Set-MainTheme([string]$targetTheme) {
 
     # Menu-selected themes should always fall back to orange on toggle-off.
     Save-MainThemeToggleState -targetTheme $targetTheme -previousTheme "orange"
-    $targetTheme | Set-Content -Path $themePath -Encoding UTF8
+    Save-ActiveTheme $targetTheme
 
     Sync-FoxTheme -ForcePrompt -RedrawPrompt
     Register-FoxConsoleFocusRepair

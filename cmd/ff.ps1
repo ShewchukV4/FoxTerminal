@@ -6,7 +6,17 @@ param(
 if ($env:FOXTERM_SYNC_CONTEXT -ne "daemon") {
     $pidPath = Join-Path $env:LOCALAPPDATA "FoxTerminal\shared-session\daemon.pid"
     $ffsyncPath = Join-Path $PSScriptRoot "ffsync.ps1"
-    if ((Test-Path $pidPath) -and (Test-Path $ffsyncPath)) {
+    $daemonAlive = $false
+    if (Test-Path $pidPath) {
+        try {
+            $raw = (Get-Content -Path $pidPath -Raw -ErrorAction Stop).Trim()
+            $proc = Get-Process -Id ([int]$raw) -ErrorAction Stop
+            $daemonAlive = -not $proc.HasExited
+        } catch {
+            Remove-Item -Path $pidPath -Force -ErrorAction SilentlyContinue
+        }
+    }
+    if ($daemonAlive -and (Test-Path $ffsyncPath)) {
         $renderedArgs = @()
         foreach ($a in $Args) {
             if ($null -eq $a) { continue }

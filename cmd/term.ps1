@@ -1,75 +1,222 @@
 param(
-    [string]$Set,
-    [switch]$Now,
-    [string]$App
+    [switch]$Status,    # Показати стан Ghostty + шляхи конфігів
+    [switch]$Apply,     # Перевстановити конфіг з репозиторію
+    [switch]$Edit,      # Відкрити встановлений конфіг у редакторі
+    [switch]$New,       # Відкрити нове вікно Ghostty
+    [switch]$Doctor,    # Діагностика: бінарник, конфіг, шрифт, shell integration
+    [switch]$Path,      # Вивести шлях до конфігу і вийти
+    [string]$Set        # Сумісність зі старим "term -Set mintty|cygwin|windows"
 )
 
 . (Join-Path $PSScriptRoot "foxauth.ps1")
+. (Join-Path $PSScriptRoot "ghostty-lib.ps1")
 
-function Get-FoxConfigPath {
-    return (Join-Path $HOME ".foxterminal.json")
+# The FoxTerminal palette has no dedicated warning slot, and noir mode must stay
+# monochrome, so pick the amber accent only when colour is allowed.
+function Get-WarnColor {
+    $p = Get-ThemePalette
+    if (Test-NoirActive) { return $p.accent4 }
+    return "#FBD38D"
 }
 
-function Load-FoxConfig {
-    $path = Get-FoxConfigPath
-    if (-not (Test-Path $path)) {
-        return @{}
+function Write-Row([string]$label, [string]$value, [string]$color) {
+    $p = Get-ThemePalette
+    $pad = $label.PadRight(16)
+    if ([string]::IsNullOrWhiteSpace($color)) { $color = $p.text }
+    Write-Host (Color-Text $p.dim ("  " + $pad)) -NoNewline
+    Write-Host (Color-Text $color $value)
+}
+
+function Show-Status {
+    $p = Get-ThemePalette
+    $warn = Get-WarnColor
+    $ghostty = Get-GhosttyCommand
+    $configPath = Get-GhosttyConfigPath
+    $sourcePath = Join-Path (Get-FoxGhosttySourceDir) "config"
+    $localPath = $null
+    if ($configPath) { $localPath = Join-Path (Split-Path -Parent $configPath) "foxterminal-local.ghostty" }
+
+    Write-Host ""
+    Write-Host (Color-Text $p.accent "=== FoxTerminal terminal: Ghostty ===")
+    Write-Host ""
+
+    if ($ghostty) {
+        Write-Row "binary" ($ghostty.Flavor + " -> " + $ghostty.Path) $p.accent2
+        $cli = Get-GhosttyCliPath $ghostty
+        if ($cli -and $cli -ne $ghostty.Path) {
+            Write-Row "cli" $cli $p.accent2
+        }
+    } else {
+        Write-Row "binary" "not found" $warn
+    }
+
+    if (Test-InGhostty) {
+        Write-Row "session" "running inside Ghostty" $p.accent2
+    } else {
+        Write-Row "session" "not a Ghostty session" $warn
+    }
+
+    Write-Row "TERM" ($(if ($env:TERM) { $env:TERM } else { "<empty>" })) $p.text
+    Write-Row "TERM_PROGRAM" ($(if ($env:TERM_PROGRAM) { $env:TERM_PROGRAM } else { "<empty>" })) $p.text
+
+    Write-Host ""
+    Write-Row "source" $sourcePath $p.text
+
+    if ($configPath) {
+        if (Test-Path $configPath) {
+            $isFox = (Get-Content -Path $configPath -Raw -ErrorAction SilentlyContinue) -match "FoxTerminal"
+            Write-Row "installed" $configPath $(if ($isFox) { $p.accent2 } else { $warn })
+            if (-not $isFox) { Write-Row "" "(config exists but is not the FoxTerminal one - run: term -Apply)" $warn }
+        } else {
+            Write-Row "installed" ($configPath + "  (missing)") $warn
+        }
+    }
+
+    if ($localPath) {
+        if (Test-Path $localPath) {
+            Write-Row "local overlay" $localPath $p.accent2
+        } else {
+            Write-Row "local overlay" ($localPath + "  (missing - run: term -Apply)") $warn
+        }
+    }
+
+    Write-Host ""
+}
+
+function Invoke-Apply {
+    $p = Get-ThemePalette
+    $installer = Join-Path (Get-FoxRepoRoot) "FoxTerminal\install.ps1"
+    if (-not (Test-Path $installer)) {
+        Write-Host (Color-Text (Get-WarnColor) ("Installer not found: " + $installer))
+        return
+    }
+
+    Write-Host ""
+    Write-Host (Color-Text $p.accent "Re-installing the FoxTerminal Ghostty config...")
+    Write-Host ""
+    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $installer -NoShortcut -Force
+    Write-Host ""
+    Write-Host (Color-Text $p.accent2 "Press ctrl+shift+comma inside Ghostty to reload without restarting.")
+}
+
+function Invoke-Edit {
+    $p = Get-ThemePalette
+    $configPath = Get-GhosttyConfigPath
+    if (-not $configPath -or -not (Test-Path $configPath)) {
+        Write-Host (Color-Text (Get-WarnColor) "No installed config yet. Run: term -Apply")
+        return
+    }
+
+    $ghostty = Get-GhosttyCommand
+    if ($ghostty) {
+        # Ghostty knows how to open its own config in the OS default editor.
+        try {
+            & (Get-GhosttyCliPath $ghostty) "+edit-config" 2>$null | Out-Null
+            if ($LASTEXITCODE -eq 0) {
+                Write-Host (Color-Text $p.accent2 ("Opened " + $configPath))
+                return
+            }
+        } catch {}
     }
 
     try {
-        $json = Get-Content -Path $path -Raw -ErrorAction SilentlyContinue
-        if ([string]::IsNullOrWhiteSpace($json)) { return @{} }
-        $obj = $json | ConvertFrom-Json
-        $ht = @{}
-        foreach ($p in $obj.PSObject.Properties) {
-            $ht[$p.Name] = $p.Value
-        }
-        return $ht
+        Invoke-Item $configPath
+        Write-Host (Color-Text $p.accent2 ("Opened " + $configPath))
     } catch {
-        return @{}
+        Write-Host (Color-Text (Get-WarnColor) ("Cannot open editor. Path: " + $configPath))
     }
 }
 
-function Save-FoxConfig([hashtable]$cfg) {
-    $path = Get-FoxConfigPath
-    $cfg | ConvertTo-Json -Depth 10 | Set-Content -Path $path -Encoding UTF8
+function Invoke-NewWindow {
+    $p = Get-ThemePalette
+    $ghostty = Get-GhosttyCommand
+    if (-not $ghostty) {
+        Write-Host (Color-Text (Get-WarnColor) "Ghostty not found.")
+        foreach ($line in (Get-GhosttyInstallHint)) { Write-Host (Color-Text $p.dim ("  " + $line)) }
+        return
+    }
+
+    if (Start-FoxGhosttyWindow) {
+        Write-Host (Color-Text $p.accent2 "Opened a new Ghostty window.")
+    } else {
+        Write-Host (Color-Text (Get-WarnColor) "Cannot start Ghostty.")
+        foreach ($line in (Get-GhosttyInstallHint)) { Write-Host (Color-Text $p.dim ("  " + $line)) }
+    }
 }
 
-function Find-BashCandidate {
-    $candidates = @(
-        @{ kind = "Cygwin"; path = "C:\cygwin64\bin\bash.exe" },
-        @{ kind = "Cygwin"; path = "C:\cygwin\bin\bash.exe" },
-        @{ kind = "MSYS2"; path = "C:\msys64\usr\bin\bash.exe" },
-        @{ kind = "Git Bash"; path = "C:\Program Files\Git\bin\bash.exe" },
-        @{ kind = "Git Bash"; path = "C:\Program Files\Git\usr\bin\bash.exe" }
-    )
+function Invoke-Doctor {
+    $p = Get-ThemePalette
+    $warnColor = Get-WarnColor
+    $script:foxDoctorOk = 0
+    $script:foxDoctorWarn = 0
 
-    foreach ($c in $candidates) {
-        if (Test-Path $c.path) {
-            return $c
+    function Check([string]$name, [bool]$ok, [string]$detail) {
+        $mark = if ($ok) { "OK  " } else { "WARN" }
+        $color = if ($ok) { $p.accent2 } else { $warnColor }
+        Write-Host (Color-Text $color ("  [" + $mark + "] ")) -NoNewline
+        Write-Host (Color-Text $p.text $name.PadRight(26)) -NoNewline
+        Write-Host (Color-Text $p.dim $detail)
+        if ($ok) { $script:foxDoctorOk++ } else { $script:foxDoctorWarn++ }
+    }
+
+    Write-Host ""
+    Write-Host (Color-Text $p.accent "=== term -Doctor ===")
+    Write-Host ""
+
+    $ghostty = Get-GhosttyCommand
+    Check "Ghostty binary" ($null -ne $ghostty) $(if ($ghostty) { $ghostty.Path } else { "install winghostty (Windows) or ghostty (Linux/macOS)" })
+    if ($ghostty) {
+        $cli = Get-GhosttyCliPath $ghostty
+        Check "Ghostty CLI" ($null -ne $cli) $(if ($cli) { $cli } else { "winghostty.com missing next to the .exe" })
+    }
+
+    Check "Ghostty session" (Test-InGhostty) $(if (Test-InGhostty) { "TERM=$env:TERM" } else { "start FoxTerminal from Ghostty" })
+
+    $sourcePath = Join-Path (Get-FoxGhosttySourceDir) "config"
+    Check "Repo config" (Test-Path $sourcePath) $sourcePath
+
+    $configPath = Get-GhosttyConfigPath
+    $installed = $configPath -and (Test-Path $configPath)
+    Check "Installed config" ([bool]$installed) $(if ($installed) { $configPath } else { "run: term -Apply" })
+
+    if ($installed) {
+        $raw = Get-Content -Path $configPath -Raw -ErrorAction SilentlyContinue
+        Check "Config is FoxTerminal's" ([bool]($raw -match "FoxTerminal")) "looks for the FoxTerminal header"
+
+        $localPath = Join-Path (Split-Path -Parent $configPath) "foxterminal-local.ghostty"
+        Check "Local overlay" (Test-Path $localPath) $(if (Test-Path $localPath) { $localPath } else { "run: term -Apply" })
+
+        $shaderOverlay = Join-Path (Split-Path -Parent $configPath) "foxterminal-shaders.ghostty"
+        $shaderOn = $true
+        if (Get-Command Test-FoxShadersEnabled -ErrorAction SilentlyContinue) {
+            $shaderOn = Test-FoxShadersEnabled
         }
-    }
-
-    return $null
-}
-
-function Find-MinttyCandidate {
-    $candidates = @(
-        "C:\cygwin64\bin\mintty.exe",
-        "C:\cygwin\bin\mintty.exe",
-        "C:\msys64\bin\mintty.exe",
-        "C:\msys64\usr\bin\mintty.exe",
-        "C:\Program Files\Git\bin\mintty.exe",
-        "C:\Program Files\Git\usr\bin\mintty.exe"
-    )
-
-    foreach ($path in $candidates) {
-        if (Test-Path $path) {
-            return $path
+        $shaderDetail = if (Test-Path $shaderOverlay) {
+            if ($shaderOn) { $shaderOverlay } else { "written, currently off — run: shader on" }
+        } else {
+            "missing — run: shader status"
         }
+        Check "Shader overlay" ($(if ($shaderOn) { Test-Path $shaderOverlay } else { $true })) $shaderDetail
     }
 
-    return $null
+    $cmdDir = Join-Path (Get-FoxRepoRoot) "cmd"
+    Check "cmd\ on PATH" ($env:PATH -like "*$cmdDir*") $cmdDir
+
+    $omp = Resolve-OhMyPoshExe
+    Check "Oh My Posh" ($null -ne $omp) $(if ($omp) { $omp } else { "optional - run: foxdeps -Install" })
+
+    if ($ghostty) {
+        $configErrors = $null
+        try {
+            $out = & (Get-GhosttyCliPath $ghostty) "+show-config" 2>&1
+            $configErrors = $out | Select-String -Pattern "error|invalid|unknown field"
+        } catch {}
+        Check "Ghostty parses config" ($null -eq $configErrors -or $configErrors.Count -eq 0) $(if ($configErrors) { "see: $($ghostty.Name) +show-config" } else { "+show-config is clean" })
+    }
+
+    Write-Host ""
+    Write-Host (Color-Text $p.dim ("  " + $script:foxDoctorOk + " ok, " + $script:foxDoctorWarn + " to look at"))
+    Write-Host ""
 }
 
 function Select-Menu([string]$title, [string[]]$options) {
@@ -89,7 +236,7 @@ function Select-Menu([string]$title, [string[]]$options) {
             }
         }
         Write-Host ""
-        Write-Host (Color-Text $p.dim "Up/Down: select, Enter: apply, Esc: cancel")
+        Write-Host (Color-Text $p.dim "Up/Down: select, Enter: run, Esc: cancel")
 
         $key = [Console]::ReadKey($true)
         switch ($key.Key) {
@@ -101,224 +248,56 @@ function Select-Menu([string]$title, [string[]]$options) {
     }
 }
 
-function Apply-Backend([string]$backend) {
-    $cfg = Load-FoxConfig
-
-    if ($backend -eq "auto") {
-        $cfg["shellBackend"] = "auto"
-        $cfg.Remove("shellPath")
-        $cfg.Remove("shellArguments")
-        Save-FoxConfig $cfg
-        return "Set backend: auto (default Windows/cross-platform fallback)."
-    }
-
-    if ($backend -eq "windows") {
-        $cfg["shellBackend"] = "windows"
-        $cfg.Remove("shellPath")
-        $cfg.Remove("shellArguments")
-        Save-FoxConfig $cfg
-        return "Set backend: windows (cmd/COMSPEC)."
-    }
-
-    if ($backend -eq "mintty") {
-        $bash = Find-BashCandidate
-        if ($null -eq $bash) {
-            return "No bash.exe found (Cygwin/MSYS2/Git Bash). Install one or set shellPath manually."
-        }
-
-        $cfg["shellBackend"] = "mintty"
-        $cfg["shellPath"] = $bash.path
-        $cfg["shellArguments"] = "--login -i"
-        Save-FoxConfig $cfg
-        return ("Set backend: mintty using " + $bash.kind + " (" + $bash.path + ").")
-    }
-
-    if ($backend -eq "cygwin") {
-        $cyg = @("C:\cygwin64\bin\bash.exe", "C:\cygwin\bin\bash.exe") | Where-Object { Test-Path $_ } | Select-Object -First 1
-        if ([string]::IsNullOrWhiteSpace($cyg)) {
-            return "Cygwin bash not found at C:\cygwin64\bin\bash.exe or C:\cygwin\bin\bash.exe."
-        }
-
-        $cfg["shellBackend"] = "mintty"
-        $cfg["shellPath"] = $cyg
-        $cfg["shellArguments"] = "--login -i"
-        Save-FoxConfig $cfg
-        return ("Set backend: cygwin (" + $cyg + ").")
-    }
-
-    return "Unknown backend."
-}
-
-function Enter-BackendNow([string]$backend, [string]$app) {
-    $cmdDirWin = $PSScriptRoot
-    $cmdInit = Join-Path $cmdDirWin "foxterm-cmd-init.cmd"
-    $bashInit = Join-Path $cmdDirWin "foxterm-bash-init.sh"
-    $runInMintty = $app -eq "mintty"
-
-    if ($backend -eq "windows" -or $backend -eq "auto") {
-        Write-Host "Switching now to cmd shell with Fox profile..."
-        if (Test-Path $cmdInit) {
-            cmd.exe /K "call `"$cmdInit`""
-        } else {
-            cmd.exe /K
-        }
-        return
-    }
-
-    if ($backend -eq "mintty" -or $backend -eq "cygwin") {
-        $cfg = Load-FoxConfig
-        $path = $null
-        if ($cfg.ContainsKey("shellPath")) {
-            $path = [string]$cfg["shellPath"]
-        }
-
-        if ([string]::IsNullOrWhiteSpace($path) -or -not (Test-Path $path)) {
-            $candidate = Find-BashCandidate
-            if ($null -ne $candidate) {
-                $path = $candidate.path
-            }
-        }
-
-        if ([string]::IsNullOrWhiteSpace($path) -or -not (Test-Path $path)) {
-            Write-Host "Cannot switch now: bash.exe not found."
-            return
-        }
-
-        $cmdDirUnix = $null
-        try {
-            $cmdDirUnix = (& $path -lc "cygpath -u '$cmdDirWin'" 2>$null | Select-Object -First 1).Trim()
-        } catch {
-            $cmdDirUnix = $null
-        }
-
-        if ([string]::IsNullOrWhiteSpace($cmdDirUnix) -or -not (Test-Path $bashInit)) {
-            Write-Host ("Switching now to bash (plain): " + $path)
-            & $path --login -i
-            return
-        }
-
-        $env:FOXTERM_CMD_PATH_UNIX = $cmdDirUnix
-        $env:FOXTERM_CMD_PATH_WIN = $cmdDirWin
-
-        $tmpInitWin = Join-Path $env:TEMP "foxterm-bash-init-runtime.sh"
-        try {
-            $content = [System.IO.File]::ReadAllText($bashInit)
-            $content = $content -replace "`r`n", "`n"
-            $content = $content -replace "`r", "`n"
-            $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
-            [System.IO.File]::WriteAllText($tmpInitWin, $content, $utf8NoBom)
-        } catch {
-            Write-Host "Cannot prepare bash init script. Falling back to plain bash."
-            & $path --login -i
-            return
-        }
-
-        $tmpInitUnix = $null
-        try {
-            $tmpInitUnix = (& $path -lc "cygpath -u '$tmpInitWin'" 2>$null | Select-Object -First 1).Trim()
-        } catch {
-            $tmpInitUnix = $null
-        }
-
-        if ([string]::IsNullOrWhiteSpace($tmpInitUnix)) {
-            Write-Host "Cannot resolve runtime init path in bash. Falling back to plain bash."
-            & $path --login -i
-            return
-        }
-
-        if ($runInMintty) {
-            $mintty = Find-MinttyCandidate
-            if ([string]::IsNullOrWhiteSpace($mintty)) {
-                Write-Host "mintty.exe not found. Falling back to in-tab bash."
-            } else {
-                Write-Host ("Opening mintty window: " + $mintty)
-                Write-Host "Current tab stays open; close it manually if not needed."
-                $minttyArgs = @(
-                    "-t", "FoxTerminal-mintty",
-                    "-o", "Sixel=true",
-                    "-e", $path, "--noprofile", "--rcfile", $tmpInitUnix, "-i"
-                )
-
-                $started = $false
-                try {
-                    # mintty launcher may exit quickly even when the window starts successfully.
-                    # Treat a successful Start-Process call as a successful launch to avoid double windows.
-                    Start-Process -FilePath $mintty -ArgumentList $minttyArgs -WorkingDirectory (Get-Location).Path | Out-Null
-                    $started = $true
-                } catch {
-                    $started = $false
-                }
-
-                if ($started) {
-                    return
-                }
-
-                Write-Host "mintty launch failed. Falling back to in-tab bash."
-            }
-        }
-
-        Write-Host ("Switching now to bash with Fox profile: " + $path)
-        & $path --noprofile --rcfile $tmpInitUnix -i
-        return
-    }
-}
-
-$cfg = Load-FoxConfig
-$currentBackend = if ($cfg.ContainsKey("shellBackend")) { [string]$cfg["shellBackend"] } else { "auto" }
-$currentPath = if ($cfg.ContainsKey("shellPath")) { [string]$cfg["shellPath"] } else { "<auto>" }
-
-$selected = $null
 if (-not [string]::IsNullOrWhiteSpace($Set)) {
-    $selected = $Set.Trim().ToLowerInvariant()
-} elseif ([Environment]::UserInteractive -and -not [Console]::IsInputRedirected) {
-    $options = @(
-        "auto (recommended)",
-        "windows (cmd)",
-        "mintty (auto-detect bash)",
-        "cygwin (force Cygwin bash)",
-        "cancel"
-    )
-
-    $choice = Select-Menu "FoxTerminal backend switch" $options
-    if ($choice -lt 0 -or $choice -eq 4) {
-        Write-Host "Cancelled."
-        return
-    }
-
-    $selected = switch ($choice) {
-        0 { "auto" }
-        1 { "windows" }
-        2 { "mintty" }
-        3 { "cygwin" }
-        default { "auto" }
-    }
-} else {
-    Write-Host "Non-interactive mode detected."
-    Write-Host "Use: term -Set auto|windows|mintty|cygwin"
+    $p = Get-ThemePalette
+    Write-Host ""
+    Write-Host (Color-Text (Get-WarnColor) "'term -Set' is gone. FoxTerminal now runs on Ghostty only.")
+    Write-Host (Color-Text $p.dim "  The mintty / Cygwin / cmd backends were removed in the Ghostty migration.")
+    Write-Host ""
+    Write-Host (Color-Text $p.accent2 "What replaced them:")
+    Write-Host "  term -Apply    reinstall the Ghostty config"
+    Write-Host "  term -Doctor   diagnose the setup"
+    Write-Host "  ctrl+shift+l   split right (was: interface / tmux)"
+    Write-Host "  ctrl+shift+j   split down"
+    Write-Host ""
     return
 }
 
-$selectedApp = if ([string]::IsNullOrWhiteSpace($App)) { "default" } else { $App.Trim().ToLowerInvariant() }
-if ($Now -and $selected -eq "mintty" -and $selectedApp -eq "default") {
-    $selectedApp = "mintty"
+if ($Path) {
+    $configPath = Get-GhosttyConfigPath
+    if ($configPath) { Write-Host $configPath }
+    return
 }
 
-$msg = Apply-Backend $selected
+if ($Status) { Show-Status; return }
+if ($Apply) { Invoke-Apply; return }
+if ($Edit) { Invoke-Edit; return }
+if ($New) { Invoke-NewWindow; return }
+if ($Doctor) { Invoke-Doctor; return }
 
-Write-Host ""
-Write-Host $msg
-Write-Host ("Current (before): shellBackend=" + $currentBackend + ", shellPath=" + $currentPath)
+if (-not ([Environment]::UserInteractive) -or [Console]::IsInputRedirected) {
+    Show-Status
+    Write-Host "Use: term [-Status] [-Apply] [-Edit] [-New] [-Doctor] [-Path]"
+    return
+}
 
-$newCfg = Load-FoxConfig
-$newBackend = if ($newCfg.ContainsKey("shellBackend")) { [string]$newCfg["shellBackend"] } else { "auto" }
-$newPath = if ($newCfg.ContainsKey("shellPath")) { [string]$newCfg["shellPath"] } else { "<auto>" }
-Write-Host ("Current (now):    shellBackend=" + $newBackend + ", shellPath=" + $newPath)
-Write-Host ""
-Write-Host "Restart FoxTerminalApp (or open a new app tab) to apply."
-Write-Host "Tip: use 'term -Set <backend> -Now' for immediate switch in this terminal."
-Write-Host "Tip: use '-App mintty' to open a real mintty window."
+$options = @(
+    "Status - binary, session, config paths",
+    "Apply - reinstall config from the repo",
+    "Edit - open the installed config",
+    "New window - launch Ghostty",
+    "Doctor - full diagnostics",
+    "cancel"
+)
 
-if ($Now) {
-    Write-Host ""
-    Enter-BackendNow $selected $selectedApp
+$choice = Select-Menu "FoxTerminal / Ghostty config" $options
+Clear-Host
+
+switch ($choice) {
+    0 { Show-Status }
+    1 { Invoke-Apply }
+    2 { Invoke-Edit }
+    3 { Invoke-NewWindow }
+    4 { Invoke-Doctor }
+    default { Write-Host "Cancelled." }
 }

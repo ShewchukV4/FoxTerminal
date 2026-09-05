@@ -186,3 +186,74 @@ function Ensure-AHK {
     Write-Host (Color-Text $p.dim "  Please install manually: https://www.autohotkey.com")
     return $null
 }
+
+function ConvertTo-AhkHotkey([string]$raw) {
+    if ([string]::IsNullOrWhiteSpace($raw)) { return "" }
+    $s = $raw.Trim()
+    if ($s -match '^[#!^+]+.+$' -and $s -notmatch '(?i)shift|alt|ctrl|control|win') {
+        return $s
+    }
+
+    $tokens = @($s -split '[+\-\s]+' | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+    $hasWin = $false
+    $hasShift = $false
+    $hasCtrl = $false
+    $hasAlt = $false
+    $key = ""
+    foreach ($t in $tokens) {
+        switch -Regex ($t) {
+            '^(?i)win(dows)?$' { $hasWin = $true; break }
+            '^(?i)shift$' { $hasShift = $true; break }
+            '^(?i)(ctrl|control)$' { $hasCtrl = $true; break }
+            '^(?i)alt$' { $hasAlt = $true; break }
+            default { $key = $t }
+        }
+    }
+    if ([string]::IsNullOrWhiteSpace($key)) { return $s }
+
+    $mods = ""
+    if ($hasWin) { $mods += "#" }
+    if ($hasShift) { $mods += "+" }
+    if ($hasCtrl) { $mods += "^" }
+    if ($hasAlt) { $mods += "!" }
+    if ($key.Length -eq 1) { $key = $key.ToLowerInvariant() }
+    return ($mods + $key)
+}
+
+function ConvertFrom-AhkHotkey([string]$ahk) {
+    if ([string]::IsNullOrWhiteSpace($ahk)) { return "" }
+    $s = $ahk.Trim()
+    if ($s -match '(?i)shift|alt|ctrl|control|win') {
+        $tokens = @($s -split '[+\-\s]+' | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+        $out = New-Object System.Collections.Generic.List[string]
+        foreach ($t in $tokens) {
+            switch -Regex ($t) {
+                '^(?i)win(dows)?$' { $out.Add("Win"); break }
+                '^(?i)shift$' { $out.Add("Shift"); break }
+                '^(?i)(ctrl|control)$' { $out.Add("Ctrl"); break }
+                '^(?i)alt$' { $out.Add("Alt"); break }
+                default {
+                    if ($t.Length -eq 1) { $out.Add($t.ToUpperInvariant()) }
+                    else { $out.Add((Get-Culture).TextInfo.ToTitleCase($t.ToLowerInvariant())) }
+                }
+            }
+        }
+        return ($out -join "+")
+    }
+
+    $parts = New-Object System.Collections.Generic.List[string]
+    $i = 0
+    while ($i -lt $s.Length) {
+        $c = $s[$i]
+        if ($c -eq [char]'#') { $parts.Add("Win"); $i++; continue }
+        if ($c -eq [char]'+') { $parts.Add("Shift"); $i++; continue }
+        if ($c -eq [char]'^') { $parts.Add("Ctrl"); $i++; continue }
+        if ($c -eq [char]'!') { $parts.Add("Alt"); $i++; continue }
+        break
+    }
+    $key = $s.Substring($i)
+    if ([string]::IsNullOrWhiteSpace($key)) { return ($parts -join "+") }
+    if ($key.Length -eq 1) { $parts.Add($key.ToUpperInvariant()) }
+    else { $parts.Add((Get-Culture).TextInfo.ToTitleCase($key.ToLowerInvariant())) }
+    return ($parts -join "+")
+}

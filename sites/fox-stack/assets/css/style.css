@@ -13,10 +13,10 @@
   --board-bg: #04060e;
   --shell-border: color-mix(in srgb, var(--accent) 28%, var(--surface2));
   --scan-op: 0.24;
-  --font-display: 'Orbitron', sans-serif;
-  --font-body: 'Exo 2', sans-serif;
+  --font-display: 'Space Grotesk', Inter, sans-serif;
+  --font-body: 'Inter', system-ui, sans-serif;
   --font-mono: 'Space Mono', monospace;
-  --radius: 10px;
+  --radius: 14px;
 }
 
 .theme-fox {
@@ -297,7 +297,7 @@ body {
   z-index: 2;
   max-width: 940px;
   margin: 0 auto;
-  padding: 20px 16px 56px;
+  padding: 52px 16px 56px;
 }
 
 header { text-align: center; margin-bottom: 16px; padding-top: 6px; }

@@ -41,6 +41,12 @@ RegisterCustomHotkeys(g_Config.bindings)
 ; Shift+Ctrl+Space → hide FoxTerminal (keeps process running in background)
 +^Space:: HideFoxTerm()
 
+; Shift+Alt+T      → show / launch FoxTerminal
++!t:: ShowFoxTerm()
+
+; Shift+Ctrl+Alt+T → close FoxTerminal (exit the Ghostty window)
++^!t:: CloseFoxTerm()
+
 ; ── Core helpers ─────────────────────────────────────────────────────────────
 
 ResolveBrowserExe() {
@@ -113,34 +119,62 @@ CloseBrowserTabWith(titlePart) {
     }
 }
 
+; FoxTerminal runs in Ghostty, so these helpers drive the Ghostty window.
+; Ghostty also has a native drop-down surface on ctrl+backquote
+; (toggle_quick_terminal); these hotkeys act on the normal window instead.
+FoxTermExeName() {
+    global g_FoxExe
+    if !g_FoxExe
+        return "ghostty.exe"
+    SplitPath g_FoxExe, &name
+    return name
+}
+
 LaunchFoxTermHidden(exePath) {
-    if WinExist("ahk_exe FoxTerminal.UI.exe")
+    exeName := FoxTermExeName()
+    if WinExist("ahk_exe " exeName)
         return
     if !exePath || !FileExist(exePath)
         return
     Run exePath
-    if WinWait("ahk_exe FoxTerminal.UI.exe",, 6)
-        WinHide "ahk_exe FoxTerminal.UI.exe"
+    if WinWait("ahk_exe " exeName,, 6)
+        WinHide "ahk_exe " exeName
 }
 
 ShowFoxTerm() {
     global g_FoxExe
-    if WinExist("ahk_exe FoxTerminal.UI.exe") {
-        WinShow    "ahk_exe FoxTerminal.UI.exe"
-        WinActivate "ahk_exe FoxTerminal.UI.exe"
-        WinRestore  "ahk_exe FoxTerminal.UI.exe"
+    exeName := FoxTermExeName()
+    if WinExist("ahk_exe " exeName) {
+        WinShow     "ahk_exe " exeName
+        WinActivate "ahk_exe " exeName
+        WinRestore  "ahk_exe " exeName
         Sleep 80
     } else if g_FoxExe && FileExist(g_FoxExe) {
         Run g_FoxExe
     } else {
-        TrayTip "FoxTerminal not found",
-            "Build the app or set foxterm_exe in hk_bindings.json"
+        TrayTip "Ghostty not found",
+            "Install winghostty, or set foxterm_exe in hk_bindings.json"
     }
 }
 
 HideFoxTerm() {
-    if WinExist("ahk_exe FoxTerminal.UI.exe")
-        WinHide "ahk_exe FoxTerminal.UI.exe"
+    exeName := FoxTermExeName()
+    if WinExist("ahk_exe " exeName)
+        WinHide "ahk_exe " exeName
+}
+
+CloseFoxTerm() {
+    closed := false
+    for exeName in ["winghostty.exe", "ghostty.exe"] {
+        while WinExist("ahk_exe " exeName) {
+            WinClose "ahk_exe " exeName
+            closed := true
+            if !WinWaitClose("ahk_exe " exeName,, 2)
+                WinKill "ahk_exe " exeName
+        }
+    }
+    if !closed
+        TrayTip "FoxTerminal", "No Ghostty window to close"
 }
 
 ; ── Config ───────────────────────────────────────────────────────────────────
@@ -195,13 +229,33 @@ LoadConfig() {
 ResolveFoxExe(configured) {
     if configured != "" && FileExist(configured)
         return configured
-    candidates := [
-        g_ScriptDir "\..\FoxTerminalApp\FoxTerminal.UI\bin\Debug\net9.0\FoxTerminal.UI.exe",
-        g_ScriptDir "\..\FoxTerminalApp\FoxTerminal.UI\bin\Release\net9.0\FoxTerminal.UI.exe"
-    ]
-    for c in candidates
-        if FileExist(c)
-            return c
+
+    for exeName in ["ghostty.exe", "winghostty.exe"] {
+        try {
+            full := ""
+            if RegExMatch(exeName, "i)^winghostty") {
+                localAppData := EnvGet("LOCALAPPDATA")
+                candidates := [
+                    localAppData "\Programs\winghostty\winghostty.exe",
+                    localAppData "\winghostty\bin\winghostty.exe",
+                    localAppData "\Microsoft\WinGet\Links\winghostty.exe",
+                    EnvGet("ProgramFiles") "\winghostty\winghostty.exe",
+                    EnvGet("USERPROFILE") "\scoop\apps\winghostty\current\winghostty.exe"
+                ]
+                for c in candidates
+                    if FileExist(c)
+                        return c
+            }
+            ; Fall back to PATH lookup.
+            RunWait A_ComSpec ' /c where ' exeName ' > "' A_Temp '\foxhk_where.txt" 2>nul',, "Hide"
+            if FileExist(A_Temp "\foxhk_where.txt") {
+                found := Trim(StrSplit(FileRead(A_Temp "\foxhk_where.txt"), "`n", "`r")[1])
+                FileDelete(A_Temp "\foxhk_where.txt")
+                if found != "" && FileExist(found)
+                    return found
+            }
+        }
+    }
     return ""
 }
 
@@ -212,7 +266,7 @@ MakeOpenFn(target, action) {
     return (*) => CustomOpen(target, action)
 }
 MakeCloseFn(match) {
-    return (*) => CloseFirefoxTabWith(match)
+    return (*) => CloseBrowserTabWith(match)
 }
 
 RegisterCustomHotkeys(bindings) {
@@ -236,7 +290,7 @@ CustomOpen(target, action) {
         else
             Run target
     } else {
-        OpenInFirefox(target)
+        OpenInBrowser(target)
     }
 }
 
@@ -248,8 +302,11 @@ ShowInfoMsg(*) {
         "  Shift+Ctrl+Y     → Close YouTube tab`n"
         "  Shift+Alt+F      → Firefox`n"
         "  Shift+Alt+M      → YouTube Music`n"
-        "  Shift+Alt+Space  → Show FoxTerminal`n"
-        "  Shift+Ctrl+Space → Hide FoxTerminal`n`n"
+        "  Shift+Alt+Space  → Show FoxTerminal (Ghostty)`n"
+        "  Shift+Ctrl+Space → Hide FoxTerminal (Ghostty)`n"
+        "  Shift+Alt+T      → Show FoxTerminal (Ghostty)`n"
+        "  Shift+Ctrl+Alt+T → Close FoxTerminal (Ghostty)`n`n"
+        "Ghostty's own drop-down terminal: Ctrl+``  (system-wide)`n`n"
         "Custom bindings: edit hk_bindings.json`n"
         "Or run  foxinfo  in the terminal.",
         "FoxTerminal Hotkeys"

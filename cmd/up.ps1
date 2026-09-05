@@ -7,7 +7,11 @@ $paths = Initialize-NotesPaths $PSScriptRoot $env:FOXTERM_USER
 $cwd = Get-NoteSessionCwd $paths.NotesRoot $paths.FilesHome
 
 if ($cwd -ieq $paths.NotesRoot) {
-    Write-Host "Already at notes root." -ForegroundColor DarkYellow
+    if (Test-WaiPinEnabled) {
+        Show-Wai $cwd $paths.NotesRoot $paths.User
+    } else {
+        Write-Host "Already at notes root." -ForegroundColor DarkYellow
+    }
     return
 }
 

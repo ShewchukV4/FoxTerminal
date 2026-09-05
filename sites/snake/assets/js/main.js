@@ -304,7 +304,7 @@ function stopGame() {
   document.getElementById('start-btn').style.display  = '';
   document.getElementById('pause-btn').style.display  = 'none';
   document.getElementById('stop-btn').style.display   = 'none';
-  showOverlay('FOX SNAKE', false);
+  showOverlay('SERPENT FOX', false);
 }
 
 function pauseGame() {

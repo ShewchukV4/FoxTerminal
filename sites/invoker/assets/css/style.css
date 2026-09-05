@@ -6,14 +6,17 @@
   --text: #f4efff;
   --muted: #a79bb8;
   --gold: #f3b45b;
+  --accent: #f3b45b;
+  --accent2: #8bd8ff;
+  --accent3: #ff8757;
   --ice: #8bd8ff;
   --storm: #b893ff;
   --fire: #ff8757;
   --good: #65f0a5;
   --bad: #ff5c7a;
   --radius: 22px;
-  --font-display: "Orbitron", sans-serif;
-  --font-body: "Exo 2", sans-serif;
+  --font-display: "Space Grotesk", Inter, sans-serif;
+  --font-body: "Inter", system-ui, sans-serif;
 }
 
 * {
@@ -34,15 +37,7 @@ body {
 }
 
 body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
-  background-size: 48px 48px;
-  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.75), transparent);
+  display: none;
 }
 
 button {
@@ -52,11 +47,11 @@ button {
 
 .bg-orb {
   position: fixed;
-  width: 28rem;
-  height: 28rem;
+  width: 34rem;
+  height: 34rem;
   border-radius: 999px;
-  filter: blur(38px);
-  opacity: 0.22;
+  filter: blur(90px);
+  opacity: 0.34;
   pointer-events: none;
 }
 
@@ -77,7 +72,7 @@ button {
   z-index: 1;
   width: min(1180px, calc(100% - 32px));
   margin: 0 auto;
-  padding: 34px 0 56px;
+  padding: 52px 0 56px;
 }
 
 .hero {
@@ -98,15 +93,22 @@ button {
 
 .hero h1 {
   font-family: var(--font-display);
-  font-size: clamp(2.5rem, 8vw, 6.8rem);
-  font-weight: 900;
-  letter-spacing: 0.05em;
-  line-height: 0.96;
-  text-shadow: 0 0 32px rgba(243, 180, 91, 0.28);
+  font-size: clamp(2.2rem, 5.4vw, 3.6rem);
+  font-weight: 700;
+  letter-spacing: -0.045em;
+  line-height: 1.05;
+  text-shadow: none;
+  background: linear-gradient(120deg, #fff 10%, var(--gold) 55%, var(--fire) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
-
 .hero h1 span {
-  color: var(--gold);
+  background: linear-gradient(120deg, var(--gold), var(--fire));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
 }
 
 .hero p {

@@ -10,12 +10,22 @@ const pillEl = document.getElementById("connection-pill");
 
 const tabButtons = Array.from(document.querySelectorAll(".tab"));
 const panels = {
+  chat: document.getElementById("panel-chat"),
   terminal: document.getElementById("panel-terminal"),
   sessions: document.getElementById("panel-sessions"),
   themes: document.getElementById("panel-themes"),
   translate: document.getElementById("panel-translate"),
   settings: document.getElementById("panel-settings")
 };
+
+const chatMessagesEl = document.getElementById("chat-messages");
+const chatFormEl = document.getElementById("chat-form");
+const chatInputEl = document.getElementById("chat-input");
+const chatSendBtn = document.getElementById("chat-send-btn");
+const chatClearBtn = document.getElementById("chat-clear-btn");
+const chatStatusEl = document.getElementById("chat-status");
+
+let chatBusy = false;
 
 const translateLangsEl = document.getElementById("translate-langs");
 const translateSourceEl = document.getElementById("translate-source");
@@ -292,7 +302,7 @@ async function executeCommand(line) {
 }
 
 function switchTab(tabName) {
-  const name = panels[tabName] ? tabName : "terminal";
+  const name = panels[tabName] ? tabName : "chat";
   for (const button of tabButtons) {
     const on = button.dataset.tab === name;
     button.classList.toggle("active", on);
@@ -300,6 +310,9 @@ function switchTab(tabName) {
   }
   for (const [key, panel] of Object.entries(panels)) {
     panel.classList.toggle("active", key === name);
+  }
+  if (name === "chat" && chatInputEl) {
+    chatInputEl.focus();
   }
   if (name === "terminal") {
     inputEl.focus();
@@ -309,6 +322,96 @@ function switchTab(tabName) {
   }
   if (name === "themes") {
     renderThemesGrid();
+  }
+}
+
+function renderChatMessages(messages) {
+  if (!chatMessagesEl) {
+    return;
+  }
+  chatMessagesEl.textContent = "";
+  const list = Array.isArray(messages) ? messages : [];
+  if (list.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "chat-empty";
+    empty.textContent = "Почни чат з Frederik: запитай щось або дай команду браузеру.\nНаприклад: «створи нову вкладку ютуб мюзік а не перейди на вже існуючу».";
+    chatMessagesEl.appendChild(empty);
+    return;
+  }
+  for (const item of list) {
+    const bubble = document.createElement("div");
+    bubble.className = `chat-bubble ${item.role === "assistant" ? "assistant" : "user"}`;
+    const meta = document.createElement("span");
+    meta.className = "chat-meta";
+    meta.textContent = item.role === "assistant" ? "Frederik" : "Ти";
+    bubble.appendChild(meta);
+    const body = document.createElement("div");
+    body.textContent = String(item.content || "");
+    bubble.appendChild(body);
+    chatMessagesEl.appendChild(bubble);
+  }
+  chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+}
+
+async function loadChatHistory() {
+  try {
+    const history = await browser.runtime.sendMessage({ type: "getAiChatHistory" });
+    renderChatMessages(history);
+  } catch (error) {
+    if (chatStatusEl) {
+      chatStatusEl.textContent = `Не вдалося завантажити історію: ${error.message || error}`;
+    }
+  }
+}
+
+async function sendChatMessage() {
+  if (!chatInputEl || chatBusy) {
+    return;
+  }
+  const text = chatInputEl.value.trim();
+  if (!text) {
+    return;
+  }
+  chatBusy = true;
+  chatInputEl.value = "";
+  if (chatSendBtn) {
+    chatSendBtn.disabled = true;
+  }
+  if (chatStatusEl) {
+    chatStatusEl.textContent = "Думаю…";
+  }
+
+  // Optimistic user bubble
+  try {
+    const current = await browser.runtime.sendMessage({ type: "getAiChatHistory" });
+    renderChatMessages([].concat(current || [], [{ role: "user", content: text }]));
+  } catch (_) {
+    renderChatMessages([{ role: "user", content: text }]);
+  }
+
+  try {
+    const result = await browser.runtime.sendMessage({
+      type: "runAiChat",
+      input: text
+    });
+    await loadChatHistory();
+    if (chatStatusEl) {
+      const mode = result && result.mode === "action" ? "дія" : "відповідь";
+      chatStatusEl.textContent = result && result.ok ? `Готово (${mode}).` : "Щось пішло не так.";
+    }
+  } catch (error) {
+    if (chatStatusEl) {
+      chatStatusEl.textContent = `Помилка: ${error.message || error}`;
+    }
+    await loadChatHistory();
+  } finally {
+    chatBusy = false;
+    if (chatSendBtn) {
+      chatSendBtn.disabled = false;
+    }
+    if (chatInputEl) {
+      chatInputEl.focus();
+    }
   }
 }
 
@@ -715,6 +818,40 @@ for (const button of tabButtons) {
     switchTab(button.dataset.tab);
   });
 }
+
+if (chatFormEl) {
+  chatFormEl.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    await sendChatMessage();
+  });
+}
+
+if (chatInputEl) {
+  chatInputEl.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      sendChatMessage();
+    }
+  });
+}
+
+if (chatClearBtn) {
+  chatClearBtn.addEventListener("click", async () => {
+    try {
+      await browser.runtime.sendMessage({ type: "clearAiChatHistory" });
+      renderChatMessages([]);
+      if (chatStatusEl) {
+        chatStatusEl.textContent = "Чат очищено.";
+      }
+    } catch (error) {
+      if (chatStatusEl) {
+        chatStatusEl.textContent = `Не вдалося очистити: ${error.message || error}`;
+      }
+    }
+  });
+}
+
+loadChatHistory().catch(() => {});
 
 translateCopyBtn.addEventListener("click", async () => {
   const text = translateResultEl.value.trim();

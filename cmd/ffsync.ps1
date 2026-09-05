@@ -98,10 +98,12 @@ function Get-RunningDaemonPid {
         $procId = [int]$raw
         $proc = Get-Process -Id $procId -ErrorAction Stop
         if ($proc.HasExited) {
+            Remove-Item -Path $pidPath -Force -ErrorAction SilentlyContinue
             return $null
         }
         return $procId
     } catch {
+        Remove-Item -Path $pidPath -Force -ErrorAction SilentlyContinue
         return $null
     }
 }
@@ -234,7 +236,7 @@ function Test-CommandIsInteractive([string]$ScriptPath) {
     foreach ($path in @($inspectPaths | Sort-Object -Unique)) {
         try {
             $raw = Get-Content -Path $path -Raw -ErrorAction Stop
-            if ($raw -match '\[Console\]::ReadKey|Read-Host|KeyAvailable|Select-Menu|Invoke-[A-Za-z0-9_-]*Menu|Invoke-[A-Za-z0-9_-]*Hotkeys|Press any key|Ctrl\+E to exit|tmux\s+attach-session|dialog\s+--|mintty|--noprofile\s+--rcfile\s+.+\s+-i') {
+            if ($raw -match '\[Console\]::ReadKey|Read-Host|KeyAvailable|Select-Menu|Invoke-[A-Za-z0-9_-]*Menu|Invoke-[A-Za-z0-9_-]*Hotkeys|Press any key|Ctrl\+E to exit|dialog\s+--') {
                 return $true
             }
         } catch {}
@@ -537,6 +539,9 @@ function Get-DaemonStatus {
 }
 
 function Send-CommandRequest([string]$Line, [string]$Source = "terminal-client", [int]$TimeoutMs = 30000) {
+    if (-not (Test-DaemonRunning)) {
+        Start-Daemon
+    }
     if (-not (Test-DaemonRunning)) {
         throw "ffsync daemon is offline. Run: ffsync start"
     }

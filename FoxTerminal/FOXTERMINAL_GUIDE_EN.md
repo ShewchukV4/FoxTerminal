@@ -15,19 +15,30 @@ FoxTerminal is a command-driven environment built from scripts, profiles, and he
 - local notes with folder navigation;
 - AI commands for one-shot prompts and interactive chat;
 - visual modes/themes (`noir`, `pride`, `arthas`, `dnote`, `spider`);
-- window layout control and terminal backend switching;
+- window layout control and native Ghostty splits;
 - config snapshots (`build`) and shareable packaging (`foxpack`).
+
+FoxTerminal targets **Ghostty and only Ghostty**. Upstream Ghostty has no Windows app
+yet, so on Windows it runs on [winghostty](https://github.com/amanthanvi/winghostty) —
+the same terminal core on a native Win32 runtime, reading the identical config format —
+driving PowerShell. On Linux/macOS it is the official Ghostty build driving bash. Every
+visual setting lives in `FoxTerminal/ghostty/config`.
 
 ---
 
 ## 2) Quick Start (10 Steps)
 
-1. Open PowerShell in the project root.
-2. Check dependencies:
-   - `foxdeps -Check`
-3. Install missing dependencies if needed:
-   - `foxdeps -Install`
-4. Open full help menu:
+1. Install Ghostty (`winget install AmanThanvi.winghostty` on Windows,
+   `brew install --cask ghostty` on macOS, your package manager on Linux).
+2. Install the FoxTerminal config:
+   - `powershell -NoProfile -ExecutionPolicy Bypass -File .\FoxTerminal\install.ps1`
+   - or `bash ./FoxTerminal/install.sh`
+3. Open Ghostty from the new shortcut and confirm the setup:
+   - `chek`
+   - `term -Doctor`
+   - `foxtest -Group info` to actually run the commands and see them work
+4. Check and install remaining dependencies, then open the help menu:
+   - `foxdeps -Check`, `foxdeps -Install`
    - `foxhelp`
 5. Register user:
    - `nuser myname mypass`
@@ -51,7 +62,9 @@ Main folders:
 
 - `cmd/` - user-facing commands (`.ps1`, `.bat`, `.cmd`);
 - `sites/` - local mini-sites and site registry;
-- `FoxTerminal/` - install/config/theme files;
+- `FoxTerminal/` - install scripts and theme files;
+- `FoxTerminal/ghostty/` - the Ghostty config plus the shell bootstrap scripts
+  (`config`, `foxterminal-boot.ps1`, `foxterminal-boot.sh`);
 - `builds/` - configuration snapshots and installer assets.
 
 Notes:
@@ -336,6 +349,23 @@ Notes:
 - Purpose: show Spider-Noir panel mode (noir context).
 - Usage: `spider`
 
+### `shader`
+- Purpose: Ghostty glass shaders for the current theme. On by default.
+- Usage: `shader [on|off|status|toggle]`
+- Examples:
+  - `shader` — show which `.glsl` is active
+  - `shader off` — disable glass for every theme
+  - `shader on` — turn it back on
+  - `ctrl+shift+o` — toggle
+
+### `foxos`
+- Purpose: the terminal theme paints the Windows wallpaper and window accent.
+- Usage: `foxos [on|off|status|apply]`
+- Examples:
+  - `foxos on` — enable (current wallpaper is saved)
+  - `foxos off` — restore the previous desktop
+  - `sw` / `dnote` / `arthas` — while FoxOS is on, the desktop follows the theme
+
 ### `frederik`
 - Purpose: voice/audio reactive waveform visualizer.
 - Usage:
@@ -380,12 +410,14 @@ Notes:
 - Usage: `fday [location]`
 
 ### `chek`
-- Purpose: detect current terminal backend environment.
+- Purpose: verify you are inside Ghostty and report shell, host and env signals.
 - Usage: `chek`
 
 ### `sixel`
-- Purpose: check SIXEL readiness in mintty.
-- Usage: `sixel`
+- Purpose: check inline-image support. Ghostty implements the Kitty graphics protocol
+  (not SIXEL), so this reports the session state, `image-storage-limit`, and which
+  renderers are installed (`chafa`, `timg`, `kitten`).
+- Usage: `sixel [-Test]`
 
 ### `foxscan`
 - Purpose: heuristic suspicious script scanner.
@@ -406,24 +438,26 @@ Notes:
 
 ---
 
-## 4.9 Interface, Backend, Layout
-
-### `interface-deps`
-- Purpose: install/check dependencies for interface mode.
-- Usage: `interface-deps [-Install|-Check]`
+## 4.9 Ghostty, Splits, Layout
 
 ### `interface`
-- Purpose: launch split UI mode (tmux/mintty/gui options).
-- Usage: `interface [-TwoWindows] [-Terminal] [-Gui]`
+- Purpose: create Ghostty splits and list the split keybinds. Splits are native to
+  Ghostty, so no tmux, mintty or bash is involved anymore.
+- Usage: `interface [-Split down|right|auto] [-TwoWindows] [-Keys] [-Gui]`
 - Examples:
-  - `interface`
-  - `interface -TwoWindows`
-  - `interface -Gui`
+  - `interface` — interactive menu
+  - `interface -Split right`
+  - `interface -Keys` — print the keybind reference
+  - `interface -Gui` — Windows GUI window-arranger fallback
 
 ### `term`
-- Purpose: set terminal backend (auto/windows/mintty/cygwin).
-- Usage: `term [-Set auto|windows|mintty|cygwin] [-Now] [-App mintty]`
-- Example: `term -Set mintty -Now`
+- Purpose: manage the FoxTerminal Ghostty config.
+- Usage: `term [-Status] [-Apply] [-Edit] [-New] [-Doctor]`
+- Examples:
+  - `term -Status` — config path, Ghostty version, whether this is a Ghostty session
+  - `term -Apply` — reinstall `FoxTerminal/ghostty/config` (backs up the old one)
+  - `term -Edit` — open the config in your editor
+  - `term -Doctor` — check binary, config, font, shell integration
 
 ### `apps`
 - Purpose: arrange up to 4 app windows.
@@ -441,6 +475,7 @@ Notes:
 ### `foxhotkeys`
 - Purpose: global hotkey daemon.
 - Usage: `foxhotkeys [-Stop] [-Restart] [-Status]`
+- FoxTerminal: `Shift+Alt+T` show, `Shift+Ctrl+Alt+T` close (Space variants still show/hide).
 
 ### `foxinfo`
 - Purpose: manage hotkey mappings and FoxTerminal path config.
@@ -476,6 +511,22 @@ Notes:
 ### `foxdeps`
 - Purpose: check/install FoxTerminal dependencies.
 - Usage: `foxdeps [-Check] [-Install]`
+
+### `foxtest`
+- Purpose: smoke-test every FoxTerminal command and report what broke.
+- Usage: `foxtest [-List] [-Quiet] [-Only <names>] [-Group all|info|tui|bat] [-Timeout <s>]`
+- How it decides what "working" means:
+  - commands that should finish on their own are run and must exit cleanly
+  - menu-driven commands only have to draw their interface and reach the point where
+    they wait for a key
+  - commands that would change settings, close the terminal, or need the ffsync daemon
+    are skipped on purpose; `foxtest -List` shows the reason for each
+- Examples:
+  - `foxtest` - full run, roughly 6 minutes
+  - `foxtest -Group info` - only the commands that exit on their own
+  - `foxtest -Only chek,term,sixel` - just those three
+- Notes: adding a command to `cmd\` without listing it makes `foxtest` report it as not
+  covered, so the manifest at the top of `cmd\foxtest.ps1` stays in sync.
 
 ### `foxhelp`
 - Purpose: interactive help menu.
@@ -556,6 +607,46 @@ Recommended:
 
 ---
 
+## 7.5) Ghostty Features You Get for Free
+
+Everything below is already configured in `FoxTerminal/ghostty/config`.
+
+| Feature | Keys | What it does |
+|---------|------|--------------|
+| Quick terminal | `ctrl+backquote` (global) or `ctrl+shift+backquote` | Quake-style drop-down from the top of the screen, 45% height, autohides on blur |
+| Splits | `ctrl+shift+enter` / `j` / `l` | Native panes, no tmux; unfocused panes dim to 85% |
+| Split zoom | `ctrl+shift+z` | Expand the focused pane to the whole window and back |
+| Equalize splits | `ctrl+shift+e` | Reset all panes to equal size |
+| Resize split | `ctrl+alt+arrows` | Resize the focused pane by 40 pixels |
+| Jump to prompt | `ctrl+shift+up` / `down` | Hop between prompts using OSC 133 shell integration |
+| Scrollback search | `ctrl+shift+f` | Search history with FoxNight-colored highlights |
+| Scrollback to file | `ctrl+shift+u` | Dump the whole 32 MB buffer to a file and open it |
+| Command palette | `ctrl+shift+p` | FoxTerminal commands registered as palette entries |
+| Terminal inspector | `ctrl+shift+i` | Live VT debugger: escape sequences, cells, fonts, renderer stats |
+| Config reload | `ctrl+shift+comma` | Apply config edits without restarting |
+| Fox shortcuts | `ctrl+shift+h/k/s/g` | Run `foxhelp`, `chek`, `sw`, `term` |
+
+Passive features that need no keys: Kitty graphics for inline images (`sixel` reports the
+state, `chafa`/`timg` render), desktop notifications when a long command finishes while
+unfocused, OSC 9;4 progress bars in the title and taskbar, `background-opacity 0.92` with
+a 20px blur, Nerd Font ligatures via `calt`/`liga`, paste protection for suspicious
+multi-line text, `ssh-terminfo` installing `xterm-ghostty` on remote hosts, and
+`window-save-state always` restoring the session after a restart.
+
+Platform caveats worth knowing:
+
+- The global `ctrl+backquote` works on macOS and on some Linux compositors. On Windows the
+  system-wide hotkey comes from the `foxhotkeys` AHK daemon (`Shift+Alt+T` show,
+  `Shift+Ctrl+Alt+T` close; Space variants still show/hide), while
+  `ctrl+shift+backquote` always works from inside Ghostty.
+- On Linux the quick terminal requires Wayland with `wlr-layer-shell-v1`, so it is
+  unavailable on GNOME.
+- Tabs, the `gtk-*` keys and `window-titlebar-*` are GTK-only. macOS and Windows silently
+  ignore them.
+- `auto-update` and `quick-terminal-screen` are macOS-only.
+
+---
+
 ## 8) Security and Data Hygiene
 
 1. Do not store plaintext secrets in notes.
@@ -579,11 +670,16 @@ Recommended:
   - `ollama serve`
   - `ollama pull qwen3-vl`
 
-### `interface` mode fails
-- Run: `interface-deps -Check`
-- If `tmux` is missing, try:
-  - `interface -TwoWindows`
-  - or `interface -Gui`
+### Splits or keybinds do nothing
+- Confirm you are in Ghostty: `chek`. Splits and keybinds come from Ghostty itself, so
+  they are unavailable in any other terminal.
+- Confirm the config is installed: `term -Status`, then `term -Apply` if it is missing.
+- Reload after edits: `ctrl+shift+,`.
+- Diagnose everything at once: `term -Doctor`.
+
+### Glyphs render as boxes
+- A Nerd Font is missing. Run `foxdeps -Install` or set `font-family` in the config to a
+  font you actually have, then `ctrl+shift+,`.
 
 ### Firefox integration mismatch
 - Test basic open:
@@ -646,14 +742,14 @@ Recommended:
 ### System/Network
 - `wifi`, `reconnect`, `ip`, `weather`, `netping`, `disk`, `ftime`, `fday`, `chek`, `sixel`
 
-### Interface/Terminal
-- `term`, `interface`, `interface-deps`, `apps`, `appbind`, `clear`, `texit`
+### Ghostty/Terminal
+- `term`, `chek`, `interface`, `apps`, `appbind`, `clear`, `texit`
 
 ### Themes
 - `sw`, `themes`, `noir`, `dnote`, `apple`, `pride`, `arthas`, `spider`, `frederik`
 
 ### Service
-- `foxscan`, `foxbg`, `foxdeps`, `foxreset`, `foxhelp`, `build`, `foxpack`, `foxhotkeys`, `foxinfo`
+- `foxscan`, `foxbg`, `foxdeps`, `foxtest`, `foxreset`, `foxhelp`, `build`, `foxpack`, `foxhotkeys`, `foxinfo`
 
 ---
 

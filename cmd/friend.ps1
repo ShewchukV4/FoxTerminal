@@ -689,7 +689,7 @@ function Show-RepoSummary {
     Write-Host "Repo: $root" -ForegroundColor DarkGray
     Write-Host "Key folders:" -ForegroundColor DarkGray
     Write-Host "  cmd\           -> FoxTerminal commands (.ps1/.bat), incl. foxhelp, friend, ff, ytm/sp tools" -ForegroundColor DarkGray
-    Write-Host "  FoxTerminal\    -> portable Windows Terminal setup + install scripts" -ForegroundColor DarkGray
+    Write-Host "  FoxTerminal\    -> portable Ghostty config + install scripts" -ForegroundColor DarkGray
     Write-Host "  FoxTerminalApp\ -> Avalonia UI terminal app (C#/.NET)" -ForegroundColor DarkGray
     Write-Host "  FireFoxBot\     -> .NET Firefox watcher (opened via ffbot)" -ForegroundColor DarkGray
     Write-Host "" -ForegroundColor DarkGray
@@ -794,6 +794,12 @@ Write-Host ""
 $commandToRunAfterExit = $null
 while ($true) {
     $inputText = Read-Host "YOU"
+    # Read-Host returns $null once stdin reaches EOF (piped or closed input). Without
+    # this guard the loop would spin forever throwing on .Trim().
+    if ($null -eq $inputText) {
+        Write-Host "Session ended."
+        break
+    }
     $inputTrim = $inputText.Trim()
     if ($inputTrim -ceq "exitt") {
         Write-Host "Session ended."

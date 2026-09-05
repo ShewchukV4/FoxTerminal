@@ -1,0 +1,336 @@
+/* Fox playground visual layer — load last. Hub-like glass + orbs. */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap");
+
+.scanlines,
+#scanlines {
+  display: none !important;
+}
+
+body::after {
+  display: none !important;
+}
+
+#particle-canvas,
+#bg-canvas,
+#bgCanvas {
+  opacity: 0.18 !important;
+}
+
+.orbs {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+.orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(100px);
+}
+.orb-a {
+  width: 620px;
+  height: 620px;
+  background: radial-gradient(circle, var(--accent, var(--gold, #7c5cff)) 0%, transparent 68%);
+  top: -190px;
+  left: -180px;
+  opacity: 0.55;
+  animation: foxOrbA 18s ease-in-out infinite;
+}
+.orb-b {
+  width: 520px;
+  height: 520px;
+  background: radial-gradient(circle, var(--accent2, var(--gold, #24d6c8)) 0%, transparent 68%);
+  bottom: -160px;
+  right: -140px;
+  opacity: 0.42;
+  animation: foxOrbB 15s ease-in-out infinite;
+}
+.orb-c {
+  width: 380px;
+  height: 380px;
+  background: radial-gradient(circle, var(--accent3, var(--fire, #ffba4a)) 0%, transparent 68%);
+  top: 38%;
+  left: 48%;
+  opacity: 0.28;
+  animation: foxOrbC 22s ease-in-out infinite;
+}
+@keyframes foxOrbA {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(44px, 32px); }
+}
+@keyframes foxOrbB {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(-34px, -42px); }
+}
+@keyframes foxOrbC {
+  0%, 100% { transform: translate(0, 0); }
+  33% { transform: translate(22px, -28px); }
+  66% { transform: translate(-18px, 22px); }
+}
+
+.chrome {
+  position: fixed;
+  top: 14px;
+  left: 18px;
+  right: 18px;
+  z-index: 80;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  pointer-events: none;
+}
+.chrome > * { pointer-events: auto; }
+
+.hub-link {
+  font-family: "Space Grotesk", Inter, system-ui, sans-serif;
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: var(--text, #eef0fb);
+  padding: 9px 16px;
+  border: 1px solid color-mix(in srgb, var(--text, #fff) 12%, transparent);
+  background: color-mix(in srgb, var(--surface, #12121a) 55%, transparent);
+  backdrop-filter: blur(16px);
+  border-radius: 999px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
+  transition: color 0.2s, border-color 0.2s, transform 0.2s, background 0.2s;
+}
+.hub-link:hover {
+  color: var(--accent, var(--gold, #c4b5fd));
+  border-color: var(--accent, var(--gold, #a78bfa));
+  transform: translateY(-1px);
+}
+
+.lang-toggle {
+  display: flex !important;
+  overflow: hidden;
+  border-radius: 999px !important;
+  border: 1px solid color-mix(in srgb, var(--text, #fff) 12%, transparent) !important;
+  background: color-mix(in srgb, var(--surface, #12121a) 55%, transparent) !important;
+  backdrop-filter: blur(16px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
+}
+.lang-toggle button {
+  padding: 8px 14px !important;
+  border: 0 !important;
+  background: transparent !important;
+  color: var(--muted, #8b8ba8) !important;
+  font-family: "Space Grotesk", Inter, sans-serif !important;
+  font-size: 0.68rem !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.08em !important;
+}
+.lang-toggle button.active {
+  background: var(--accent, #7c5cff) !important;
+  color: #081018 !important;
+}
+
+header:not(.topbar):not(.nav):not(.hero):not(.header) {
+  margin: 0 auto 22px !important;
+  padding: 28px 24px 22px !important;
+  max-width: 920px;
+  background: color-mix(in srgb, var(--surface, #14141c) 62%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent, #7c5cff) 32%, transparent);
+  border-radius: 24px;
+  backdrop-filter: blur(20px);
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.32),
+    0 0 60px color-mix(in srgb, var(--accent, #7c5cff) 14%, transparent);
+}
+
+.logo {
+  font-family: "Space Grotesk", system-ui, sans-serif !important;
+  letter-spacing: -0.04em !important;
+  font-weight: 700 !important;
+  text-shadow: none !important;
+  animation: none !important;
+  font-size: clamp(2.05rem, 4.8vw, 2.95rem) !important;
+  background: linear-gradient(125deg, var(--text, #fff) 0%, var(--accent, #a78bfa) 78%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.logo span {
+  background: linear-gradient(125deg, var(--accent, #38bdf8), var(--accent2, var(--accent3, #34d399)));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent !important;
+  color: transparent !important;
+}
+
+.tagline {
+  font-family: Inter, system-ui, sans-serif !important;
+  letter-spacing: 0.12em !important;
+  font-weight: 500 !important;
+  text-transform: uppercase;
+  opacity: 0.78;
+}
+
+.mode-switcher .mode-btn,
+.tabs .tab,
+.chips .chip,
+.mode-chip {
+  border-radius: 999px !important;
+  letter-spacing: 0.04em !important;
+  font-size: 0.72rem !important;
+  padding: 8px 14px !important;
+  border: 1px solid color-mix(in srgb, var(--text, #fff) 10%, transparent) !important;
+  background: color-mix(in srgb, var(--surface, #12121a) 70%, transparent) !important;
+  backdrop-filter: blur(10px);
+  box-shadow: none !important;
+  text-shadow: none !important;
+  transition: background 0.2s, border-color 0.2s, color 0.2s, transform 0.2s !important;
+}
+.mode-switcher .mode-btn:hover,
+.tabs .tab:hover,
+.chips .chip:hover,
+.mode-chip:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--accent, #a78bfa) 45%, transparent) !important;
+  color: var(--text, #fff) !important;
+}
+.mode-switcher .mode-btn.active,
+.tabs .tab.active,
+.chips .chip.active,
+.mode-chip.active {
+  background: color-mix(in srgb, var(--accent, #7c5cff) 28%, var(--surface, #12121a)) !important;
+  border-color: color-mix(in srgb, var(--accent, #7c5cff) 65%, transparent) !important;
+  color: var(--text, #fff) !important;
+  box-shadow: 0 10px 28px color-mix(in srgb, var(--accent, #7c5cff) 22%, transparent) !important;
+}
+
+.tabs {
+  background: color-mix(in srgb, var(--surface, #12121a) 62%, transparent) !important;
+  border: 1px solid color-mix(in srgb, var(--text, #fff) 8%, transparent) !important;
+  border-radius: 18px !important;
+  padding: 6px !important;
+  backdrop-filter: blur(14px);
+}
+.tabs .tab {
+  border-bottom: 0 !important;
+  border-radius: 14px !important;
+}
+
+.stats-bar,
+.score-card,
+.setting-group,
+.ach-card,
+.hist-item,
+.side .panel,
+.overlay-card,
+.stat-box {
+  background: color-mix(in srgb, var(--surface, #12121a) 62%, transparent) !important;
+  border: 1px solid color-mix(in srgb, var(--text, #fff) 8%, transparent) !important;
+  backdrop-filter: blur(16px);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.28);
+}
+.stats-bar {
+  border-radius: 18px !important;
+  padding: 16px 18px !important;
+}
+.score-card,
+.setting-group,
+.ach-card,
+.overlay-card,
+.stat-box {
+  border-radius: 18px !important;
+}
+.status-panel .stat-card {
+  border-radius: 0 !important;
+}
+
+.canvas-wrap,
+.board-shell,
+.typing-panel,
+.keyboard-wrap {
+  border-radius: 22px !important;
+  border: 1px solid color-mix(in srgb, var(--accent, #7c5cff) 28%, transparent) !important;
+  background: color-mix(in srgb, var(--surface, #0e1018) 72%, transparent) !important;
+  box-shadow:
+    0 28px 70px rgba(0, 0, 0, 0.42),
+    0 0 80px color-mix(in srgb, var(--accent, #7c5cff) 12%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--text, #fff) 4%, transparent) inset !important;
+  backdrop-filter: blur(10px);
+}
+
+.overlay {
+  background: color-mix(in srgb, var(--bg, #060811) 48%, transparent) !important;
+  backdrop-filter: blur(16px) !important;
+}
+.game-overlay {
+  background: color-mix(in srgb, var(--bg, #060811) 58%, transparent) !important;
+  backdrop-filter: blur(18px) !important;
+}
+.overlay-card {
+  background: color-mix(in srgb, var(--surface, #12121a) 78%, transparent) !important;
+}
+.overlay-title {
+  letter-spacing: -0.045em !important;
+  text-shadow: none !important;
+  font-weight: 700 !important;
+}
+
+.btn,
+.overlay-btn,
+select,
+.icon-btn {
+  border-radius: 14px !important;
+  letter-spacing: 0.04em !important;
+}
+.btn.primary,
+.overlay-btn.primary {
+  background: linear-gradient(135deg, var(--accent, #7c5cff), color-mix(in srgb, var(--accent, #7c5cff) 72%, #000)) !important;
+  color: #081018 !important;
+  border-color: transparent !important;
+  box-shadow: 0 12px 28px color-mix(in srgb, var(--accent, #7c5cff) 28%, transparent) !important;
+}
+
+.icon-btn {
+  background: color-mix(in srgb, var(--surface, #12121a) 70%, transparent) !important;
+  border: 1px solid color-mix(in srgb, var(--text, #fff) 10%, transparent) !important;
+  backdrop-filter: blur(10px);
+}
+
+.kb-key,
+.key {
+  border-radius: 12px !important;
+  border-color: color-mix(in srgb, var(--text, #fff) 10%, transparent) !important;
+}
+
+.progress-wrap,
+.load-bar {
+  height: 7px !important;
+  border-radius: 99px !important;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--surface2, #1a1a28) 80%, transparent) !important;
+}
+
+.hero.panel,
+.panel.hero,
+.hud.panel,
+.controls.panel,
+.item-card,
+.list-panel {
+  background: color-mix(in srgb, var(--panel, var(--surface, #14120f)) 78%, transparent) !important;
+  backdrop-filter: blur(18px);
+  box-shadow: 0 28px 70px rgba(0, 0, 0, 0.38);
+}
+
+button,
+.chip,
+.tab,
+.mode-btn,
+.hub-link,
+.btn {
+  cursor: pointer;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .logo, .orb, .scanlines, .hub-link, .mode-btn, .tab, .chip {
+    animation: none !important;
+    transition: none !important;
+  }
+}

@@ -3,6 +3,15 @@
   const mark = document.querySelector(".brand-mark");
   if (mark && !mark.textContent.trim()) mark.textContent = "❯";
 
+  const actions = document.querySelector(".topbar-actions");
+  if (actions && !document.querySelector(".hub-link")) {
+    const a = document.createElement("a");
+    a.className = "hub-link btn btn-sm btn-ghost";
+    a.href = "../hub/index.html";
+    a.textContent = "← Hub";
+    actions.prepend(a);
+  }
+
   document.querySelectorAll(".page-hero-visual.hero-mesh").forEach((el) => {
     if (el.dataset.meshReady) return;
     el.dataset.meshReady = "1";

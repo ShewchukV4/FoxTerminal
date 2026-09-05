@@ -1,5 +1,7 @@
 param()
 
+. "$PSScriptRoot\foxauth.ps1"
+
 $bindingsPath = Join-Path $PSScriptRoot "bindings.json"
 
 function Load-Bindings {
@@ -23,13 +25,25 @@ function Load-Bindings {
     }
 }
 
+$p = Get-ThemePalette
+$link = Get-FoxIcon 0xF0C1
 $bindings = Load-Bindings
+
+Write-Host ""
+Write-Host (Color-Text $p.accent ("  " + (Get-FoxIcon 0xF0AC) + "  bindings"))
+
 if ($bindings.Count -eq 0) {
-    Write-Host "Bindings: (none)"
+    Write-Host (Color-Text $p.dim ("  " + $link + "  (none)"))
+    Write-Host ""
     return
 }
 
-Write-Host "Bindings:"
-$bindings.Keys | Sort-Object | ForEach-Object {
-    Write-Host ("  {0} -> {1}" -f $_, $bindings[$_])
+$names = @($bindings.Keys | Sort-Object)
+for ($i = 0; $i -lt $names.Count; $i++) {
+    $name = $names[$i]
+    Write-Host (Color-Text $p.accent ("  " + $link + "  ")) -NoNewline
+    Write-Host (Color-Text $p.text $name) -NoNewline
+    Write-Host (Color-Text $p.dim ("  " + [char]0x2192 + "  ")) -NoNewline
+    Write-Host (Color-Text $p.accent2 ([string]$bindings[$name]))
 }
+Write-Host ""

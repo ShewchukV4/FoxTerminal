@@ -13,10 +13,28 @@ param(
     [string]$Action = '',
 
     [Parameter(Position=1)]
-    [string]$NameArg = ''
+    [string]$NameArg = '',
+
+    [switch]$list,
+    [switch]$restore,
+    [switch]$delete,
+    [switch]$help
 )
 
 $ErrorActionPreference = 'Stop'
+
+# PowerShell's parameter binder rejects -list/-restore/-delete outright unless they
+# are declared, so declare them and fold them back into the positional Action/NameArg
+# pair that the rest of this script already parses.
+foreach ($switchName in 'list', 'restore', 'delete', 'help') {
+    if ($PSBoundParameters[$switchName]) {
+        if ([string]::IsNullOrEmpty($NameArg) -and -not [string]::IsNullOrEmpty($Action)) {
+            $NameArg = $Action
+        }
+        $Action = "-$switchName"
+        break
+    }
+}
 
 # ── helpers ─────────────────────────────────────────────────
 function fx([string]$t, [ConsoleColor]$c='White') { Write-Host $t -ForegroundColor $c }
