@@ -24,7 +24,8 @@
 
 Повна документація:
 
-- `FoxTerminal/FOXTERMINAL_GUIDE_UA.md` (UA)
+- **Linux / Kali pack:** `FoxTerminal/linux/` → почни з `LINUX_GUIDE_UA.md` (стіл, пропорції екрана, оптимізація, команди)
+- `FoxTerminal/FOXTERMINAL_GUIDE_UA.md` (UA, уся система)
 - `FoxTerminal/FOXTERMINAL_GUIDE_EN.md` (EN)
 - `FoxTerminal/README.md`
 - Інтерактивно: `sites/fox-terminal/` через `sites`
@@ -103,8 +104,10 @@ bash ./FoxTerminal/install.sh
 ```
 Ти працюєш у репозиторії FoxTerminal (FireFoxBot).
 Спочатку прочитай AGENTS.md, потім FoxTerminal/FOXTERMINAL_GUIDE_UA.md і CHANGELOG.md.
+Якщо сесія на Linux/Kali — обов’язково FoxTerminal/linux/LINUX_GUIDE_UA.md і COMMANDS_LINUX.md.
 Відповідай українською. Продовжуй роботу над системою з того контексту.
 Не вимикай і не вмикай foxlook shell без мого явного «так».
+На Linux foxos/foxlook — Windows-only; давай еквіваленти зі linux-гайда.
 ```
 
 ---

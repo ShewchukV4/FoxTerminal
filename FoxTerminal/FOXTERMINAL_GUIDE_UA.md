@@ -4,6 +4,7 @@
 
 > English version: [`FOXTERMINAL_GUIDE_EN.md`](FOXTERMINAL_GUIDE_EN.md)  
 > Короткий README: [`README.md`](README.md)  
+> **Linux / Kali (стіл, пропорції, оптимізація, команди):** [`linux/LINUX_GUIDE_UA.md`](linux/LINUX_GUIDE_UA.md)  
 > Інтерактивна презентація: `sites/fox-terminal/` (відкрий через `sites`)
 
 ---
