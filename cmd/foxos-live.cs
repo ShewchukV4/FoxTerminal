@@ -42,7 +42,7 @@ namespace FoxOsLive {
         public static extern bool EnumWindows(EnumWindowsProc cb, IntPtr l);
         [DllImport("user32.dll", CharSet = CharSet.Auto)]
         public static extern IntPtr SendMessageTimeout(IntPtr hWnd, uint msg, UIntPtr wParam, IntPtr lParam, uint flags, uint timeout, out UIntPtr result);
-        [DllImport("user32.dll")]
+        [DllImport("user32.dll", SetLastError = true)]
         public static extern IntPtr SetParent(IntPtr child, IntPtr parent);
         [DllImport("user32.dll")]
         public static extern int GetWindowLong(IntPtr hWnd, int nIndex);
@@ -78,6 +78,10 @@ namespace FoxOsLive {
         public static extern bool GetSystemTimes(out long idle, out long kernel, out long user);
         [DllImport("user32.dll")]
         public static extern bool IsWindowVisible(IntPtr hWnd);
+        [DllImport("user32.dll")]
+        public static extern bool IsWindow(IntPtr hWnd);
+        [DllImport("user32.dll")]
+        public static extern IntPtr GetWindow(IntPtr hWnd, uint uCmd);
         [DllImport("user32.dll", CharSet = CharSet.Unicode)]
         public static extern int GetClassName(IntPtr hWnd, StringBuilder name, int max);
         [DllImport("user32.dll", CharSet = CharSet.Unicode)]
@@ -86,6 +90,11 @@ namespace FoxOsLive {
         public static extern int DwmSetWindowAttribute(IntPtr hWnd, uint attr, ref uint value, uint size);
         [DllImport("dwmapi.dll")]
         public static extern int DwmGetWindowAttribute(IntPtr hWnd, uint attr, out uint value, uint size);
+        [DllImport("user32.dll")]
+        public static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, UIntPtr extra);
+        [DllImport("user32.dll")]
+        public static extern bool GetLastInputInfo(ref LASTINPUTINFO plii);
+        public struct LASTINPUTINFO { public uint cbSize; public uint dwTime; }
         public struct RECT { public int L, T, R, B; }
         public struct MEMORYSTATUSEX {
             public uint Length;
@@ -103,15 +112,32 @@ namespace FoxOsLive {
     sealed class State {
         public Color Night = Color.FromArgb(11, 15, 26);
         public Color Accent = Color.FromArgb(220, 122, 20);
+        public Color Accent2 = Color.FromArgb(240, 160, 60);
+        public string DockStyle = "pill";
+        public string DockPos = "bottom";
+        public string DockSize = "normal";
+        public bool DockHide;
+        public string DockWins = "titles";
+        public string DockTray = "full";
+        public bool DockWidgets = true;
+        public bool DockHome = true;
+        public string PinCursor = "";
+        public string PinZen = "";
+        public string PinTerm = "";
+        public Color[] Flag = null;
         public string FoxPath = "";
         public string CmdDir = "";
         public string Theme = "";
         public int Rig = 4;
+        // "overlay": a tool window pinned at HWND_BOTTOM above the desktop (desk prompt clickable).
+        // "behind":  parented into Explorer's WorkerW, under the icon layer (true wallpaper; prompt unreachable).
+        public string Wall = "overlay";
+        public bool Shell;
         public DateTime Stamp;
     }
 
     static class Json {
-        static string Grab(string json, string key) {
+        public static string Grab(string json, string key) {
             var m = Regex.Match(json, "\"" + key + "\"\\s*:\\s*\"([^\"]*)\"");
             return m.Success ? m.Groups[1].Value.Replace("\\\\", "\\") : "";
         }
@@ -133,15 +159,54 @@ namespace FoxOsLive {
                 var json = File.ReadAllText(path);
                 s.Night = Hex(Grab(json, "night"), s.Night);
                 s.Accent = Hex(Grab(json, "accent"), s.Accent);
+                s.Accent2 = Hex(Grab(json, "accent2"), s.Accent2);
                 var fox = Grab(json, "fox");
                 if (!string.IsNullOrEmpty(fox)) s.FoxPath = fox;
                 var cmd = Grab(json, "cmd");
                 if (!string.IsNullOrEmpty(cmd)) s.CmdDir = cmd;
                 var theme = Grab(json, "theme");
                 if (!string.IsNullOrEmpty(theme)) s.Theme = theme;
+                var flag = Grab(json, "flag");
+                if (!string.IsNullOrEmpty(flag)) {
+                    string[] parts = flag.Split(new[] { ',', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                    var list = new List<Color>();
+                    for (int i = 0; i < parts.Length; i++) {
+                        Color c = Hex(parts[i], Color.Empty);
+                        if (c.A > 0) list.Add(c);
+                    }
+                    s.Flag = list.Count > 0 ? list.ToArray() : null;
+                } else {
+                    s.Flag = null;
+                }
                 var rig = Grab(json, "rig");
                 int rv;
                 if (int.TryParse(rig, out rv) && rv >= 1 && rv <= 5) s.Rig = rv;
+                var wall = Grab(json, "wall");
+                if (wall == "behind" || wall == "overlay") s.Wall = wall;
+                var shell = Grab(json, "shell");
+                s.Shell = (shell == "on" || shell == "true" || shell == "1");
+                var ds = Grab(json, "dockStyle");
+                if (ds == "rail" || ds == "pill" || ds == "glass" || ds == "slim") s.DockStyle = ds;
+                var dp = Grab(json, "dockPos");
+                if (dp == "top" || dp == "bottom") s.DockPos = dp;
+                var dz = Grab(json, "dockSize");
+                if (dz == "compact" || dz == "normal" || dz == "large") s.DockSize = dz;
+                var dh = Grab(json, "dockHide");
+                s.DockHide = (dh == "on" || dh == "true" || dh == "1");
+                var dw = Grab(json, "dockWins");
+                if (dw == "titles" || dw == "dots" || dw == "off") s.DockWins = dw;
+                var dt = Grab(json, "dockTray");
+                if (dt == "full" || dt == "clock" || dt == "off") s.DockTray = dt;
+                var dwg = Grab(json, "dockWidgets");
+                s.DockWidgets = !(dwg == "off" || dwg == "false" || dwg == "0");
+                var dhm = Grab(json, "dockHome");
+                s.DockHome = !(dhm == "off" || dhm == "false" || dhm == "0");
+                var pc = Grab(json, "pinCursor");
+                if (!string.IsNullOrEmpty(pc)) s.PinCursor = pc;
+                var pz = Grab(json, "pinZen");
+                if (!string.IsNullOrEmpty(pz)) s.PinZen = pz;
+                var pt = Grab(json, "pinTerm");
+                if (!string.IsNullOrEmpty(pt)) s.PinTerm = pt;
                 s.Stamp = File.GetLastWriteTimeUtc(path);
             } catch { }
             return s;
@@ -368,6 +433,9 @@ namespace FoxOsLive {
         Bitmap[][] rainGlyphs;
         StringFormat rainFmt;
         DateTime lastBottom;
+        DateTime lastFgCheck;
+        DateTime lastCoveredPaint;
+        bool fgCovered;
         Bitmap foxBmp;
         string foxKey = "";
         int markX;
@@ -396,10 +464,34 @@ namespace FoxOsLive {
         readonly Rig rig = new Rig();
         HelpBoard helpWin;
 
+        DateTime lastIdleCheck;
+        string toastText = "";
+        DateTime toastUntil;
+        bool sessionLocked;
+        string lockUser = "";
+        bool behind;
+        readonly List<ShellBar> docks = new List<ShellBar>();
+        AltTabBoard altTab;
+        DeskWidgets widgets;
+        HomeLaunch homeWin;
+        bool homeShown;
+        DateTime pinsStamp;
+        float foxBoot; // 0..1 entrance
+        Color morphFromNight;
+        float morphT = 1f; // 1 = idle
+        const float MorphMs = 640f;
+        WifiBoard wifiWin;
+        BluetoothBoard btWin;
+        BrightBoard brightWin;
+        VolumeBoard volWin;
+        BatteryBoard batWin;
+        ReminderBoard calWin;
+
         static readonly string[] Allowed = {
-            "sw","noir","dnote","arthas","pride","shader","foxos",
+            "sw","noir","dnote","arthas","pride","shader","foxos","foxlook",
             "ytm","yt","sp","dj","term","sites","youtube","ff","help","rig","note",
-            "ser","foxhelp"
+            "ser","foxhelp","foxlife","home","lock","settings","mirror",
+            "wifi","bt","bright","vol","bat","cal","calendar","reminders","off","shutdown"
         };
 
         public Wall(string path) {
@@ -442,16 +534,42 @@ namespace FoxOsLive {
             InitRain();
             RebuildBrushes();
             RebuildFox(true);
+            foxBoot = 0f;
+            morphFromNight = state.Night;
+            morphT = 1f;
 
             timer = new System.Windows.Forms.Timer();
-            timer.Interval = 50;
+            timer.Interval = 100;
             timer.Tick += delegate {
+                bool covered = !promptFocus && ForegroundIsCovered();
+                bool animating = foxBoot < 1f || morphT < 1f;
+                int want = animating ? 16 : (promptFocus ? 70 : (covered ? 400 : 100));
+                if (timer.Interval != want) timer.Interval = want;
+                if (foxBoot < 1f) {
+                    foxBoot += 0.045f;
+                    if (foxBoot > 1f) foxBoot = 1f;
+                }
+                if (morphT < 1f) {
+                    morphT += 16f / MorphMs;
+                    if (morphT > 1f) morphT = 1f;
+                }
                 Poll();
+                LoadToast();
+                LoadLockFlag();
+                CheckIdleLock();
                 LoadDesk();
+                if (covered && !animating) {
+                    if ((DateTime.UtcNow - lastCoveredPaint).TotalMilliseconds > 1000) {
+                        lastCoveredPaint = DateTime.UtcNow;
+                        Invalidate();
+                    }
+                    return;
+                }
                 Step();
                 rig.Pulse();
                 PaintChrome(false);
-                if (!promptFocus && (DateTime.UtcNow - lastBottom).TotalMilliseconds > 2200) {
+                EnsureDock();
+                if (!behind && !state.Shell && !promptFocus && (DateTime.UtcNow - lastBottom).TotalMilliseconds > 2200) {
                     lastBottom = DateTime.UtcNow;
                     Native.SetWindowPos(Handle, Native.HWND_BOTTOM, 0, 0, 0, 0, 0x0013);
                 }
@@ -481,6 +599,10 @@ namespace FoxOsLive {
         protected override void WndProc(ref Message m) {
             if (m.Msg == 0x0010 || m.Msg == 0x0016) return;
             if (m.Msg == 0x0084) {
+                if (sessionLocked) {
+                    m.Result = new IntPtr(-1);
+                    return;
+                }
                 long lp = m.LParam.ToInt64();
                 int sx = (short)(lp & 0xFFFF);
                 int sy = (short)((lp >> 16) & 0xFFFF);
@@ -522,6 +644,7 @@ namespace FoxOsLive {
         }
 
         protected override void OnMouseDown(MouseEventArgs e) {
+            if (sessionLocked) return;
             if (PromptRect().Contains(e.Location)) {
                 promptFocus = true;
                 Focus();
@@ -538,6 +661,7 @@ namespace FoxOsLive {
         }
 
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData) {
+            if (sessionLocked) return true;
             if (!promptFocus) return base.ProcessCmdKey(ref msg, keyData);
             if (keyData == Keys.Enter) { RunPrompt(); return true; }
             if (keyData == Keys.Escape) { typed = ""; BlurPrompt(); return true; }
@@ -574,6 +698,10 @@ namespace FoxOsLive {
                 return;
             }
             string verb = line.Split(' ')[0].ToLowerInvariant();
+            if (verb == "off" || verb == "shutdown") {
+                ConfirmPowerOff();
+                return;
+            }
             if (verb == "term") {
                 string rest = line.Length > 4 ? line.Substring(4).Trim() : "";
                 string dir = state.CmdDir;
@@ -611,7 +739,128 @@ namespace FoxOsLive {
             }
         }
 
+        void EnsureDock() {
+            if (!state.Shell) {
+                KillDocks();
+                // Tear down shell-only chrome, but never dispose AltTab here —
+                // EnsureDock runs every tick and was killing the slide mid-animation.
+                if (widgets != null) {
+                    try { widgets.Dispose(); } catch { }
+                    widgets = null;
+                }
+                if (homeWin != null) {
+                    try { homeWin.Dispose(); } catch { }
+                    homeWin = null;
+                }
+                return;
+            }
+            int want = Screen.AllScreens.Length;
+            if (docks.Count == want) {
+                bool ok = true;
+                for (int i = 0; i < docks.Count; i++) {
+                    if (docks[i] == null || docks[i].IsDisposed) { ok = false; break; }
+                }
+                if (ok) {
+                    string pp = PinStore.PathIn(Path.GetDirectoryName(statePath) ?? "");
+                    DateTime st = File.Exists(pp) ? File.GetLastWriteTimeUtc(pp) : DateTime.MinValue;
+                    if (st != pinsStamp) {
+                        pinsStamp = st;
+                        for (int i = 0; i < docks.Count; i++) docks[i].ReloadPins();
+                    }
+                    EnsureChrome();
+                    return;
+                }
+            }
+            KillDocks();
+            string dir = Path.GetDirectoryName(statePath) ?? "";
+            IntPtr self = IntPtr.Zero;
+            try { self = Handle; } catch { }
+            foreach (Screen sc in Screen.AllScreens) {
+                var bar = new ShellBar(state, RunDeskLine, self, dir, sc);
+                bar.Show();
+                docks.Add(bar);
+            }
+            string p2 = PinStore.PathIn(dir);
+            pinsStamp = File.Exists(p2) ? File.GetLastWriteTimeUtc(p2) : DateTime.MinValue;
+            EnsureChrome();
+        }
+
+        void KillDocks() {
+            for (int i = 0; i < docks.Count; i++) {
+                try { docks[i].Kill(); } catch { }
+                try { docks[i].Dispose(); } catch { }
+            }
+            docks.Clear();
+        }
+
+        void EnsureChrome() {
+            if (!state.Shell) { KillChrome(); return; }
+            string dir = Path.GetDirectoryName(statePath) ?? "";
+            if (state.DockWidgets) {
+                if (widgets == null || widgets.IsDisposed) {
+                    widgets = new DeskWidgets(state, dir, Screen.PrimaryScreen);
+                    widgets.Show();
+                } else widgets.Recolor();
+            } else if (widgets != null) {
+                try { widgets.Dispose(); } catch { }
+                widgets = null;
+            }
+            if (state.DockHome && !homeShown) {
+                homeShown = true;
+                ShowHome();
+            }
+        }
+
+        void KillChrome() {
+            if (widgets != null) {
+                try { widgets.Dispose(); } catch { }
+                widgets = null;
+            }
+            if (homeWin != null) {
+                try { homeWin.Dispose(); } catch { }
+                homeWin = null;
+            }
+            // AltTabBoard is independent of shell mode — keep it alive
+        }
+
+        void ShowHome() {
+            if (homeWin != null && !homeWin.IsDisposed) {
+                homeWin.Recolor(state.Night, state.Accent);
+                homeWin.Show();
+                homeWin.Activate();
+                return;
+            }
+            homeWin = new HomeLaunch(state.Night, state.Accent, state.Accent2, state.FoxPath, state.Theme, RunDeskLine, FillDeskPrompt);
+            homeWin.FormClosed += delegate { homeWin = null; };
+            homeWin.Show();
+        }
+
+        void ShowAltTab(bool forward) {
+            if (altTab == null || altTab.IsDisposed) {
+                altTab = new AltTabBoard(state.Night, state.Accent, delegate(IntPtr h) {
+                    Native.ShowWindow(h, 9);
+                    Native.ShowWindow(h, 5);
+                    Native.SetForegroundWindow(h);
+                });
+            } else altTab.Recolor(state.Night, state.Accent);
+            altTab.ShowCycle(forward);
+        }
+
         void Attach() {
+            if (state.Shell) {
+                behind = false;
+                Rectangle sb = Screen.PrimaryScreen.Bounds;
+                Bounds = sb;
+                Native.SetWindowPos(Handle, Native.HWND_BOTTOM, sb.X, sb.Y, sb.Width, sb.Height, 0x0010);
+                Visible = true;
+                Opacity = 1;
+                Log("shell " + sb.Width + "x" + sb.Height);
+                lastChrome = DateTime.MinValue;
+                PaintChrome(false);
+                EnsureDock();
+                return;
+            }
+            if (state.Wall == "behind" && AttachBehind()) return;
             Rectangle wa = Screen.PrimaryScreen.WorkingArea;
             Bounds = wa;
             Native.SetWindowPos(Handle, Native.HWND_BOTTOM, wa.X, wa.Y, wa.Width, wa.Height, 0x0010);
@@ -624,11 +873,37 @@ namespace FoxOsLive {
             PaintChrome(false);
         }
 
+        // Live-wallpaper mode: the form becomes a child of the WorkerW Explorer spawns between the
+        // wallpaper and the icon layer. Win+D, "show desktop" and z-order fights no longer touch it.
+        // The icon layer sits on top, so mouse and keyboard never reach the desk prompt here.
+        bool AttachBehind() {
+            IntPtr worker = IntPtr.Zero;
+            try { worker = FindWorker(); } catch { }
+            if (worker == IntPtr.Zero) { Log("behind: no WorkerW, overlay fallback"); return false; }
+            Rectangle sb = Screen.PrimaryScreen.Bounds;
+            Rectangle vs = SystemInformation.VirtualScreen;
+            IntPtr prev = Native.SetParent(Handle, worker);
+            if (prev == IntPtr.Zero && Marshal.GetLastWin32Error() != 0) {
+                Log("behind: SetParent failed, overlay fallback");
+                return false;
+            }
+            behind = true;
+            promptFocus = false;
+            // Child coordinates are relative to WorkerW, which spans the virtual screen.
+            Native.SetWindowPos(Handle, IntPtr.Zero, sb.X - vs.X, sb.Y - vs.Y, sb.Width, sb.Height, 0x0014);
+            Visible = true;
+            Opacity = 1;
+            Log("behind " + sb.Width + "x" + sb.Height + " in WorkerW " + worker.ToInt64().ToString("X"));
+            lastChrome = DateTime.MinValue;
+            PaintChrome(false);
+            return true;
+        }
+
         static uint ColorRef(Color c) {
             return (uint)(c.R | (c.G << 8) | (c.B << 16));
         }
 
-        static bool SkipChromeClass(string cls) {
+        public static bool SkipChromeClass(string cls) {
             if (string.IsNullOrEmpty(cls)) return true;
             switch (cls) {
                 case "Progman":
@@ -717,15 +992,24 @@ namespace FoxOsLive {
             }
         }
 
+        Color MixNight(Color ink, double t) {
+            return Color.FromArgb(
+                (int)(state.Night.R * (1 - t) + ink.R * t),
+                (int)(state.Night.G * (1 - t) + ink.G * t),
+                (int)(state.Night.B * (1 - t) + ink.B * t));
+        }
+
         void RebuildBrushes() {
             if (rainBrushes != null) foreach (var b in rainBrushes) if (b != null) b.Dispose();
             rainBrushes = new SolidBrush[6];
             for (int i = 0; i < 6; i++) {
                 double t = 0.28 + 0.72 * (i / 5.0);
-                rainBrushes[i] = new SolidBrush(Color.FromArgb(
-                    (int)(state.Night.R * (1 - t) + state.Accent.R * t),
-                    (int)(state.Night.G * (1 - t) + state.Accent.G * t),
-                    (int)(state.Night.B * (1 - t) + state.Accent.B * t)));
+                Color ink = state.Accent;
+                if (state.Flag != null && state.Flag.Length > 0) {
+                    ink = state.Flag[i % state.Flag.Length];
+                    t = 0.42 + 0.50 * (i / 5.0);
+                }
+                rainBrushes[i] = new SolidBrush(MixNight(ink, t));
             }
             BackColor = state.Night;
             RebuildGlyphs();
@@ -761,8 +1045,36 @@ namespace FoxOsLive {
             }
         }
 
+        Color FoxInk(int row, int rowCount, double lum, bool accented) {
+            if (state.Flag != null && state.Flag.Length > 0) {
+                int span = Math.Max(1, rowCount - 1);
+                int idx = (int)Math.Floor((row / (double)span) * (state.Flag.Length - 1) + 0.001);
+                if (idx < 0) idx = 0;
+                if (idx >= state.Flag.Length) idx = state.Flag.Length - 1;
+                Color c = state.Flag[idx];
+                double t = 0.72 + 0.28 * lum;
+                return Color.FromArgb(
+                    Math.Min(255, (int)(c.R * t)),
+                    Math.Min(255, (int)(c.G * t)),
+                    Math.Min(255, (int)(c.B * t)));
+            }
+            if (accented) {
+                double t = 0.62 + 0.38 * lum;
+                return Color.FromArgb(
+                    Math.Min(255, (int)(state.Accent.R * t)),
+                    Math.Min(255, (int)(state.Accent.G * t)),
+                    Math.Min(255, (int)(state.Accent.B * t)));
+            }
+            int v = Math.Min(255, (int)(210 + 45 * lum));
+            return Color.FromArgb(v, v, v);
+        }
+
         void RebuildFox(bool force) {
-            string key = (state.FoxPath ?? "") + "|" + state.Accent.ToArgb() + "|" + cols;
+            string flagKey = "";
+            if (state.Flag != null) {
+                for (int i = 0; i < state.Flag.Length; i++) flagKey += state.Flag[i].ToArgb().ToString() + ",";
+            }
+            string key = (state.FoxPath ?? "") + "|" + state.Accent.ToArgb() + "|" + flagKey + "|" + cols;
             if (!force && key == foxKey) return;
             foxKey = key;
             if (foxBmp != null) { foxBmp.Dispose(); foxBmp = null; }
@@ -795,17 +1107,9 @@ namespace FoxOsLive {
                                 if (idx < 1) continue;
                                 bool accented = (p.R > p.G + 8 && p.R > p.B + 8 && p.R > 50)
                                     || (p.B > p.R && lum > 0.25 && lum < 0.85);
-                                Color ink;
-                                if (accented) {
-                                    double t = 0.62 + 0.38 * lum;
-                                    ink = Color.FromArgb(
-                                        Math.Min(255, (int)(state.Accent.R * t)),
-                                        Math.Min(255, (int)(state.Accent.G * t)),
-                                        Math.Min(255, (int)(state.Accent.B * t)));
-                                } else if (lum > 0.45) {
-                                    int v = Math.Min(255, (int)(210 + 45 * lum));
-                                    ink = Color.FromArgb(v, v, v);
-                                } else continue;
+                                bool striped = state.Flag != null && state.Flag.Length > 0;
+                                if (!accented && !striped && lum <= 0.45) continue;
+                                Color ink = FoxInk(y, foxRows, lum, accented);
                                 using (var br = new SolidBrush(ink)) {
                                     g.DrawString(Glyphs[idx].ToString(), font, br, x * cellW, y * cellH, fmt);
                                 }
@@ -841,12 +1145,159 @@ namespace FoxOsLive {
             } finally { src.Dispose(); }
         }
 
+        // Request files other processes drop in the foxos dir (deskcmd, FoxHotkeys Win keys):
+        //   help.req    open the command picker
+        //   prompt.req  focus the desk prompt (Win+R / Win+S)
+        //   desk.req    run one desk line, e.g. "term edit" (Win+E) or "term settings" (Win+I)
         void PeekHelpRequest() {
             string dir = Path.GetDirectoryName(statePath);
-            string req = string.IsNullOrEmpty(dir) ? "" : Path.Combine(dir, "help.req");
-            if (string.IsNullOrEmpty(req) || !File.Exists(req)) return;
-            try { File.Delete(req); } catch { }
-            ShowHelp();
+            if (string.IsNullOrEmpty(dir)) return;
+            string help = Path.Combine(dir, "help.req");
+            if (File.Exists(help)) {
+                try { File.Delete(help); } catch { }
+                ShowHelp();
+                return;
+            }
+            string prompt = Path.Combine(dir, "prompt.req");
+            if (File.Exists(prompt)) {
+                try { File.Delete(prompt); } catch { }
+                FocusPromptFromRequest();
+                return;
+            }
+            string desk = Path.Combine(dir, "desk.req");
+            if (File.Exists(desk)) {
+                string line = "";
+                try { line = File.ReadAllText(desk).Trim(); } catch { }
+                try { File.Delete(desk); } catch { }
+                if (line.Length > 0 && line.Length <= 80 && !sessionLocked) RunDeskLine(line);
+                return;
+            }
+            string at = Path.Combine(dir, "alttab.req");
+            if (File.Exists(at)) {
+                string raw = "";
+                try { raw = File.ReadAllText(at).Trim(); } catch { }
+                try { File.Delete(at); } catch { }
+                if (!sessionLocked) ShowAltTab(raw != "back");
+                return;
+            }
+            string hm = Path.Combine(dir, "home.req");
+            if (File.Exists(hm)) {
+                try { File.Delete(hm); } catch { }
+                if (!sessionLocked) ShowHome();
+                return;
+            }
+            string wifi = Path.Combine(dir, "wifi.req");
+            if (File.Exists(wifi)) {
+                try { File.Delete(wifi); } catch { }
+                if (!sessionLocked) ShowWifi();
+                return;
+            }
+            string bt = Path.Combine(dir, "bt.req");
+            if (File.Exists(bt)) {
+                try { File.Delete(bt); } catch { }
+                if (!sessionLocked) ShowBt();
+                return;
+            }
+            string bright = Path.Combine(dir, "bright.req");
+            if (File.Exists(bright)) {
+                try { File.Delete(bright); } catch { }
+                if (!sessionLocked) ShowBright();
+                return;
+            }
+            string vol = Path.Combine(dir, "vol.req");
+            if (File.Exists(vol)) {
+                try { File.Delete(vol); } catch { }
+                if (!sessionLocked) ShowVol();
+                return;
+            }
+            string bat = Path.Combine(dir, "bat.req");
+            if (File.Exists(bat)) {
+                try { File.Delete(bat); } catch { }
+                if (!sessionLocked) ShowBat();
+                return;
+            }
+            string cal = Path.Combine(dir, "cal.req");
+            if (File.Exists(cal)) {
+                try { File.Delete(cal); } catch { }
+                if (!sessionLocked) ShowCal();
+            }
+        }
+
+        void SoftCloseQuickOthers(Form keep) {
+            try { if (wifiWin != null && !wifiWin.IsDisposed && wifiWin.Visible && !object.ReferenceEquals(wifiWin, keep)) wifiWin.SoftClose(); } catch { }
+            try { if (btWin != null && !btWin.IsDisposed && btWin.Visible && !object.ReferenceEquals(btWin, keep)) btWin.SoftClose(); } catch { }
+            try { if (brightWin != null && !brightWin.IsDisposed && brightWin.Visible && !object.ReferenceEquals(brightWin, keep)) brightWin.SoftClose(); } catch { }
+            try { if (volWin != null && !volWin.IsDisposed && volWin.Visible && !object.ReferenceEquals(volWin, keep)) volWin.SoftClose(); } catch { }
+            try { if (batWin != null && !batWin.IsDisposed && batWin.Visible && !object.ReferenceEquals(batWin, keep)) batWin.SoftClose(); } catch { }
+            try { if (calWin != null && !calWin.IsDisposed && calWin.Visible && !object.ReferenceEquals(calWin, keep)) calWin.SoftClose(); } catch { }
+        }
+
+        void ShowWifi() {
+            if (wifiWin == null || wifiWin.IsDisposed) {
+                wifiWin = new WifiBoard(state.Night, state.Accent);
+                wifiWin.FormClosed += delegate { wifiWin = null; };
+            } else wifiWin.Recolor(state.Night, state.Accent);
+            SoftCloseQuickOthers(wifiWin);
+            wifiWin.Pop();
+        }
+
+        void ShowBt() {
+            if (btWin == null || btWin.IsDisposed) {
+                btWin = new BluetoothBoard(state.Night, state.Accent);
+                btWin.FormClosed += delegate { btWin = null; };
+            } else btWin.Recolor(state.Night, state.Accent);
+            SoftCloseQuickOthers(btWin);
+            btWin.Pop();
+        }
+
+        void ShowBright() {
+            if (brightWin == null || brightWin.IsDisposed) {
+                brightWin = new BrightBoard(state.Night, state.Accent);
+                brightWin.FormClosed += delegate { brightWin = null; };
+            } else brightWin.Recolor(state.Night, state.Accent);
+            SoftCloseQuickOthers(brightWin);
+            brightWin.Pop();
+        }
+
+        void ShowVol() {
+            if (volWin == null || volWin.IsDisposed) {
+                volWin = new VolumeBoard(state.Night, state.Accent);
+                volWin.FormClosed += delegate { volWin = null; };
+            } else volWin.Recolor(state.Night, state.Accent);
+            SoftCloseQuickOthers(volWin);
+            volWin.Pop();
+        }
+
+        void ShowBat() {
+            if (batWin == null || batWin.IsDisposed) {
+                batWin = new BatteryBoard(state.Night, state.Accent);
+                batWin.OpenBright = delegate { ShowBright(); };
+                batWin.FormClosed += delegate { batWin = null; };
+            } else batWin.Recolor(state.Night, state.Accent);
+            SoftCloseQuickOthers(batWin);
+            batWin.Pop();
+        }
+
+        void ShowCal() {
+            if (calWin == null || calWin.IsDisposed) {
+                calWin = new ReminderBoard(state.Night, state.Accent);
+                calWin.FormClosed += delegate { calWin = null; };
+            } else calWin.Recolor(state.Night, state.Accent);
+            SoftCloseQuickOthers(calWin);
+            calWin.Pop();
+        }
+
+        void FocusPromptFromRequest() {
+            if (sessionLocked || behind) return;
+            promptFocus = true;
+            try {
+                Native.SetWindowPos(Handle, IntPtr.Zero, 0, 0, 0, 0, 0x0013);
+                Native.SetForegroundWindow(Handle);
+                Activate();
+                Focus();
+            } catch { }
+            SetHint("type a command   esc closes");
+            Invalidate();
         }
 
         void ShowHelp() {
@@ -870,9 +1321,128 @@ namespace FoxOsLive {
             SetHint("type the rest");
         }
 
+        void ConfirmPowerOff() {
+            var r = MessageBox.Show(
+                this,
+                "Shut down this PC?\n\nWindows will close apps safely.\nNothing is forced.",
+                "FoxOS · power off",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning,
+                MessageBoxDefaultButton.Button2);
+            if (r != DialogResult.Yes) {
+                SetHint("shutdown cancelled");
+                return;
+            }
+            try {
+                // /s = graceful shutdown, /t 0 = now (after Yes), /f not used so apps can save
+                Process.Start(new ProcessStartInfo {
+                    FileName = "shutdown.exe",
+                    Arguments = "/s /t 0",
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                });
+                SetHint("shutting down…");
+            } catch {
+                SetHint("shutdown failed");
+            }
+        }
+
         void RunDeskLine(string line) {
             typed = line ?? "";
             RunPrompt();
+        }
+
+        void LoadToast() {
+            string dir = Path.GetDirectoryName(statePath);
+            if (string.IsNullOrEmpty(dir)) return;
+            string path = Path.Combine(dir, "toast.json");
+            if (!File.Exists(path)) { toastText = ""; return; }
+            try {
+                string json = File.ReadAllText(path);
+                string text = Json.Grab(json, "text");
+                string until = Json.Grab(json, "until");
+                DateTime when;
+                if (string.IsNullOrEmpty(text) || !DateTime.TryParse(until, null, System.Globalization.DateTimeStyles.RoundtripKind, out when)) {
+                    toastText = "";
+                    return;
+                }
+                if (DateTime.UtcNow > when.ToUniversalTime()) { toastText = ""; return; }
+                bool fresh = toastText != text;
+                toastText = text;
+                toastUntil = when.ToUniversalTime();
+                if (fresh) {
+                    try { System.Media.SystemSounds.Asterisk.Play(); } catch { }
+                }
+            } catch { }
+        }
+
+        void LoadLockFlag() {
+            string dir = Path.GetDirectoryName(statePath);
+            if (string.IsNullOrEmpty(dir)) { sessionLocked = false; return; }
+            string path = Path.Combine(dir, "lock.json");
+            if (!File.Exists(path)) { sessionLocked = false; lockUser = ""; return; }
+            try {
+                string json = File.ReadAllText(path);
+                sessionLocked = json.IndexOf("\"locked\":true", StringComparison.OrdinalIgnoreCase) >= 0
+                    || string.Equals(Json.Grab(json, "locked"), "true", StringComparison.OrdinalIgnoreCase);
+                lockUser = Json.Grab(json, "user");
+            } catch {
+                sessionLocked = false;
+            }
+        }
+
+        void CheckIdleLock() {
+            if (sessionLocked) return;
+            if ((DateTime.UtcNow - lastIdleCheck).TotalMilliseconds < 2000) return;
+            lastIdleCheck = DateTime.UtcNow;
+            string dir = Path.GetDirectoryName(statePath);
+            if (string.IsNullOrEmpty(dir)) return;
+            string path = Path.Combine(dir, "idle-lock.txt");
+            if (!File.Exists(path)) return;
+            string[] lines;
+            try { lines = File.ReadAllLines(path); } catch { return; }
+            if (lines.Length < 1) return;
+            int minutes;
+            if (!int.TryParse((lines[0] ?? "").Trim(), out minutes) || minutes <= 0) return;
+            string user = lines.Length > 1 ? (lines[1] ?? "").Trim() : "";
+            if (string.IsNullOrEmpty(user)) return;
+            var info = new Native.LASTINPUTINFO();
+            info.cbSize = (uint)Marshal.SizeOf(typeof(Native.LASTINPUTINFO));
+            if (!Native.GetLastInputInfo(ref info)) return;
+            uint idleMs = (uint)Environment.TickCount - info.dwTime;
+            if (idleMs < (uint)minutes * 60000u) return;
+            try {
+                File.WriteAllText(Path.Combine(dir, "lock.json"),
+                    "{\"locked\":true,\"user\":\"" + user.Replace("\\", "") + "\",\"at\":\"" + DateTime.Now.ToString("s") + "\"}");
+                File.WriteAllText(Path.Combine(dir, "toast.json"),
+                    "{\"text\":\"locked  " + user.Replace("\"", "") + "\",\"until\":\"" + DateTime.UtcNow.AddSeconds(8).ToString("o") + "\"}");
+            } catch { }
+            GhosttyTalk.HideAll();
+            sessionLocked = true;
+            lockUser = user;
+        }
+
+        bool ForegroundIsCovered() {
+            if ((DateTime.UtcNow - lastFgCheck).TotalMilliseconds < 280) return fgCovered;
+            lastFgCheck = DateTime.UtcNow;
+            fgCovered = false;
+            try {
+                IntPtr fg = Native.GetForegroundWindow();
+                if (fg == IntPtr.Zero) return false;
+                IntPtr self = IntPtr.Zero;
+                try { self = Handle; } catch { }
+                if (fg == self) return false;
+                uint pid;
+                Native.GetWindowThreadProcessId(fg, out pid);
+                if (pid == 0) return false;
+                using (var p = Process.GetProcessById((int)pid)) {
+                    string n = (p.ProcessName ?? "").ToLowerInvariant();
+                    if (n == "winghostty" || n == "ghostty") fgCovered = true;
+                    else if (n == "cursor" || n == "code") fgCovered = true;
+                    else if (n == "firefox" || n.IndexOf("zen") >= 0) fgCovered = true;
+                }
+            } catch { }
+            return fgCovered;
         }
 
         void Poll() {
@@ -882,11 +1452,37 @@ namespace FoxOsLive {
             if (!File.Exists(statePath)) return;
             var stamp = File.GetLastWriteTimeUtc(statePath);
             if (stamp == state.Stamp) return;
+            bool wasShell = state.Shell;
+            Color wasNight = state.Night;
+            Color wasAccent = state.Accent;
             Json.Load(statePath, state);
+            bool themeChanged = wasNight.ToArgb() != state.Night.ToArgb()
+                || wasAccent.ToArgb() != state.Accent.ToArgb();
+            if (themeChanged) {
+                morphFromNight = wasNight;
+                morphT = 0f;
+            }
             DropPanels();
             RebuildBrushes();
             RebuildFox(true);
             if (helpWin != null && !helpWin.IsDisposed) helpWin.Recolor(state.Night, state.Accent);
+            for (int i = 0; i < docks.Count; i++) {
+                if (docks[i] != null && !docks[i].IsDisposed) docks[i].Recolor();
+            }
+            if (widgets != null && !widgets.IsDisposed) widgets.Recolor();
+            if (homeWin != null && !homeWin.IsDisposed) homeWin.Recolor(state.Night, state.Accent);
+            if (altTab != null && !altTab.IsDisposed) altTab.Recolor(state.Night, state.Accent);
+            if (wifiWin != null && !wifiWin.IsDisposed) wifiWin.Recolor(state.Night, state.Accent);
+            if (btWin != null && !btWin.IsDisposed) btWin.Recolor(state.Night, state.Accent);
+            if (brightWin != null && !brightWin.IsDisposed) brightWin.Recolor(state.Night, state.Accent);
+            if (volWin != null && !volWin.IsDisposed) volWin.Recolor(state.Night, state.Accent);
+            if (batWin != null && !batWin.IsDisposed) batWin.Recolor(state.Night, state.Accent);
+            if (calWin != null && !calWin.IsDisposed) calWin.Recolor(state.Night, state.Accent);
+            EnsureDock();
+            if (wasShell != state.Shell) {
+                behind = false;
+                Attach();
+            }
             lastChrome = DateTime.MinValue;
             PaintChrome(false);
         }
@@ -910,6 +1506,15 @@ namespace FoxOsLive {
             g.CompositingMode = CompositingMode.SourceCopy;
             g.Clear(state.Night);
             g.CompositingMode = CompositingMode.SourceOver;
+            if (morphT < 1f) {
+                float mt = morphT < 0f ? 0f : (morphT > 1f ? 1f : morphT);
+                float ease = mt * mt * (3f - 2f * mt);
+                int a = (int)(210 * (1f - ease));
+                if (a > 0) {
+                    using (var wash = new SolidBrush(Color.FromArgb(a, morphFromNight)))
+                        g.FillRectangle(wash, ClientRectangle);
+                }
+            }
             g.CompositingQuality = CompositingQuality.HighSpeed;
             g.InterpolationMode = InterpolationMode.NearestNeighbor;
             g.SmoothingMode = SmoothingMode.None;
@@ -932,7 +1537,24 @@ namespace FoxOsLive {
                 }
             }
             if (foxBmp != null) {
-                g.DrawImageUnscaled(foxBmp, (Width - foxBmp.Width) / 2, (Height - foxBmp.Height) / 2);
+                float t = foxBoot < 0f ? 0f : (foxBoot > 1f ? 1f : foxBoot);
+                float ease = 1f - (1f - t) * (1f - t);
+                float scale = 0.78f + 0.22f * ease;
+                int fw = Math.Max(1, (int)(foxBmp.Width * scale));
+                int fh = Math.Max(1, (int)(foxBmp.Height * scale));
+                int fx = (Width - fw) / 2;
+                int fy = (Height - fh) / 2 + (int)((1f - ease) * 48f);
+                if (ease >= 0.995f) {
+                    g.DrawImageUnscaled(foxBmp, (Width - foxBmp.Width) / 2, (Height - foxBmp.Height) / 2);
+                } else {
+                    var cm = new System.Drawing.Imaging.ColorMatrix();
+                    cm.Matrix33 = ease;
+                    using (var ia = new System.Drawing.Imaging.ImageAttributes()) {
+                        ia.SetColorMatrix(cm);
+                        g.DrawImage(foxBmp, new Rectangle(fx, fy, fw, fh),
+                            0, 0, foxBmp.Width, foxBmp.Height, GraphicsUnit.Pixel, ia);
+                    }
+                }
             }
 
             g.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
@@ -978,6 +1600,45 @@ namespace FoxOsLive {
             if (hint.Length > 0 && DateTime.UtcNow < hintUntil) {
                 using (var dim = new SolidBrush(state.Accent)) {
                     g.DrawString(hint, font, dim, bar.X, bar.Bottom + 4, StringFormat.GenericTypographic);
+                }
+            }
+
+            if (toastText.Length > 0 && DateTime.UtcNow < toastUntil) {
+                SizeF tz = g.MeasureString(toastText, specFont);
+                int tw = Math.Min(Width - 80, (int)Math.Ceiling(tz.Width) + 28);
+                int th = 36;
+                int toastY = Height - 88 - (state.Shell ? ShellBar.LastBarH : 0);
+                var toast = new Rectangle((Width - tw) / 2, toastY, tw, th);
+                using (var fill = new SolidBrush(Color.FromArgb(230, 7, 9, 16))) {
+                    g.FillRectangle(fill, toast);
+                }
+                using (var rail = new SolidBrush(Color.FromArgb(255, state.Accent))) {
+                    g.FillRectangle(rail, toast.X, toast.Y, 3, toast.Height);
+                }
+                using (var ink = new SolidBrush(Color.FromArgb(236, 238, 242))) {
+                    g.DrawString(toastText, specFont, ink, toast.X + 14, toast.Y + 8, StringFormat.GenericTypographic);
+                }
+            }
+
+            if (sessionLocked) {
+                string who = string.IsNullOrEmpty(lockUser) ? "" : ("  " + lockUser);
+                string line = "LOCKED" + who;
+                string sub = "Shift+Alt+T  then Fox password";
+                SizeF lz = g.MeasureString(line, specTitle);
+                int lw = Math.Min(Width - 80, Math.Max(420, (int)Math.Ceiling(lz.Width) + 40));
+                int lh = 92;
+                var box = new Rectangle((Width - lw) / 2, Height / 2 - 200, lw, lh);
+                using (var fill = new SolidBrush(Color.FromArgb(235, 7, 9, 16))) {
+                    g.FillRectangle(fill, box);
+                }
+                using (var rail = new SolidBrush(Color.FromArgb(255, state.Accent))) {
+                    g.FillRectangle(rail, box.X, box.Y, 4, box.Height);
+                }
+                using (var ink = new SolidBrush(Color.FromArgb(236, 238, 242))) {
+                    g.DrawString(line, specTitle, ink, box.X + 18, box.Y + 14, StringFormat.GenericTypographic);
+                }
+                using (var dim = new SolidBrush(Color.FromArgb(200, state.Accent))) {
+                    g.DrawString(sub, specSmall, dim, box.X + 18, box.Y + 58, StringFormat.GenericTypographic);
                 }
             }
 
@@ -1762,6 +2423,8 @@ namespace FoxOsLive {
         protected override void Dispose(bool disposing) {
             if (disposing) {
                 try { PaintChrome(true); } catch { }
+                KillDocks();
+                KillChrome();
                 if (helpWin != null && !helpWin.IsDisposed) helpWin.Close();
                 if (timer != null) timer.Dispose();
                 if (promptFont != null) promptFont.Dispose();
@@ -1782,8 +2445,12 @@ namespace FoxOsLive {
     }
 
     static class Program {
+        [DllImport("user32.dll")]
+        static extern bool SetProcessDPIAware();
+
         [STAThread]
         static void Main(string[] args) {
+            try { SetProcessDPIAware(); } catch { }
             bool created;
             using (var mutex = new Mutex(true, "FoxTerminal.FoxOsLive", out created)) {
                 if (!created) return;

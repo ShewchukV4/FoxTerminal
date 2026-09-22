@@ -71,8 +71,24 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     } else if (STYLE == 18) {
         amt = rim * 0.09 + step(0.992, foxHash(floor(uv * 55.0 + iTime * 0.2))) * 0.32;
     } else if (STYLE == 19) {
-        amt = 0.0;
-    }
+        // Soft slate rain (2 layers) â€” matches adaptive.glsl without the probe cost.
+        float rain = 0.0;
+        for (int k = 0; k < 2; k++) {
+            float layer = float(k);
+            float cols = 72.0 + layer * 48.0;
+            float id = floor(uv.x * cols + layer * 5.1);
+            float h = foxHash(vec2(id, 3.3 + layer));
+            if (h >= 0.32) {
+                float speed = 0.18 + h * 0.42;
+                float y = fract(uv.y * (0.78 + 0.22 * h) + iTime * speed + h * 0.7);
+                float x = abs(fract(uv.x * cols) - 0.5);
+                float thin = 1.0 - smoothstep(0.0, 0.38, x * 20.0);
+                float body = smoothstep(1.0, 0.12, y) * smoothstep(0.0, 0.10, y + 0.03);
+                rain += thin * body * (0.40 + 0.60 * h);
+            }
+        }
+        col += ACCENT * rain * 0.11;
+        amt = rim * 0.04;
     } else if (STYLE == 20) {
         amt = rim * 0.10 + step(0.988, foxHash(floor(uv * 30.0))) * rim * 0.22;
     } else if (STYLE == 21) {

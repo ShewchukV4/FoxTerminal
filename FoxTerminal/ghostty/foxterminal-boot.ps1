@@ -43,14 +43,14 @@ if (Test-Path $foxAuth) {
     if (Get-Command Initialize-FoxPaneTheme -ErrorAction SilentlyContinue) {
         Initialize-FoxPaneTheme -ParentSurfaceId $foxParentThemeSurface
     }
+    if (Get-Command Ensure-Login -ErrorAction SilentlyContinue) {
+        Ensure-Login | Out-Null
+    }
     if (Get-Command Sync-FoxGhosttyShader -ErrorAction SilentlyContinue) {
         try { Sync-FoxGhosttyShader | Out-Null } catch {}
     }
     if (Get-Command Sync-FoxOsSkin -ErrorAction SilentlyContinue) {
         try { Sync-FoxOsSkin | Out-Null } catch {}
-    }
-    if (Get-Command Ensure-Login -ErrorAction SilentlyContinue) {
-        Ensure-Login | Out-Null
     }
 } else {
     Write-Host "FoxTerminal: cmd\foxauth.ps1 not found under $foxRoot" -ForegroundColor Yellow

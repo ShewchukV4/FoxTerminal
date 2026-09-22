@@ -216,6 +216,9 @@ function Select-SitesCatalog {
 
             $site = $sitePick.item
             Open-Site -url $site.url
+            if (Get-Command Set-FoxUserWorldValue -ErrorAction SilentlyContinue) {
+                Set-FoxUserWorldValue "lastSite" $site.name | Out-Null
+            }
             Write-Host ""
             Write-Host ("Opened: " + $site.name) -ForegroundColor Green
             Start-Sleep -Milliseconds 400

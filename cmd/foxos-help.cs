@@ -35,13 +35,35 @@ namespace FoxOsLive {
             return true;
         }
 
+        public static bool Open(string cmdDir) {
+            IntPtr hwnd = Find();
+            if (hwnd == IntPtr.Zero) hwnd = FindAny();
+            if (hwnd != IntPtr.Zero) {
+                Native.ShowWindow(hwnd, 9);
+                Native.ShowWindow(hwnd, 5);
+                Focus(hwnd);
+                return true;
+            }
+            return StartFresh(cmdDir);
+        }
+
         public static bool Run(string command, string cmdDir) {
             string cmd = (command ?? "").Trim();
+            if (cmd.Length == 0) return Open(cmdDir);
             IntPtr hwnd = Find();
             if (hwnd == IntPtr.Zero) {
-                if (cmd.Length > 0) WritePending(cmd);
-                if (GhosttyPids().Count > 0) return true;
-                return StartFresh(cmdDir);
+                hwnd = FindAny();
+                if (hwnd != IntPtr.Zero) {
+                    Native.ShowWindow(hwnd, 9);
+                    Native.ShowWindow(hwnd, 5);
+                    Focus(hwnd);
+                } else if (GhosttyPids().Count > 0) {
+                    WritePending(cmd);
+                    return true;
+                } else {
+                    WritePending(cmd);
+                    return StartFresh(cmdDir);
+                }
             }
             Focus(hwnd);
             if (cmd.Length == 0) return true;
@@ -84,6 +106,48 @@ namespace FoxOsLive {
                 finally { all[i].Dispose(); }
             }
             return pids;
+        }
+
+        public static void HideAll() {
+            List<int> pids = GhosttyPids();
+            if (pids.Count == 0) return;
+            Native.EnumWindows(delegate(IntPtr h, IntPtr l) {
+                uint pid;
+                Native.GetWindowThreadProcessId(h, out pid);
+                for (int i = 0; i < pids.Count; i++) {
+                    if (pids[i] == (int)pid) {
+                        Native.ShowWindow(h, 0);
+                        break;
+                    }
+                }
+                return true;
+            }, IntPtr.Zero);
+        }
+
+        static IntPtr FindAny() {
+            List<int> pids = GhosttyPids();
+            if (pids.Count == 0) return IntPtr.Zero;
+            IntPtr best = IntPtr.Zero;
+            int bestArea = -1;
+            Native.EnumWindows(delegate(IntPtr h, IntPtr l) {
+                uint pid;
+                Native.GetWindowThreadProcessId(h, out pid);
+                bool mine = false;
+                for (int i = 0; i < pids.Count; i++) {
+                    if (pids[i] == (int)pid) { mine = true; break; }
+                }
+                if (!mine) return true;
+                Native.RECT r;
+                if (!Native.GetWindowRect(h, out r)) return true;
+                int area = (r.R - r.L) * (r.B - r.T);
+                if (area < 200) return true;
+                if (area > bestArea) {
+                    bestArea = area;
+                    best = h;
+                }
+                return true;
+            }, IntPtr.Zero);
+            return best;
         }
 
         static IntPtr Find() {
@@ -207,11 +271,13 @@ namespace FoxOsLive {
             public HelpItem Item;
         }
 
-        static readonly HelpItem[] Catalog = BuildCatalog();
+        public static readonly HelpItem[] Catalog = BuildCatalog();
 
         static HelpItem[] BuildCatalog() {
             return new HelpItem[] {
+                // —— wallpaper / desk prompt ——
                 new HelpItem("foxhelp", "foxhelp", "this picker", "prompt", true, false),
+                new HelpItem("home", "home", "foxos home launcher", "prompt", true, false),
                 new HelpItem("ser", "ser <terms>", "google search in the browser", "search", true, true),
                 new HelpItem("yt", "yt [query]", "youtube, or search", "search", true, false),
                 new HelpItem("ytm", "ytm [query]", "youtube music, or search", "search", true, false),
@@ -227,10 +293,23 @@ namespace FoxOsLive {
                 new HelpItem("dnote", "dnote", "death note mode", "theme", true, false),
                 new HelpItem("arthas", "arthas", "arthas mode", "theme", true, false),
                 new HelpItem("pride", "pride", "pride mode", "theme", true, false),
+                new HelpItem("foxlook", "foxlook [on|off]", "windows foxos skin", "theme", true, false),
+                new HelpItem("foxos", "foxos [on|off|toggle]", "wallpaper overlay", "launch", true, false),
                 new HelpItem("term", "term", "new ghostty window", "launch", true, false),
                 new HelpItem("sites", "sites", "open the local hub", "launch", true, false),
-                new HelpItem("foxos", "foxos [on|off|toggle]", "wallpaper overlay", "launch", true, false),
+                new HelpItem("foxlife", "foxlife", "notes / finance / tables", "launch", true, false),
+                new HelpItem("mirror", "mirror", "iphone screen mirror", "launch", true, false),
+                new HelpItem("settings", "settings", "open settings in ghostty", "launch", true, false),
+                new HelpItem("lock", "lock", "lock foxterminal", "launch", true, false),
+                new HelpItem("off", "off", "shut down pc (asks first)", "launch", true, false),
+                new HelpItem("wifi", "wifi", "fox wifi board", "quick", true, false),
+                new HelpItem("bt", "bt", "fox bluetooth board", "quick", true, false),
+                new HelpItem("bright", "bright", "fox brightness", "quick", true, false),
+                new HelpItem("vol", "vol", "fox volume", "quick", true, false),
+                new HelpItem("bat", "bat", "fox battery", "quick", true, false),
+                new HelpItem("cal", "cal", "life reminders", "quick", true, false),
 
+                // —— terminal ——
                 new HelpItem("l", "l <name> <pass>", "login (or register if new)", "login", false, false),
                 new HelpItem("nuser", "nuser <name> <pass>", "register a new user", "login", false, false),
                 new HelpItem("who", "who", "show the current user", "login", false, false),
@@ -248,15 +327,21 @@ namespace FoxOsLive {
                 new HelpItem("sp-ui", "sp-ui", "spotify dj ui", "media", false, false),
                 new HelpItem("dj", "dj", "audio-level visualizer", "media", false, false),
                 new HelpItem("ytsplit", "ytsplit", "place youtube / ytm windows", "media", false, false),
+                new HelpItem("youtube", "youtube", "open youtube", "media", false, false),
                 new HelpItem("ff", "ff open [alias-or-url]", "open a url or alias", "web", false, false),
+                new HelpItem("ffbot", "ffbot", "firefox bot helper", "web", false, false),
                 new HelpItem("ser", "ser <terms>", "google search", "web", false, false),
                 new HelpItem("sites", "sites", "browse local sites", "web", false, false),
                 new HelpItem("blist", "blist", "list site aliases", "web", false, false),
                 new HelpItem("bbind", "bbind", "bind a site alias", "web", false, false),
                 new HelpItem("bdel", "bdel <alias>", "delete a site alias", "web", false, false),
                 new HelpItem("tg", "tg [alias|@user]", "telegram web", "web", false, false),
+                new HelpItem("tglist", "tglist", "list telegram aliases", "web", false, false),
+                new HelpItem("tgub", "tgub", "unbind telegram alias", "web", false, false),
                 new HelpItem("apps", "apps <a> / <b>", "arrange app windows", "apps", false, false),
                 new HelpItem("appbind", "appbind", "bind an app alias", "apps", false, false),
+                new HelpItem("foxlife", "foxlife", "notes / finance / tables", "apps", false, false),
+                new HelpItem("foxmirror", "foxmirror", "iphone screen mirror", "apps", false, false),
                 new HelpItem("wai", "wai [-pin]", "where you are in notes", "notes", false, false),
                 new HelpItem("go", "go <path>", "change notes folder", "notes", false, false),
                 new HelpItem("up", "up", "go up one notes folder", "notes", false, false),
@@ -265,28 +350,54 @@ namespace FoxOsLive {
                 new HelpItem("edit", "edit <file>", "terminal editor", "notes", false, false),
                 new HelpItem("nano", "nano <file>", "linux-style editor", "notes", false, false),
                 new HelpItem("view", "view <file>", "read-only pager", "notes", false, false),
+                new HelpItem("fdel", "fdel <name>", "delete notes file/folder", "notes", false, false),
+                new HelpItem("hash", "hash <file>", "hash a notes file", "notes", false, false),
+                new HelpItem("unhash", "unhash <file>", "unhash a notes file", "notes", false, false),
+                new HelpItem("changelog", "changelog", "read foxterminal changelog", "notes", false, false),
                 new HelpItem("sw", "sw [theme]", "theme switcher + system info", "theme", false, false),
                 new HelpItem("themes", "themes", "main theme picker", "theme", false, false),
                 new HelpItem("shader", "shader [on|off]", "ghostty glass shaders", "theme", false, false),
                 new HelpItem("foxos", "foxos [on|off]", "ascii rain wallpaper", "theme", false, false),
+                new HelpItem("foxlook", "foxlook [on|off|...]", "windows foxos skin / dock / shell", "theme", false, false),
                 new HelpItem("noir", "noir", "black and white mode", "theme", false, false),
                 new HelpItem("dnote", "dnote", "death note mode", "theme", false, false),
                 new HelpItem("arthas", "arthas", "arthas mode", "theme", false, false),
                 new HelpItem("pride", "pride", "pride mode", "theme", false, false),
+                new HelpItem("apple", "apple [image]", "death note apple scene", "theme", false, false),
+                new HelpItem("spider", "spider", "noir spider panel", "theme", false, false),
+                new HelpItem("frederik", "frederik", "voice-reactive waveform", "theme", false, false),
                 new HelpItem("wifi", "wifi", "wifi status", "net", false, false),
                 new HelpItem("ip", "ip", "public + local ips", "net", false, false),
                 new HelpItem("weather", "weather [place]", "weather via wttr.in", "net", false, false),
                 new HelpItem("disk", "disk", "disk usage", "net", false, false),
                 new HelpItem("fday", "fday", "daily summary", "net", false, false),
+                new HelpItem("ftime", "ftime", "time + date", "net", false, false),
+                new HelpItem("netping", "netping [targets]", "ping targets", "net", false, false),
+                new HelpItem("reconnect", "reconnect [ssid]", "reconnect wifi", "net", false, false),
                 new HelpItem("term", "term", "ghostty config / new window", "system", false, false),
                 new HelpItem("interface", "interface", "ghostty split layout", "system", false, false),
+                new HelpItem("home", "home", "post-login home screen", "system", false, false),
+                new HelpItem("lock", "lock", "lock foxterminal", "system", false, false),
+                new HelpItem("settings", "settings", "system settings tui / gui", "system", false, false),
                 new HelpItem("foxhelp", "foxhelp", "this menu", "system", false, false),
                 new HelpItem("foxhotkeys", "foxhotkeys", "global hotkey daemon", "system", false, false),
+                new HelpItem("foxinfo", "foxinfo", "hotkey binding manager", "system", false, false),
                 new HelpItem("foxreset", "foxreset", "reset caches + prompt", "system", false, false),
+                new HelpItem("foxdeps", "foxdeps", "check / install dependencies", "system", false, false),
+                new HelpItem("foxsetup", "foxsetup", "first-boot wizard", "system", false, false),
+                new HelpItem("foxtest", "foxtest", "smoke-test commands", "system", false, false),
+                new HelpItem("foxpack", "foxpack", "pack shareable zip", "system", false, false),
+                new HelpItem("foxscan", "foxscan", "suspicious-script scanner", "system", false, false),
+                new HelpItem("foxbg", "foxbg", "background process cleaner", "system", false, false),
+                new HelpItem("foximg", "foximg [path]", "show a photo in the terminal", "system", false, false),
+                new HelpItem("chek", "chek", "ghostty detection dump", "system", false, false),
+                new HelpItem("sixel", "sixel", "inline-image support check", "system", false, false),
+                new HelpItem("ffsync", "ffsync", "firefox sidebar terminal bridge", "system", false, false),
+                new HelpItem("build", "build", "build helpers", "system", false, false),
+                new HelpItem("texit", "texit", "exit foxterminal session", "system", false, false),
                 new HelpItem("clear", "clear", "clear the terminal screen", "system", false, false)
             };
         }
-
         public HelpBoard(Color nightColor, Color accentColor, Action<string> run, Action<string> fill) {
             night = nightColor;
             accent = accentColor;
@@ -301,6 +412,7 @@ namespace FoxOsLive {
             SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint | ControlStyles.OptimizedDoubleBuffer, true);
             Size = new Size(1040, 700);
             BackColor = night;
+            Opacity = 0.92;
             titleFont = new Font("Consolas", 22f, FontStyle.Bold, GraphicsUnit.Pixel);
             tabFont = new Font("Consolas", 15f, FontStyle.Bold, GraphicsUnit.Pixel);
             rowFont = new Font("Consolas", 15f, FontStyle.Regular, GraphicsUnit.Pixel);

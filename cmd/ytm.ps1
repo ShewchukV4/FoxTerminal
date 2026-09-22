@@ -52,7 +52,7 @@ function Start-YtmUrl([string]$url) {
         if ($firefox) {
             Start-Process -FilePath $firefox -ArgumentList @("-new-tab", $url) | Out-Null
         } else {
-            Start-Process $url | Out-Null
+            Open-FoxBrowserUrl -Url $url -Mode tab | Out-Null
         }
         return $true
     } catch {

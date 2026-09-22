@@ -108,6 +108,7 @@ function Show-Commands {
         $known["sw"]       = @{ usage = "sw [themeName] [live] [color|mono] [imagePath]"; desc = "system info + theme switcher (arrows change theme, Ctrl+E exit); example: sw slate" }
         $known["shader"]   = @{ usage = "shader [on|off|status]"; desc = "toggle Ghostty glass shaders (per-theme GLSL); off disables them for every theme" }
         $known["foxos"]    = @{ usage = "foxos [on|off|status|apply]"; desc = "animated ASCII rain wallpaper (same fox as sw) + Windows accent; off restores the previous desktop" }
+        $known["foxlook"]  = @{ usage = "foxlook [on|off|status|<part> on|off|wall overlay|behind|cursor <style>|shell on|off|dock style|place|size|hide|apps|tray]"; desc = "Windows wears FoxOS: dark chrome, pixel cursors, lock screen, Win keys, styled dock; foxlook shell on = this user next login is FoxOS instead of Explorer; foxlook dock style pill|rail|glass|slim" }
         $known["themes"]   = @{ usage = "themes"; desc = "main themes picker: arrows + Enter (Fox default, Arthas, Pride, Noir, Death Note)" }
         $known["noir"]     = @{ usage = "noir"; desc = "toggle noir mode: full black & white, locks sw theme picker; run again to restore" }
         $known["dnote"]    = @{ usage = "dnote"; desc = "toggle Death Note mode: crimson noir-like style, login user selection with strike-through, apple intro + '<user> died'" }
@@ -119,6 +120,7 @@ function Show-Commands {
         $known["chek"]     = @{ usage = "chek"; desc = "show whether this session is Ghostty and dump the detection signals" }
         $known["sixel"]    = @{ usage = "sixel [-Image <path>]"; desc = "check inline-image support (Ghostty uses the Kitty graphics protocol, not SIXEL)" }
         $known["foximg"]   = @{ usage = "foximg [path]"; desc = "show a photo in the terminal" }
+        $known["foxmirror"] = @{ usage = "foxmirror [-Video|-Photo] [-Wifi|-Usb] [-PairWifi] [-NoAudio] [-Check] [-Setup] [-Fps <n>] [-Width <px>]"; desc = "live iPhone screen over USB, or Wi-Fi after one run with the cable: ~30 fps HEVC video on iOS 27+, screenshot mode otherwise (auto-installs deps)" }
         $known["foxscan"]  = @{ usage = "foxscan [-Deep] [-IncludeLow] [-IncludeWorkspace] [-Top <n>] [-Path <dir1,dir2,...>]"; desc = "heuristic suspicious-script scanner (names + risk score + reasons)" }
         $known["foxbg"]    = @{ usage = "foxbg [-IncludeLow] [-Top <n>] [-MinMemoryMB <n>]"; desc = "interactive background cleaner: arrows select, Enter close app, Esc exit" }
         $known["interface"]= @{ usage = "interface [-Split] [-TwoWindows] [-Keys] [-Gui]"; desc = "Ghostty split layout: -Split splits from the CLI, -TwoWindows opens a second window, -Keys lists the keybinds, -Gui Windows GUI split" }
@@ -133,6 +135,14 @@ function Show-Commands {
         $known["foxdeps"]    = @{ usage = "foxdeps [-Check] [-Install]"; desc = "check + auto-install all FoxTerminal dependencies (Firefox, OhMyPosh, AHK, .NET 9, FoxTerminalApp)" }
         $known["foxtest"]    = @{ usage = "foxtest [-List] [-Quiet] [-Only <names>] [-Group all|info|tui|bat] [-Timeout <s>]"; desc = "smoke-test every command: runs the ones that finish, checks the menus still draw, reports what broke" }
         $known["foxpack"]    = @{ usage = "foxpack [-Full] [-Open] [-OutPath <path>]"; desc = "pack FoxTerminal into shareable zip (clean by default, -Full keeps your binds/notes/theme)" }
+        $known["foxlife"]    = @{ usage = "foxlife [-Status|-Rebuild]"; desc = "FOXOS Life: notes, finance, tables, AI assistant (native window)" }
+        $known["home"]       = @{ usage = "home"; desc = "system home after login: day, notes, last site, Prompt / YTM / Sites / Help / Settings / Lock" }
+        $known["lock"]       = @{ usage = "lock [-Status] [-Unlock]"; desc = "lock FoxTerminal (wallpaper + hide Ghostty); Shift+Alt+L; unlock with Fox password" }
+        $known["off"]        = @{ usage = "off"; desc = "shut down the PC safely (asks Yes/No first; default is No)" }
+        $known["shutdown"]   = @{ usage = "shutdown"; desc = "same as off — graceful Windows shutdown after confirm" }
+        $known["settings"]   = @{ usage = "settings [-Status] [-Gui] [-StopGui]"; desc = "system settings TUI, or Control UI in the browser (never blocks the pane)" }
+        $known["foxsetup"]   = @{ usage = "foxsetup"; desc = "first-boot wizard: user, theme, FoxOS, logon, hotkeys, idle lock" }
+        $known["changelog"]  = @{ usage = "changelog"; desc = "read-only history of what was added and removed (same viewer as notes)" }
 
         # Auto-detect commands present in cmd\ (include .ps1 and .bat).
         # We de-duplicate by base name, prefer commands people can type (bat/ps1 wrappers).
@@ -147,7 +157,7 @@ function Show-Commands {
             $base = [System.IO.Path]::GetFileNameWithoutExtension($f.Name)
             if ([string]::IsNullOrWhiteSpace($base)) { continue }
             # Not meant to be executed directly by users:
-            if ($base -in @("foxauth", "foxcodec", "foxhash-lookup", "note-lib", "sw-script", "spider-script", "hk_parse", "hk_lib", "pride-lib", "shader-lib", "foxos-lib", "foxos-deskcmd", "interface-gui", "foxterm-cmd-init")) { continue }
+            if ($base -in @("foxauth", "foxcodec", "foxhash-lookup", "note-lib", "sw-script", "spider-script", "hk_parse", "hk_lib", "pride-lib", "shader-lib", "foxos-lib", "foxlook-lib", "foxcursor-lib", "foxsys-lib", "foxos-deskcmd", "foxos-shell", "foxos-watch", "interface-gui", "foxterm-cmd-init")) { continue }
             $null = $names.Add($base)
         }
 
@@ -190,17 +200,17 @@ function Show-Commands {
     Write-CommandSection "Login / Users:" $inv @("l","nuser","passwd","uexit","users","who") 0xF007
     Write-CommandSection "AI:" $inv @("ask","friend","sum") 0xF0EB
     Write-CommandSection "Media:" $inv @("dj","sp","sp-ui","yt","ytm","ytm-ui","ytsplit") 0xF001
-    Write-CommandSection "Apps / layout:" $inv @("appbind","apps") 0xF108
+    Write-CommandSection "Apps / layout:" $inv @("appbind","apps","foxlife") 0xF108
     Write-CommandSection "Firefox / web aliases:" $inv @("bbind","bdel","blist","ff","ffbot","gask","ser","sites","youtube") 0xF0AC
     Write-CommandSection "Telegram:" $inv @("tg","tglist","tgub") 0xF1D8
-    Write-CommandSection "Notes / files:" $inv @("edit","fdel","go","hash","nano","nfile","nfould","unhash","up","view","wai") 0xF07B
+    Write-CommandSection "Notes / files:" $inv @("changelog","edit","fdel","go","hash","nano","nfile","nfould","unhash","up","view","wai") 0xF07B
     Write-CommandSection "Builds / packaging:" $inv @("build","foxpack") 0xF187
-    Write-CommandSection "Themes / visual modes:" $inv @("apple","arthas","dnote","foxos","frederik","noir","pride","shader","spider","sw","themes") 0xF1FC
+    Write-CommandSection "Themes / visual modes:" $inv @("apple","arthas","dnote","foxlook","foxos","frederik","noir","pride","shader","spider","sw","themes") 0xF1FC
     Write-CommandSection "Network / diagnostics:" $inv @("chek","disk","fday","ftime","foximg","ip","netping","reconnect","sixel","weather","wifi") 0xF1EB
-    Write-CommandSection "System tools:" $inv @("clear","ffsync","foxbg","foxscan","interface","term","texit") 0xF013
+    Write-CommandSection "System tools:" $inv @("changelog","clear","ffsync","foxbg","foxscan","home","interface","lock","settings","term","texit") 0xF013
     Write-CommandSection "Hotkeys / bindings:" $inv @("foxhotkeys","foxinfo") 0xF11C
-    Write-CommandSection "Setup / reset / help:" $inv @("foxdeps","foxhelp","foxreset","foxtest") 0xF0AD
-    Write-CommandSection "Wallpaper prompt (FoxOS desk):" $inv @("arthas","dnote","dj","ff","foxhelp","foxos","noir","note","pride","rig","ser","shader","sites","sp","sw","term","yt","ytm","youtube") 0xF1FC
+    Write-CommandSection "Setup / reset / help:" $inv @("foxdeps","foxhelp","foxreset","foxsetup","foxtest") 0xF0AD
+    Write-CommandSection "Wallpaper prompt (FoxOS desk):" $inv @("arthas","bright","bt","dnote","dj","ff","foxhelp","foxlife","foxlook","foxos","home","lock","mirror","noir","note","off","pride","rig","ser","settings","shader","shutdown","sites","sp","sw","term","wifi","yt","ytm","youtube") 0xF1FC
 
     # Commands that live outside cmd\ (in FoxTerminal folder).
     Write-Host (Color-Text $p.accent2 ((Get-FoxIcon 0xF17A) + "  Windows (run from FoxTerminal folder):"))

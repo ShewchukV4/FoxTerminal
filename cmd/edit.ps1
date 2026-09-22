@@ -1,5 +1,6 @@
 param(
     [switch]$AnyPath,
+    [switch]$ReadOnly,
     [Parameter(ValueFromRemainingArguments = $true)]
     [string[]]$Args
 )
@@ -50,6 +51,10 @@ if ($isPathLike) {
 }
 
 if (-not (Test-Path -LiteralPath $filePath)) {
+    if ($ReadOnly) {
+        Write-Host "File not found: $filePath" -ForegroundColor Yellow
+        return
+    }
     $parent = Split-Path -Path $filePath -Parent
     if (-not [string]::IsNullOrWhiteSpace($parent) -and -not (Test-Path -LiteralPath $parent)) {
         Write-Host "Folder does not exist: $parent" -ForegroundColor Yellow
@@ -60,7 +65,12 @@ if (-not (Test-Path -LiteralPath $filePath)) {
 }
 
 $lines = New-Object System.Collections.Generic.List[string]
-$existing = Get-Content -LiteralPath $filePath -ErrorAction SilentlyContinue
+$existing = @()
+try {
+    $existing = [System.IO.File]::ReadAllLines($filePath, [System.Text.UTF8Encoding]::new($false))
+} catch {
+    $existing = Get-Content -LiteralPath $filePath -Encoding UTF8 -ErrorAction SilentlyContinue
+}
 if ($null -ne $existing) { $lines.AddRange([string[]]$existing) }
 if ($lines.Count -eq 0) { $lines.Add("") }
 
@@ -73,6 +83,7 @@ $cursorCol = 0
 $topLine = 0
 $leftCol = 0
 $modified = $false
+$script:foxEditReadOnly = [bool]$ReadOnly
 $dirty = "all"
 $dirtyLine = 0
 $oldTreatControlC = $false
@@ -80,10 +91,25 @@ $enteredAlt = $false
 $script:foxEditCaret = @{ On = $false; Line = -1; Col = -1; X = 0; Y = 0 }
 
 function Get-FoxEditView([int]$lineCount) {
-    $h = [Console]::WindowHeight
-    $w = [Console]::WindowWidth
-    if ($h -lt 6) { $h = 6 }
-    if ($w -lt 20) { $w = 20 }
+    $h = 0
+    $w = 0
+    try { $h = [Console]::WindowHeight } catch {}
+    try { $w = [Console]::WindowWidth } catch {}
+    try {
+        $ui = $Host.UI.RawUI
+        if ($ui.WindowSize.Height -gt $h) { $h = $ui.WindowSize.Height }
+        if ($ui.WindowSize.Width -gt $w) { $w = $ui.WindowSize.Width }
+        if ($h -lt 12 -and $ui.MaxPhysicalWindowSize.Height -gt $h) { $h = $ui.MaxPhysicalWindowSize.Height }
+        if ($w -lt 40 -and $ui.MaxPhysicalWindowSize.Width -gt $w) { $w = $ui.MaxPhysicalWindowSize.Width }
+    } catch {}
+    $envH = 0
+    $envW = 0
+    [void][int]::TryParse($env:LINES, [ref]$envH)
+    [void][int]::TryParse($env:COLUMNS, [ref]$envW)
+    if ($envH -gt $h) { $h = $envH }
+    if ($envW -gt $w) { $w = $envW }
+    if ($h -lt 12) { $h = 24 }
+    if ($w -lt 40) { $w = 80 }
     $digits = ([string][Math]::Max(1, $lineCount)).Length
     $gutter = [Math]::Max(4, $digits + 1)
     if ($gutter -gt ($w - 12)) { $gutter = [Math]::Max(3, $w - 12) }
@@ -137,7 +163,8 @@ function Write-FoxEditChip([string]$text, [string]$bgHex, $palette) {
 
 function Write-FoxEditHeader($view, [string]$title, [bool]$isModified, [int]$lineNo, [int]$colNo, $palette) {
     $left = "  " + $title
-    if ($isModified) { $left = $left + "  +" }
+    if ($script:foxEditReadOnly) { $left = $left + "  read" }
+    elseif ($isModified) { $left = $left + "  +" }
     $right = Get-FoxEditPosLabel $lineNo $colNo
     $max = $view.Width - 1
     try { [Console]::SetCursorPosition(0, 0) } catch { return }
@@ -159,7 +186,11 @@ function Write-FoxEditHeader($view, [string]$title, [bool]$isModified, [int]$lin
 }
 
 function Write-FoxEditStatus($view, [int]$lineNo, [int]$colNo, [bool]$isModified, $palette) {
-    $left = "  Ctrl+S save  $script:dot  Ctrl+E save+exit  $script:dot  Ctrl+Q quit"
+    $left = if ($script:foxEditReadOnly) {
+        "  arrows move  $script:dot  PgUp/PgDn  $script:dot  Q or Esc quit"
+    } else {
+        "  Ctrl+S save  $script:dot  Ctrl+E save+exit  $script:dot  Ctrl+Q quit"
+    }
     $right = Get-FoxEditPosLabel $lineNo $colNo
     if ($isModified) { $right = " + " + $right }
     $max = $view.Width - 1
@@ -406,13 +437,15 @@ try {
         if (($key.Modifiers -band [ConsoleModifiers]::Control) -ne 0) {
             switch ($key.Key) {
                 "S" {
-                    Save-FoxEditFile $filePath $lines
-                    $modified = $false
-                    $dirty = Merge-FoxEditDirty $dirty "chrome"
+                    if (-not $script:foxEditReadOnly) {
+                        Save-FoxEditFile $filePath $lines
+                        $modified = $false
+                        $dirty = Merge-FoxEditDirty $dirty "chrome"
+                    }
                     $handled = $true
                 }
                 "E" {
-                    Save-FoxEditFile $filePath $lines
+                    if (-not $script:foxEditReadOnly) { Save-FoxEditFile $filePath $lines }
                     return
                 }
                 "Q" { return }
@@ -484,7 +517,12 @@ try {
                     $handled = $true
                     $dirty = Merge-FoxEditDirty $dirty "chrome"
                 }
+                "Escape" {
+                    if ($script:foxEditReadOnly) { return }
+                    $handled = $true
+                }
                 "Backspace" {
+                    if ($script:foxEditReadOnly) { $handled = $true; break }
                     if ($cursorCol -gt 0) {
                         $line = $lines[$cursorLine]
                         $lines[$cursorLine] = $line.Remove($cursorCol - 1, 1)
@@ -506,6 +544,7 @@ try {
                     $handled = $true
                 }
                 "Delete" {
+                    if ($script:foxEditReadOnly) { $handled = $true; break }
                     $line = $lines[$cursorLine]
                     if ($cursorCol -lt $line.Length) {
                         $lines[$cursorLine] = $line.Remove($cursorCol, 1)
@@ -522,6 +561,13 @@ try {
                     $handled = $true
                 }
                 "Enter" {
+                    if ($script:foxEditReadOnly) {
+                        $cursorLine = [Math]::Min($lines.Count - 1, $cursorLine + $view.BodyHeight)
+                        $cursorCol = [Math]::Min($cursorCol, $lines[$cursorLine].Length)
+                        $dirty = Merge-FoxEditDirty $dirty "body"
+                        $handled = $true
+                        break
+                    }
                     $line = $lines[$cursorLine]
                     $leftText = $line.Substring(0, $cursorCol)
                     $rightText = $line.Substring($cursorCol)
@@ -534,6 +580,7 @@ try {
                     $handled = $true
                 }
                 "Tab" {
+                    if ($script:foxEditReadOnly) { $handled = $true; break }
                     $line = $lines[$cursorLine]
                     $lines[$cursorLine] = $line.Insert($cursorCol, "  ")
                     $cursorCol += 2
@@ -543,6 +590,12 @@ try {
                     $handled = $true
                 }
             }
+        }
+
+        if ($script:foxEditReadOnly -and -not $handled) {
+            $ch = [string]$key.KeyChar
+            if ($ch -eq "q" -or $ch -eq "Q") { return }
+            $handled = $true
         }
 
         if (-not $handled -and $key.KeyChar -ne 0 -and -not [char]::IsControl($key.KeyChar)) {

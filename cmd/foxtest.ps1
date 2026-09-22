@@ -64,6 +64,9 @@ $infoCommands = [ordered]@{
     "frederik"      = @()
     "shader"        = @("status")
     "foxos"         = @("status")
+    "lock"          = @("-Status")
+    "settings"      = @("-Status")
+    "foxlife"       = @("-Status")
 }
 
 # Filesystem scans and network sweeps are legitimately slow, so they get a longer
@@ -78,8 +81,8 @@ $slowCommands = @{
 $tuiCommands = @(
     "foxhelp", "themes", "sw-script", "sites", "ytm-ui", "sp-ui", "friend",
     "interface", "term", "tglist", "foxinfo", "unhash", "nfile", "nfould",
-    "fdel", "go", "up", "edit", "passwd", "nuser", "l", "bbind", "bdel",
-    "foxpack", "dnote", "ytm", "sp", "dj"
+    "fdel", "go", "up", "edit", "changelog", "passwd", "nuser", "l", "bbind", "bdel",
+    "foxpack", "dnote", "ytm", "sp", "dj", "home", "foxsetup"
 )
 
 $batCommands = @("gask", "ser")
@@ -93,6 +96,7 @@ $skipCommands = [ordered]@{
     "pride-lib"      = "shared library"
     "shader-lib"     = "shared library"
     "foxos-lib"      = "shared library"
+    "foxsys-lib"     = "shared library"
     "foxos-deskcmd"  = "desktop overlay runner"
     "hk_lib"         = "shared library"
     "hk_parse"       = "shared library"
@@ -100,6 +104,7 @@ $skipCommands = [ordered]@{
     "noir"           = "changes the active theme"
     "pride"          = "changes the active theme"
     "foxreset"       = "resets configuration"
+    "foxmirror"      = "needs a USB iPhone; may download/install Apple Mobile Device Support"
     "texit"          = "closes the terminal"
     "uexit"          = "logs the user out"
     "clear"          = "clears the screen, nothing to assert"

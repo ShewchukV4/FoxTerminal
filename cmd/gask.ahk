@@ -16,12 +16,18 @@ if (query = "") {
 
 url := "https://chatgpt.com"
 
-Run 'firefox.exe --new-tab "' url '"'
-WinWaitActive "ahk_exe firefox.exe",, 8
+zen := "C:\Program Files\Zen Browser\zen.exe"
+if !FileExist(zen)
+    zen := EnvGet("LOCALAPPDATA") "\Zen Browser\zen.exe"
+if FileExist(zen)
+    Run '"' zen '" --new-tab "' url '"'
+else
+    Run 'zen.exe --new-tab "' url '"'
+WinWaitActive "ahk_exe zen.exe",, 8
 Sleep 1800
 
 ; Focus input: click near bottom center, then paste
-WinGetPos &x, &y, &w, &h, "ahk_exe firefox.exe"
+WinGetPos &x, &y, &w, &h, "ahk_exe zen.exe"
 focusX := x + (w * 0.50)
 focusY := y + (h * 0.90)
 Click focusX, focusY

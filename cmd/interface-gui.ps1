@@ -127,7 +127,13 @@ function Open-YouTube {
     if (Test-Path $ytPs1) {
         Start-Process -FilePath "powershell.exe" -ArgumentList @("-NoProfile","-ExecutionPolicy","Bypass","-File",$ytPs1) | Out-Null
     } else {
-        Start-Process "https://www.youtube.com/" | Out-Null
+        $browser = Join-Path $PSScriptRoot "fox-browser.ps1"
+        if (Test-Path -LiteralPath $browser) {
+            . $browser
+            Open-FoxBrowserUrl -Url "https://www.youtube.com/" -Mode tab | Out-Null
+        } else {
+            Start-Process -FilePath "C:\Program Files\Zen Browser\zen.exe" -ArgumentList @("-new-tab", "https://www.youtube.com/") | Out-Null
+        }
     }
 }
 

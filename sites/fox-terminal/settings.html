@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FoxTerminal — Settings</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css?v=20260907s">
+  <style>
+    .ctl-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+    .ctl-card { background: color-mix(in srgb, #0b0f1a 86%, var(--accent)); border: 1px solid color-mix(in srgb, var(--accent) 28%, #1a1f2c); padding: 18px 18px 16px; }
+    .ctl-card h3 { margin: 0 0 6px; font-family: "JetBrains Mono", monospace; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
+    .ctl-card p { margin: 0 0 14px; color: #9aa3b2; font-size: 14px; }
+    .ctl-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid rgba(255,255,255,0.06); }
+    .ctl-row:first-of-type { border-top: 0; padding-top: 0; }
+    .ctl-name { font-family: "JetBrains Mono", monospace; font-size: 13px; }
+    .ctl-val { font-family: "JetBrains Mono", monospace; font-size: 12px; color: var(--accent); }
+    .ctl-banner { padding: 12px 14px; margin-bottom: 18px; border-left: 3px solid var(--accent); background: rgba(0,0,0,0.28); font-family: "JetBrains Mono", monospace; font-size: 13px; }
+    .ctl-banner.ok { border-left-color: #3ecf8e; }
+    .ctl-banner.warn { border-left-color: #fbd38d; color: #fbd38d; }
+  </style>
+</head>
+<body data-page="settings">
+  <canvas id="bg-particles" aria-hidden="true"></canvas>
+  <div class="noise"></div>
+  <div class="cursor-glow" id="cursor-glow"></div>
+  <header class="topbar">
+    <div class="topbar-dots" aria-hidden="true"><span class="term-dot"></span><span class="term-dot"></span><span class="term-dot"></span></div>
+    <a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">❯</span><span class="brand-text"><span class="brand-name">FoxTerminal</span><small>Settings</small></span></a>
+    <nav class="nav">
+      <a href="index.html" data-page="home">Головна</a>
+      <a href="companion.html" data-page="companion">Zen</a>
+      <a href="themes.html" data-page="themes">Теми</a>
+      <a href="commands.html" data-page="commands">Команди</a>
+      <a href="terminal.html" data-page="terminal">Термінал</a>
+      <a href="ai.html" data-page="ai">AI</a>
+      <a href="media.html" data-page="media">Медіа</a>
+      <a href="hotkeys.html" data-page="hotkeys">Hotkeys</a>
+      <a href="ecosystem.html" data-page="ecosystem">Екосистема</a>
+      <a href="settings.html" data-page="settings">Settings</a>
+    </nav>
+    <div class="topbar-actions">
+      <button class="btn btn-sm btn-ghost" id="noir-toggle" type="button">Noir</button>
+      <button class="btn btn-sm btn-ghost" id="theme-toggle" type="button">Light</button>
+    </div>
+  </header>
+  <main>
+    <section class="page-hero reveal">
+      <p class="eyebrow">Control UI</p>
+      <h1 class="title-gradient">Параметри системи</h1>
+      <p class="muted">Тема, FoxOS, скло, автозапуск, хоткеї, idle lock. Кнопки нижче пишуть у систему. Light / Noir у шапці лише для цього сайту.</p>
+    </section>
+    <section class="section">
+      <div id="ctl-banner" class="ctl-banner warn">Offline preview. Run <code>settings -Gui</code> in FoxTerminal to apply.</div>
+      <div class="ctl-grid">
+        <article class="ctl-card">
+          <h3>Session</h3>
+          <p>Хто зараз у системі FoxTerminal.</p>
+          <div class="ctl-row"><span class="ctl-name">user</span><span class="ctl-val" id="v-user">—</span></div>
+          <div class="ctl-row"><span class="ctl-name">theme</span><span class="ctl-val" id="v-theme">orange</span></div>
+          <div class="ctl-row">
+            <span class="ctl-name">theme</span>
+            <span>
+              <button class="btn btn-sm" type="button" data-set='{"theme":"orange"}'>orange</button>
+              <button class="btn btn-sm" type="button" data-set='{"theme":"slate"}'>slate</button>
+              <button class="btn btn-sm" type="button" data-set='{"theme":"ice"}'>ice</button>
+              <button class="btn btn-sm" type="button" data-set='{"theme":"blue"}'>blue</button>
+              <button class="btn btn-sm" type="button" data-set='{"theme":"noir"}'>noir</button>
+            </span>
+          </div>
+        </article>
+        <article class="ctl-card">
+          <h3>Desktop</h3>
+          <p>Дощ FoxOS, вигляд Windows і скло Ghostty для цього юзера.</p>
+          <div class="ctl-row">
+            <span class="ctl-name">FoxOS</span>
+            <button class="btn btn-sm btn-primary" type="button" id="b-foxos" data-toggle="foxos">on</button>
+          </div>
+          <div class="ctl-row">
+            <span class="ctl-name" title="Темна Windows, без іконок, таскбар ховається, без звуків, інвертовані курсори, lock screen FoxOS, Win = FoxTerminal">FoxOS look</span>
+            <button class="btn btn-sm btn-primary" type="button" id="b-look" data-toggle="look">off</button>
+          </div>
+          <div class="ctl-row">
+            <span class="ctl-name">Taskbar</span>
+            <button class="btn btn-sm btn-primary" type="button" id="b-dockStyle" data-cycle="dockStyle" data-values="pill,rail,glass,slim">pill</button>
+          </div>
+          <div class="ctl-row">
+            <span class="ctl-name">Bar place</span>
+            <button class="btn btn-sm btn-primary" type="button" id="b-dockPos" data-cycle="dockPos" data-values="bottom,top">bottom</button>
+          </div>
+          <div class="ctl-row">
+            <span class="ctl-name">Bar size</span>
+            <button class="btn btn-sm btn-primary" type="button" id="b-dockSize" data-cycle="dockSize" data-values="compact,normal,large">normal</button>
+          </div>
+          <div class="ctl-row">
+            <span class="ctl-name">Bar hide</span>
+            <button class="btn btn-sm btn-primary" type="button" id="b-dockHide" data-toggle="dockHide">off</button>
+          </div>
+          <div class="ctl-row">
+            <span class="ctl-name">Bar apps</span>
+            <button class="btn btn-sm btn-primary" type="button" id="b-dockWins" data-cycle="dockWins" data-values="titles,dots,off">titles</button>
+          </div>
+          <div class="ctl-row">
+            <span class="ctl-name">Bar tray</span>
+            <button class="btn btn-sm btn-primary" type="button" id="b-dockTray" data-cycle="dockTray" data-values="full,clock,off">full</button>
+          </div>
+          <div class="ctl-row">
+            <span class="ctl-name">Cursor</span>
+            <button class="btn btn-sm btn-primary" type="button" id="b-cursor" data-cycle="cursor" data-values="neon,pixel,chunky,fox">neon</button>
+          </div>
+          <div class="ctl-row">
+            <span class="ctl-name">FoxOS shell</span>
+            <button class="btn btn-sm btn-primary" type="button" id="b-shell" data-toggle="shell">off</button>
+          </div>
+          <div class="ctl-row">
+            <span class="ctl-name">Shader</span>
+            <button class="btn btn-sm btn-primary" type="button" id="b-shader" data-toggle="shader">on</button>
+          </div>
+        </article>
+        <article class="ctl-card">
+          <h3>Start / lock</h3>
+          <p>Що встає з Windows і коли система закривається.</p>
+          <div class="ctl-row">
+            <span class="ctl-name">Windows logon</span>
+            <button class="btn btn-sm btn-primary" type="button" id="b-autostart" data-toggle="autostart">on</button>
+          </div>
+          <div class="ctl-row">
+            <span class="ctl-name">Hotkeys</span>
+            <button class="btn btn-sm btn-primary" type="button" id="b-hotkeys" data-toggle="hotkeys">on</button>
+          </div>
+          <div class="ctl-row">
+            <span class="ctl-name">Idle lock</span>
+            <button class="btn btn-sm btn-primary" type="button" id="b-lock" data-lock>10 min</button>
+          </div>
+        </article>
+        <article class="ctl-card">
+          <h3>Windows</h3>
+          <p>Bloat і реклама лишаються командами інсталера — тут лише нагадування.</p>
+          <p class="muted">Від адміна: <code>install.ps1 -DisableBloat</code> · <code>-DisableAds</code> · <code>foxlook oem on</code> (Параметри → Про систему: FoxOS). Рівень 2: <code>foxlook shell on</code> — наступний вхід цього юзера без Explorer; другий Windows-юзер не змінюється. Rescue: <code>%LOCALAPPDATA%\FoxTerminal\foxos\restore-windows.cmd</code></p>
+          <p class="muted">Lock зараз: <span class="ctl-val" id="v-locked">open</span></p>
+        </article>
+      </div>
+    </section>
+  </main>
+  <script src="assets/js/effects.js"></script>
+  <script src="assets/js/shell.js"></script>
+  <script src="assets/js/main.js"></script>
+  <script src="assets/js/settings-page.js?v=20260913dock"></script>
+</body>
+</html>

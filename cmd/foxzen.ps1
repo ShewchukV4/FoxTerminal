@@ -1,6 +1,6 @@
 param(
     [Parameter(Position = 0)]
-    [ValidateSet("status", "open", "theme", "host", "addon", "help")]
+    [ValidateSet("status", "open", "theme", "host", "addon", "default", "help")]
     [string]$Action = "status",
 
     [Parameter(ValueFromRemainingArguments = $true)]
@@ -115,10 +115,24 @@ switch ($Action) {
         Write-Host "If disabled: about:config xpinstall.signatures.required=false"
         exit 0
     }
+    "default" {
+        if (Set-FoxClassicBrowser) {
+            $info = Get-FoxBrowserInfo
+            Write-Host ("Classic browser: " + $info.Name + " -> " + $info.Path)
+            if (Test-FoxWindowsDefaultIsZen) {
+                Write-Host "Windows http/https already open in Zen."
+            } else {
+                Write-Host "Windows still has another default. Opening Settings so you can Set default on Zen."
+                Start-Process "ms-settings:defaultapps?registeredAppMachine=Zen"
+            }
+        }
+        exit 0
+    }
     default {
         Write-Host "foxzen usage:"
         Write-Host "  foxzen status   # which browser FoxTerminal will open"
         Write-Host "  foxzen open [url]"
+        Write-Host "  foxzen default  # make Zen the classic browser (FoxTerminal + Windows)"
         Write-Host "  foxzen theme    # install FoxTerminal userChrome into Zen"
         Write-Host "  foxzen host     # register native messaging for Zen/Firefox"
         Write-Host "  foxzen addon    # rebuild+replace installed addon in Zen profile"

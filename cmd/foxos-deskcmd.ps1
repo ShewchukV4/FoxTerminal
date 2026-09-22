@@ -36,7 +36,14 @@ function Open-DeskUrl([string]$url) {
         Write-DeskLog ("browser " + $info.Path + " " + $url)
         return
     }
-    Start-Process $url | Out-Null
+    if (Get-Command Open-FoxBrowserUrl -ErrorAction SilentlyContinue) {
+        Open-FoxBrowserUrl -Url $url -Mode tab | Out-Null
+    } else {
+        $zen = "C:\Program Files\Zen Browser\zen.exe"
+        if (Test-Path -LiteralPath $zen) {
+            Start-Process -FilePath $zen -ArgumentList @("-new-tab", $url) | Out-Null
+        }
+    }
     Write-DeskLog ("shell " + $url)
 }
 
@@ -71,9 +78,32 @@ switch ($verb) {
         Sync-FoxTheme
     }
     { $_ -in @("noir","dnote","pride","arthas") } {
-        Start-DeskApp $verb $rest
-        Start-Sleep -Milliseconds 400
-        if (Get-Command Sync-FoxTheme -ErrorAction SilentlyContinue) { Sync-FoxTheme }
+        $target = if ($verb -eq "arthas") { "arthas-dark" } else { $verb }
+        $disk = if (Get-Command Get-FoxOsThemeName -ErrorAction SilentlyContinue) {
+            Get-FoxOsThemeName
+        } else {
+            Get-DiskThemeName
+        }
+        if ($disk -ne $target) {
+            if (Get-Command Save-MainThemeToggleState -ErrorAction SilentlyContinue) {
+                Save-MainThemeToggleState $target $disk
+            }
+            if (Get-Command Save-ActiveTheme -ErrorAction SilentlyContinue) {
+                Save-ActiveTheme $target
+            } else {
+                $target | Set-Content -LiteralPath (Get-ThemePath) -Encoding UTF8
+            }
+        }
+        if (Get-Command Get-FoxControlThemePath -ErrorAction SilentlyContinue) {
+            $target | Set-Content -LiteralPath (Get-FoxControlThemePath) -Encoding UTF8
+        }
+        if (Get-Command Clear-FoxThemeCache -ErrorAction SilentlyContinue) { Clear-FoxThemeCache }
+        if (Get-Command Sync-FoxTheme -ErrorAction SilentlyContinue) {
+            Sync-FoxTheme
+        } elseif (Get-Command Sync-FoxOsSkin -ErrorAction SilentlyContinue) {
+            Sync-FoxOsSkin -Force
+        }
+        Write-DeskLog ("theme " + $target)
     }
     "shader" {
         $act = if ($rest.Count -gt 0) { $rest[0] } else { "toggle" }
@@ -84,6 +114,31 @@ switch ($verb) {
         $act = if ($rest.Count -gt 0) { $rest[0] } else { "status" }
         if ($act -notin @("on","off","toggle","status","apply")) { throw "foxos on|off" }
         & (Join-Path $cmdDir "foxos.ps1") $act | Out-Null
+    }
+    "foxlook" {
+        $act = if ($rest.Count -gt 0) { $rest[0].ToLowerInvariant() } else { "status" }
+        if ($act -eq "shell") {
+            $sv = if ($rest.Count -gt 1) { $rest[1].ToLowerInvariant() } else { "" }
+            if ($sv -notin @("on","off")) { throw "foxlook shell on|off" }
+            & (Join-Path $cmdDir "foxlook.ps1") "shell" $sv | Out-Null
+            return
+        }
+        if ($act -eq "dock") {
+            $dk = if ($rest.Count -gt 1) { $rest[1].ToLowerInvariant() } else { "status" }
+            $dv = if ($rest.Count -gt 2) { $rest[2].ToLowerInvariant() } else { "" }
+            if ($dv) { & (Join-Path $cmdDir "foxlook.ps1") "dock" $dk $dv | Out-Null }
+            else { & (Join-Path $cmdDir "foxlook.ps1") "dock" $dk | Out-Null }
+            return
+        }
+        if ($act -eq "cursor") {
+            $cs = if ($rest.Count -gt 1) { $rest[1].ToLowerInvariant() } else { "" }
+            $sc = if ($rest.Count -gt 2) { $rest[2] } else { "" }
+            if ($sc) { & (Join-Path $cmdDir "foxlook.ps1") "cursor" $cs $sc | Out-Null }
+            else { & (Join-Path $cmdDir "foxlook.ps1") "cursor" $cs | Out-Null }
+            return
+        }
+        if ($act -notin @("on","off","status")) { throw "foxlook on|off" }
+        & (Join-Path $cmdDir "foxlook.ps1") $act | Out-Null
     }
     "ytm" {
         if ([string]::IsNullOrWhiteSpace($query)) {
@@ -165,6 +220,75 @@ switch ($verb) {
         Save-FoxOsRigStyle $next
         Write-DeskLog ("rig " + $next)
     }
+    "lock" {
+        Start-DeskApp "lock" @()
+    }
+    "foxlife" {
+        Start-DeskApp "foxlife" @()
+    }
+    "mirror" {
+        Start-DeskApp "foxmirror" @()
+    }
+    "wifi" {
+        $foxDir = Join-Path $env:LOCALAPPDATA "FoxTerminal\foxos"
+        New-Item -ItemType Directory -Force -Path $foxDir | Out-Null
+        Set-Content -LiteralPath (Join-Path $foxDir "wifi.req") -Value "1" -Encoding ASCII
+        Write-DeskLog "wifi"
+    }
+    "bt" {
+        $foxDir = Join-Path $env:LOCALAPPDATA "FoxTerminal\foxos"
+        New-Item -ItemType Directory -Force -Path $foxDir | Out-Null
+        Set-Content -LiteralPath (Join-Path $foxDir "bt.req") -Value "1" -Encoding ASCII
+        Write-DeskLog "bt"
+    }
+    "bright" {
+        $foxDir = Join-Path $env:LOCALAPPDATA "FoxTerminal\foxos"
+        New-Item -ItemType Directory -Force -Path $foxDir | Out-Null
+        Set-Content -LiteralPath (Join-Path $foxDir "bright.req") -Value "1" -Encoding ASCII
+        Write-DeskLog "bright"
+    }
+    "vol" {
+        $foxDir = Join-Path $env:LOCALAPPDATA "FoxTerminal\foxos"
+        New-Item -ItemType Directory -Force -Path $foxDir | Out-Null
+        Set-Content -LiteralPath (Join-Path $foxDir "vol.req") -Value "1" -Encoding ASCII
+        Write-DeskLog "vol"
+    }
+    "bat" {
+        $foxDir = Join-Path $env:LOCALAPPDATA "FoxTerminal\foxos"
+        New-Item -ItemType Directory -Force -Path $foxDir | Out-Null
+        Set-Content -LiteralPath (Join-Path $foxDir "bat.req") -Value "1" -Encoding ASCII
+        Write-DeskLog "bat"
+    }
+    { $_ -in @("cal","calendar","reminders") } {
+        $foxDir = Join-Path $env:LOCALAPPDATA "FoxTerminal\foxos"
+        New-Item -ItemType Directory -Force -Path $foxDir | Out-Null
+        Set-Content -LiteralPath (Join-Path $foxDir "cal.req") -Value "1" -Encoding ASCII
+        Write-DeskLog "cal"
+    }
+    { $_ -in @("off","shutdown") } {
+        Add-Type -AssemblyName System.Windows.Forms | Out-Null
+        $r = [System.Windows.Forms.MessageBox]::Show(
+            "Shut down this PC?`n`nWindows will close apps safely.`nNothing is forced.",
+            "FoxOS · power off",
+            [System.Windows.Forms.MessageBoxButtons]::YesNo,
+            [System.Windows.Forms.MessageBoxIcon]::Warning,
+            [System.Windows.Forms.MessageBoxDefaultButton]::Button2)
+        if ($r -eq [System.Windows.Forms.DialogResult]::Yes) {
+            Start-Process -FilePath "shutdown.exe" -ArgumentList @("/s","/t","0") -WindowStyle Hidden | Out-Null
+            Write-DeskLog "shutdown"
+        } else {
+            Write-DeskLog "shutdown cancelled"
+        }
+    }
+    { $_ -in @("home","settings") } {
+        $pending = Join-Path $env:LOCALAPPDATA "FoxTerminal\foxos\pending-term.txt"
+        [System.IO.File]::WriteAllText($pending, $verb, (New-Object System.Text.UTF8Encoding $false))
+        if (-not (Get-Command Start-FoxGhosttyWindow -ErrorAction SilentlyContinue)) {
+            . (Join-Path $cmdDir "ghostty-lib.ps1")
+        }
+        Start-FoxGhosttyWindow | Out-Null
+        Write-DeskLog $verb
+    }
     "note" {
         $path = Get-FoxOsDeskPath
         $dir = Split-Path $path -Parent
@@ -176,6 +300,10 @@ switch ($verb) {
             throw "note <text>"
         } else {
             Add-Content -LiteralPath $path -Value $query -Encoding UTF8
+            try {
+                $noteOut = Join-Path $env:LOCALAPPDATA "FoxTerminal\foxos\widget-note.txt"
+                [System.IO.File]::WriteAllText($noteOut, $query, (New-Object System.Text.UTF8Encoding $false))
+            } catch {}
             Write-DeskLog ("note " + $query)
         }
     }

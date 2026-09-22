@@ -5,6 +5,7 @@ param(
     [switch]$Status,        # Показати, що вимкнено / увімкнено
     [switch]$Enable,        # Увімкнути назад служби та рекламу/підказки
     [switch]$NoShortcut,    # Не створювати ярлик на робочому столі
+    [switch]$NoLogonStart,  # Не відкривати FoxTerminal після входу в Windows
     [switch]$Force          # Перезаписати конфіг Ghostty без запитань
 )
 
@@ -261,12 +262,28 @@ if (-not $onlyBloatOrAds) {
                 Write-Host ("Could not create desktop shortcut: " + $_) -ForegroundColor Yellow
             }
         }
+
+        if ($NoLogonStart) {
+            try {
+                Remove-FoxGhosttyLogonStart | Out-Null
+            } catch {}
+        } else {
+            try {
+                $logonLink = Install-FoxGhosttyLogonStart -Ghostty $ghostty -WorkingDirectory $foxRoot
+                if ($logonLink) {
+                    Write-Host ("Windows logon will open FoxTerminal: " + $logonLink) -ForegroundColor Green
+                }
+            } catch {
+                Write-Host ("Could not install logon autostart: " + $_) -ForegroundColor Yellow
+            }
+        }
     }
 
     Write-Host ""
     Write-Host "Next steps:" -ForegroundColor Cyan
     Write-Host "  1. Start Ghostty (or press ctrl+shift+comma inside it to reload)."
-    Write-Host "  2. Run 'chek' to confirm FoxTerminal sees Ghostty."
-    Write-Host "  3. Run 'foxdeps' to install the remaining dependencies (Nerd Font, Oh My Posh, Ollama)."
-    Write-Host "  4. 'term' manages this config from now on."
+    Write-Host "  2. Sign in to Windows: FoxTerminal opens. New machine runs foxsetup, then Home."
+    Write-Host "  3. Run 'chek' to confirm FoxTerminal sees Ghostty."
+    Write-Host "  4. Run 'foxdeps' to install the remaining dependencies (Nerd Font, Oh My Posh, Ollama)."
+    Write-Host "  5. 'term' manages this config from now on."
 }

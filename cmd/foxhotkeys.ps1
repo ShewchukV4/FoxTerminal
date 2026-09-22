@@ -83,6 +83,20 @@ function Show-Status {
     Write-Host "  Shift+Ctrl+Space    -> Hide FoxTerminal"
     Write-Host "  Shift+Alt+T         -> Show FoxTerminal"
     Write-Host "  Shift+Ctrl+Alt+T    -> Close FoxTerminal"
+    Write-Host "  Alt+Tab             -> FoxOS window switcher (while foxos-live runs)"
+    Write-Host "  Alt+Shift+Tab       -> previous window"
+    $winKeys = (Get-Command Test-FoxLookPart -ErrorAction SilentlyContinue) -and (Test-FoxLookPart "winkeys")
+    Write-Host ""
+    if ($winKeys) {
+        Write-Host (Color-Text $p.accent2 "FoxOS Win keys (foxlook winkeys off):")
+        Write-Host "  Win                 -> Show / hide FoxTerminal"
+        Write-Host "  Win+R, Win+S        -> Desk prompt on the wallpaper"
+        Write-Host "  Win+E               -> edit        Win+I -> settings"
+        Write-Host "  Win+L               -> Fox lock (after foxlook winlock on)"
+        Write-Host "  Win+Esc             -> Rescue: restore Windows shell"
+    } else {
+        Write-Host (Color-Text $p.dim "FoxOS Win keys: off  (foxlook winkeys on)")
+    }
 }
 
 if ($Status)  { Show-Status;   exit }

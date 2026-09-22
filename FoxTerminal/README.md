@@ -1,8 +1,18 @@
 # Fox Terminal (Ghostty)
 
+Full system docs (guides + examples):
+
+- Українською: [`FOXTERMINAL_GUIDE_UA.md`](FOXTERMINAL_GUIDE_UA.md)
+- English: [`FOXTERMINAL_GUIDE_EN.md`](FOXTERMINAL_GUIDE_EN.md)
+- Interactive site: `sites/fox-terminal/` (open with `sites`)
+
 This is a portable terminal setup built exclusively for **[Ghostty](https://ghostty.org)**.
 Everything visual — the FoxNight palette, fonts, opacity, blur, padding, splits, tabs,
 keybinds and the command palette — lives in one file: `ghostty/config`.
+
+Beyond the terminal it also covers **FoxOS** (`foxos` / `foxlook`), the system shell
+(`home`, `lock`, `settings`, `foxsetup`), local sites, Zen Companion, and AI (`friend` / `ask`).
+See the guides above for the full map.
 
 | Platform | Build | Install | Shell |
 |----------|-------|---------|-------|
@@ -63,8 +73,10 @@ The installer copies `ghostty\config` into the Ghostty config directory
 writes a machine-specific `foxterminal-local.ghostty` overlay next to it (repo path +
 shell command pointing at `ghostty\foxterminal-boot.ps1`), validates the result with
 `winghostty.com +show-config` (the `.com` is the console binary; the `.exe` is GUI-only
-and would pop a "WriteFailed" dialog), and creates a desktop shortcut. Use `-NoShortcut` to skip the
-shortcut and `-Force` to overwrite without prompting.
+and would pop a "WriteFailed" dialog), and creates a desktop shortcut plus a logon
+scheduled task so Ghostty opens at sign-in and asks Test / Login / Register.
+Use `-NoShortcut` to skip the desktop icon, `-NoLogonStart` to skip autostart, and
+`-Force` to overwrite without prompting.
 
 ### Linux / macOS
 

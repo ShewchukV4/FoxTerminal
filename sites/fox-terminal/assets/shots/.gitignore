@@ -2,5 +2,9 @@ node_modules/
 package-lock.json
 package.json
 _shot-*.html
+_src/
+_build_shots.py
+_capture_windows.ps1
+_capture_ghostty.ps1
 capture.mjs
 # keep popup.png sidebar.png overlay.png tracked

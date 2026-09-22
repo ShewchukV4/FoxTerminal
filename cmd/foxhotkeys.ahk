@@ -15,10 +15,23 @@ global g_ScriptDir := A_ScriptDir
 global g_Config    := LoadConfig()
 global g_FoxExe    := ResolveFoxExe(g_Config.foxterm_exe)
 
-if g_Config.start_hidden
+; Skip hidden pre-launch when Windows Startup already opens a visible
+; FoxTerminal (Ensure-Login). Otherwise AHK can hide that window first.
+if g_Config.start_hidden && !HasFoxTerminalLogonShortcut()
     LaunchFoxTermHidden(g_FoxExe)
 
 RegisterCustomHotkeys(g_Config.bindings)
+
+; FoxOS look: Win keys belong to FoxOS (foxlook winkeys on|off writes the flag, then reloads us).
+global g_WinKeys := WinKeysEnabled()
+if g_WinKeys
+    RegisterWinKeys()
+
+; FoxOS Alt+Tab only while foxos-live is running; otherwise Windows keeps Alt+Tab.
+#HotIf FoxLiveRunning()
+!Tab:: FoxAltTab(false)
+!+Tab:: FoxAltTab(true)
+#HotIf
 
 ; ── Built-in hotkeys ─────────────────────────────────────────────────────────
 
@@ -46,6 +59,9 @@ RegisterCustomHotkeys(g_Config.bindings)
 
 ; Shift+Ctrl+Alt+T → close FoxTerminal (exit the Ghostty window)
 +^!t:: CloseFoxTerm()
+
+; Shift+Alt+L      → lock FoxTerminal (Windows stays signed in)
++!l:: LockFoxTerm()
 
 ; ── Core helpers ─────────────────────────────────────────────────────────────
 
@@ -130,9 +146,19 @@ FoxTermExeName() {
     return name
 }
 
+HasFoxTerminalLogonShortcut() {
+    flag := EnvGet("LOCALAPPDATA") "\FoxTerminal\logon-autostart"
+    if FileExist(flag)
+        return true
+    startup := EnvGet("APPDATA") "\Microsoft\Windows\Start Menu\Programs\Startup\FoxTerminal.lnk"
+    return FileExist(startup)
+}
+
 LaunchFoxTermHidden(exePath) {
     exeName := FoxTermExeName()
     if WinExist("ahk_exe " exeName)
+        return
+    if HasFoxTerminalLogonShortcut()
         return
     if !exePath || !FileExist(exePath)
         return
@@ -163,6 +189,14 @@ HideFoxTerm() {
         WinHide "ahk_exe " exeName
 }
 
+LockFoxTerm() {
+    global g_ScriptDir
+    lockPs := g_ScriptDir "\lock.ps1"
+    if FileExist(lockPs)
+        Run 'powershell.exe -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "' lockPs '"',, "Hide"
+    HideFoxTerm()
+}
+
 CloseFoxTerm() {
     closed := false
     for exeName in ["winghostty.exe", "ghostty.exe"] {
@@ -175,6 +209,95 @@ CloseFoxTerm() {
     }
     if !closed
         TrayTip "FoxTerminal", "No Ghostty window to close"
+}
+
+; ── FoxOS Win keys ───────────────────────────────────────────────────────────
+; Win alone       → show / hide FoxTerminal (instead of Start)
+; Win+R, Win+S    → desk prompt on the FoxOS wallpaper (FoxTerminal if no wallpaper)
+; Win+E           → `edit` in FoxTerminal        Win+I → `settings` in FoxTerminal
+; Win+L           → Fox lock, only after `foxlook winlock on` (Windows grabs Win+L first otherwise)
+; Other Win combos (Win+D, Win+Shift+S, Win+Tab, Win+number…) still reach Windows.
+
+FoxOsDir() {
+    return EnvGet("LOCALAPPDATA") "\FoxTerminal\foxos"
+}
+
+WinKeysEnabled() {
+    flag := FoxOsDir() "\winkeys.txt"
+    if !FileExist(flag)
+        return false
+    try return Trim(FileRead(flag)) = "on"
+    return false
+}
+
+RegisterWinKeys() {
+    ; `~` lets the Win press through so Windows still sees it as a modifier. vkE8 is an
+    ; unassigned virtual key: sending it while Win is down makes Windows treat the press
+    ; as a combo, so Start does not open on release. A_PriorKey ignores keys we send.
+    Hotkey "~LWin", (*) => Send("{Blind}{vkE8}")
+    Hotkey "~LWin Up", WinAlone
+    Hotkey "#r", (*) => FoxDeskPrompt()
+    Hotkey "#s", (*) => FoxDeskPrompt()
+    Hotkey "#e", (*) => FoxDeskLine("term edit")
+    Hotkey "#i", (*) => FoxDeskLine("term settings")
+    Hotkey "#l", (*) => LockFoxTerm()
+    Hotkey "#Esc", (*) => FoxRescueWindows()
+}
+
+FoxRescueWindows() {
+    cmd := FoxOsDir() "\restore-windows.cmd"
+    if FileExist(cmd)
+        Run cmd
+}
+
+FoxAltTab(back) {
+    if !FoxLiveRunning()
+        return
+    dir := FoxOsDir()
+    if !DirExist(dir)
+        DirCreate(dir)
+    path := dir "\alttab.req"
+    try FileDelete(path)
+    try FileAppend(back ? "back" : "next", path)
+}
+
+WinAlone(*) {
+    if (A_PriorKey != "LWin")
+        return
+    exeName := FoxTermExeName()
+    if WinActive("ahk_exe " exeName)
+        HideFoxTerm()
+    else
+        ShowFoxTerm()
+}
+
+FoxLiveRunning() {
+    return WinExist("ahk_exe foxos-live.exe")
+}
+
+WriteFoxRequest(name, text) {
+    dir := FoxOsDir()
+    if !DirExist(dir)
+        DirCreate(dir)
+    path := dir "\" name
+    try FileDelete(path)
+    FileAppend(text, path, "UTF-8-RAW")
+}
+
+FoxDeskPrompt() {
+    if FoxLiveRunning() {
+        WriteFoxRequest("prompt.req", "1")
+        try WinActivate "ahk_exe foxos-live.exe"
+    } else {
+        ShowFoxTerm()
+    }
+}
+
+FoxDeskLine(line) {
+    if FoxLiveRunning()
+        WriteFoxRequest("desk.req", line)
+    else
+        ShowFoxTerm()
 }
 
 ; ── Config ───────────────────────────────────────────────────────────────────
@@ -296,6 +419,15 @@ CustomOpen(target, action) {
 
 ; ── Tray info popup ───────────────────────────────────────────────────────────
 ShowInfoMsg(*) {
+    global g_WinKeys
+    winKeys := (g_WinKeys
+        ? "FoxOS Win keys (foxlook winkeys off returns them):`n"
+          . "  Win              → Show / hide FoxTerminal`n"
+          . "  Win+R, Win+S     → Desk prompt on the wallpaper`n"
+          . "  Win+E            → edit    Win+I → settings`n"
+          . "  Win+L            → Fox lock (after foxlook winlock on)`n"
+          . "  Win+Esc          → Rescue: restore Windows shell`n`n"
+        : "FoxOS Win keys: off  (foxlook winkeys on)`n`n")
     MsgBox(
         "FoxTerminal Hotkeys`n`n"
         "  Shift+Alt+Y      → YouTube`n"
@@ -306,6 +438,9 @@ ShowInfoMsg(*) {
         "  Shift+Ctrl+Space → Hide FoxTerminal (Ghostty)`n"
         "  Shift+Alt+T      → Show FoxTerminal (Ghostty)`n"
         "  Shift+Ctrl+Alt+T → Close FoxTerminal (Ghostty)`n`n"
+        "  Alt+Tab          → FoxOS window switcher (while foxos-live runs)`n"
+        "  Alt+Shift+Tab    → previous window`n`n"
+        winKeys
         "Ghostty's own drop-down terminal: Ctrl+``  (system-wide)`n`n"
         "Custom bindings: edit hk_bindings.json`n"
         "Or run  foxinfo  in the terminal.",

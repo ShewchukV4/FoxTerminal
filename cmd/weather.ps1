@@ -77,3 +77,6 @@ if ($null -ne $text) {
 }
 
 Write-Host "Weather unavailable. Check connection or try again."
+if (Get-Command Write-FoxToast -ErrorAction SilentlyContinue) {
+    Write-FoxToast "weather unavailable"
+}

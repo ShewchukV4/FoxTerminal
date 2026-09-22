@@ -1,761 +1,724 @@
-# FoxTerminal: Complete Practical Guide
+# FoxTerminal: Complete System Guide
 
-This is a full English documentation guide for FoxTerminal: from installation and first launch to daily workflows, themes, diagnostics, notes, AI commands, hotkeys, snapshots, and packaging.
+Full English documentation: from the Ghostty terminal to FoxOS on the Windows desktop, commands, local sites, AI, hotkeys, and day-to-day workflows.
 
-The guide is written for real Windows usage, with a focus on PowerShell/CMD launch flows, Firefox integration, local sites, media workflows, and personalization tools.
-
----
-
-## 1) What FoxTerminal Is
-
-FoxTerminal is a command-driven environment built from scripts, profiles, and helper tools. Main goals:
-
-- fast web/media actions (YouTube, YouTube Music, Spotify, Telegram, search);
-- system utilities (network, disks, date/time, IP, diagnostics);
-- local notes with folder navigation;
-- AI commands for one-shot prompts and interactive chat;
-- visual modes/themes (`noir`, `pride`, `arthas`, `dnote`, `spider`);
-- window layout control and native Ghostty splits;
-- config snapshots (`build`) and shareable packaging (`foxpack`).
-
-FoxTerminal targets **Ghostty and only Ghostty**. Upstream Ghostty has no Windows app
-yet, so on Windows it runs on [winghostty](https://github.com/amanthanvi/winghostty) —
-the same terminal core on a native Win32 runtime, reading the identical config format —
-driving PowerShell. On Linux/macOS it is the official Ghostty build driving bash. Every
-visual setting lives in `FoxTerminal/ghostty/config`.
+> Українська версія: [`FOXTERMINAL_GUIDE_UA.md`](FOXTERMINAL_GUIDE_UA.md)  
+> Short README: [`README.md`](README.md)  
+> Interactive presentation: `sites/fox-terminal/` (open via `sites`)
 
 ---
 
-## 2) Quick Start (10 Steps)
+## Contents
 
-1. Install Ghostty (`winget install AmanThanvi.winghostty` on Windows,
-   `brew install --cask ghostty` on macOS, your package manager on Linux).
-2. Install the FoxTerminal config:
-   - `powershell -NoProfile -ExecutionPolicy Bypass -File .\FoxTerminal\install.ps1`
-   - or `bash ./FoxTerminal/install.sh`
-3. Open Ghostty from the new shortcut and confirm the setup:
-   - `chek`
-   - `term -Doctor`
-   - `foxtest -Group info` to actually run the commands and see them work
-4. Check and install remaining dependencies, then open the help menu:
-   - `foxdeps -Check`, `foxdeps -Install`
-   - `foxhelp`
-5. Register user:
-   - `nuser myname mypass`
-6. Login:
-   - `l myname mypass`
-7. Check active user:
-   - `who`
-8. Create first note:
-   - `nfile hello.txt`
-   - `edit hello.txt`
-9. Test media command:
-   - `yt lofi hip hop`
-10. Save current setup:
-   - `build first-day`
+1. [What this system is](#1-what-this-system-is)
+2. [Quick start](#2-quick-start)
+3. [Where things live](#3-where-things-live)
+4. [System layers](#4-system-layers)
+5. [FoxOS and foxlook](#5-foxos-and-foxlook)
+6. [home · lock · settings · foxsetup](#6-home--lock--settings--foxsetup)
+7. [Command catalog](#7-command-catalog)
+8. [Workflows and guides](#8-workflows-and-guides)
+9. [Local sites](#9-local-sites)
+10. [Themes and visuals](#10-themes-and-visuals)
+11. [Ghostty features and keys](#11-ghostty-features-and-keys)
+12. [Zen / Firefox Companion](#12-zen--firefox-companion)
+13. [AI (FRIEND / ask)](#13-ai-friend--ask)
+14. [Security](#14-security)
+15. [Troubleshooting](#15-troubleshooting)
+16. [Cheat sheets](#16-cheat-sheets)
+17. [Ready-made command packs](#17-ready-made-command-packs)
 
 ---
 
-## 3) Project Layout
+## 1) What this system is
 
-Main folders:
+**FoxTerminal** is not just PowerShell aliases. It is a local ecosystem:
 
-- `cmd/` - user-facing commands (`.ps1`, `.bat`, `.cmd`);
-- `sites/` - local mini-sites and site registry;
-- `FoxTerminal/` - install scripts and theme files;
-- `FoxTerminal/ghostty/` - the Ghostty config plus the shell bootstrap scripts
-  (`config`, `foxterminal-boot.ps1`, `foxterminal-boot.sh`);
-- `builds/` - configuration snapshots and installer assets.
+| Layer | Role |
+|-------|------|
+| **Ghostty** | Terminal: themes, splits, keybinds, shaders, command palette |
+| **cmd/** | 85+ commands: media, notes, network, themes, AI, packaging |
+| **FoxOS (`foxos`)** | Animated ASCII wallpaper + Windows accent + desk prompt |
+| **Fox look (`foxlook`)** | Windows “wears” FoxOS: dark mode, cursors, dock, Win keys, shell |
+| **System shell** | `home`, `lock`, `settings`, `foxsetup` — mini-OS after login |
+| **Apps** | `foxlife` (notes/finance), `sites` (local web apps), Zen Companion |
+| **builds / foxpack** | Config snapshots and zip packs for another PC |
+
+Targets **Ghostty only**. On Windows use [winghostty](https://github.com/amanthanvi/winghostty) (`winget install AmanThanvi.winghostty`). On Linux/macOS use official Ghostty. All terminal visuals live in `FoxTerminal/ghostty/config`.
+
+---
+
+## 2) Quick start
+
+### Install once
+
+```powershell
+winget install AmanThanvi.winghostty
+powershell -NoProfile -ExecutionPolicy Bypass -File .\FoxTerminal\install.ps1
+```
+
+Linux/macOS: `bash ./FoxTerminal/install.sh`
+
+The installer copies the Ghostty config, creates a shortcut, and optionally starts Ghostty at Windows sign-in.
+
+### First day in the terminal
+
+```powershell
+chek                  # are we really in Ghostty?
+term -Doctor          # config / font / shell diagnostics
+foxdeps -Install      # Firefox, Nerd Font, Oh My Posh, AHK, .NET…
+foxsetup              # wizard: user, theme, FoxOS, hotkeys, idle lock
+```
+
+Or manually:
+
+```powershell
+nuser myname mypass
+l myname mypass
+who
+foxhelp
+fday Kyiv
+nfile hello.txt
+edit hello.txt
+ytm lofi
+build first-day
+```
+
+### Full FoxOS on Windows
+
+```powershell
+l myname mypass
+foxos on              # ASCII rain wallpaper + accent
+foxlook on            # dark Windows, cursors, dock, Win keys
+home                  # system home after login
+settings              # settings TUI (or settings -Gui)
+```
+
+---
+
+## 3) Where things live
+
+```
+FireFoxBot/
+├── cmd/                    ← all commands (.ps1 + .bat wrappers)
+├── sites/                  ← local mini-sites + hub
+│   └── fox-terminal/       ← interactive presentation / docs UI
+├── FoxTerminal/
+│   ├── ghostty/config      ← single terminal visual file
+│   ├── ghostty/shaders/    ← per-theme GLSL
+│   ├── install.ps1 / .sh
+│   ├── FOXTERMINAL_GUIDE_UA.md
+│   └── FOXTERMINAL_GUIDE_EN.md   ← this file
+├── builds/                 ← snapshots from `build`
+└── CHANGELOG.md            ← history (read via `changelog`)
+```
 
 Notes:
 
-- Many commands have both `.ps1` and `.bat` wrappers.
-- Some scripts are internal helpers and not meant for direct manual use.
-- Main entry point for navigation/help is `foxhelp`.
+- Many commands ship as `.ps1` + `.bat` with the same name — in Ghostty type `ytm`, `foxos`, `home`.
+- Library scripts (`foxauth.ps1`, `foxos-lib.ps1`, `shader-lib.ps1`…) are **not** for direct use.
+- In-terminal help entry point: **`foxhelp`** (arrows + Enter).
 
 ---
 
-## 4) Full Command Catalog by Category
+## 4) System layers
 
-## 4.1 Login and Users
+Think of FoxTerminal as layers:
 
-### `l`
-- Purpose: login (or register if user does not exist).
-- Usage: `l <name> <pass>`
-- Example: `l dmytr qwerty123`
+```
+┌─────────────────────────────────────────────┐
+│  Windows desktop (foxlook: dark, dock…)     │
+│  ┌───────────────────────────────────────┐  │
+│  │  FoxOS wallpaper (foxos: rain + fox)  │  │
+│  │  desk prompt: sw slate, ytm, help…    │  │
+│  └───────────────────────────────────────┘  │
+│  Ghostty (terminal + shaders + splits)      │
+│    └── PowerShell + Oh My Posh + cmd\       │
+│         home / settings / notes / media / AI│
+└─────────────────────────────────────────────┘
+```
 
-### `nuser`
-- Purpose: register a new user.
-- Usage: `nuser <name> <pass>`
-- Example: `nuser fox admin123`
-
-### `passwd`
-- Purpose: change password (requires active login).
-- Usage: `passwd`
-
-### `users`
-- Purpose: list registered users.
-- Usage: `users`
-
-### `who`
-- Purpose: show active/current user.
-- Usage: `who`
-
-### `uexit`
-- Purpose: logout.
-- Usage: `uexit`
+| Command | Layer | Short |
+|---------|-------|-------|
+| `term`, `chek`, `shader` | Terminal | Ghostty config, diagnostics, glass shaders |
+| `sw`, `themes`, `noir`… | Session visuals | Palette and mood modes |
+| `foxos` | Desktop skin | Wallpaper + accent + live rain |
+| `foxlook` | Windows shell | Dark/cursors/dock/Win keys/shell |
+| `home` | Post-login UX | Day digest + quick actions |
+| `lock` | Session security | Hides terminal; needs Fox password |
+| `settings` | Control | TUI or browser Control UI |
+| `foxlife` | Separate app | Notes, finance, tables, AI |
 
 ---
 
-## 4.2 AI Commands
+## 5) FoxOS and foxlook
 
-### `ask`
-- Purpose: one-shot AI request via Ollama.
-- Usage: `ask "..." [--image <path>]`
-- Examples:
-  - `ask "Explain this script"`
-  - `ask "What is in this image?" --image C:\img\photo.png`
+### 5.1 `foxos` — wallpaper and accent
 
-### `friend`
-- Purpose: interactive AI chat mode.
-- Usage: `friend`
-- Useful in-chat commands:
-  - `/help`, `/clear`, `/model`, `/cmds`, `/repo`, `/read <path>`, `/explain <path>`
+```powershell
+foxos                 # status
+foxos on              # ASCII rain + Windows accent from theme
+foxos off             # restore previous wallpaper/accent
+foxos apply           # repaint now (theme already changed via sw)
+foxos toggle
+```
 
-### `sum`
-- Purpose: summarize a file with OpenAI.
-- Usage: `sum <file>`
-- Example: `sum .\cmd\foxdeps.ps1`
+What `foxos on` does:
 
----
+- animated ASCII rain with the fox (same art language as `sw`);
+- Windows accent color follows the current theme;
+- taskbar search / Copilot / weather stay hidden while FoxOS is on;
+- under the fox, a **desk prompt** accepts clicks and short commands like `sw slate`, `ytm`, `help`, `home`.
 
-## 4.3 Media and Content
+Skip the skin for this session only: `$env:FOXTERM_FOXOS = "0"`.
 
-### `yt`
-- Purpose: YouTube search in Firefox.
-- Usage: `yt <query>`
-- Example: `yt cyberpunk ambient`
+### 5.2 `foxlook` — Windows wears FoxOS
 
-### `ytm`
-- Purpose: open/search YouTube Music (supports alias or URL too).
-- Usage: `ytm [query|alias|url]`
-- Examples:
-  - `ytm`
-  - `ytm synthwave`
+```powershell
+foxlook               # status of every part
+foxlook on            # enable full look
+foxlook off           # restore Windows from snapshot
+```
 
-### `ytm-ui`
-- Purpose: YouTube Music TUI controls + DJ visualizer.
-- Usage: `ytm-ui`
+Parts (toggle individually):
 
-### `ytsplit`
-- Purpose: split and place YouTube/YTM windows.
-- Usage: `ytsplit [-ReportOnly]`
-- Example: `ytsplit`
+| Part | Example | Effect |
+|------|---------|--------|
+| `dark` | `foxlook dark on` | Dark Windows apps/shell |
+| `icons` | `foxlook icons on` | Hide desktop icons |
+| `taskbar` | `foxlook taskbar on` | Auto-hide taskbar |
+| `sounds` | `foxlook sounds on` | Mute system sounds |
+| `cursors` | `foxlook cursors on` | Theme-colored pixel cursors |
+| `lockscreen` | `foxlook lockscreen on` | Lock screen = FoxOS, no Spotlight |
+| `winkeys` | `foxlook winkeys on` | Win → FoxTerminal, Win+I → settings… |
+| `oem` | `foxlook oem on` | Settings → About: FoxOS (admin once) |
+| `winlock` | `foxlook winlock on` | Win+L → Fox `lock` (Windows lock off) |
+| `shell` | `foxlook shell on` | **Next** sign-in of this user = FoxOS instead of Explorer |
 
-### `sp`
-- Purpose: open/search Spotify.
-- Usage: `sp [query|url]`
-- Example: `sp dark ambient`
+#### Cursors
 
-### `sp-ui`
-- Purpose: Spotify DJ UI controls (play/next/prev/etc).
-- Usage: `sp-ui`
+```powershell
+foxlook cursor pixel
+foxlook cursor chunky 2
+foxlook cursor neon 3
+foxlook cursor fox
+foxlook cursor inverted
+foxlook cursor preview     # PNG preview of every style
+```
 
-### `dj`
-- Purpose: audio-level visualizer.
-- Usage: `dj`
+Styles: `pixel` | `chunky` | `neon` | `fox` | `inverted`. Size: `1` | `2` | `3`.
 
-### `youtube`
-- Purpose: open YouTube in Firefox.
-- Usage: `youtube`
+#### Wallpaper: overlay vs behind
 
----
+```powershell
+foxlook wall overlay   # rain as a window (desk prompt works) — default
+foxlook wall behind    # rain under icons (Win+D safe; desk prompt off)
+```
 
-## 4.4 Firefox, Web, and Alias Management
+#### Dock
 
-### `ff`
-- Purpose: open URL or alias in Firefox.
-- Usage: `ff open [alias-or-url]`
-- Examples:
-  - `ff open youtube`
-  - `ff open https://developer.mozilla.org`
+```powershell
+foxlook dock style pill      # rail | pill | glass | slim
+foxlook dock place bottom    # top | bottom
+foxlook dock size normal     # compact | normal | large
+foxlook dock hide on
+foxlook dock apps titles     # titles | dots | off
+foxlook dock tray clock      # full | clock | off
+foxlook dock widgets on
+foxlook dock home on
+```
 
-### `sites`
-- Purpose: browse local sites, scaffold a new site, open site folder.
-- Usage: `sites [-createn <name>] [-open <name>]`
-- Examples:
-  - `sites`
-  - `sites -createn fox-lab`
-  - `sites -open fox-lab`
+#### Export / import look profile
 
-### `bbind`
-- Purpose: create custom `.bat` command or website alias for `ff`.
-- Usage: `bbind`
+```powershell
+foxlook export
+foxlook export D:\looks\work.json
+foxlook import D:\looks\work.json
+```
 
-### `blist`
-- Purpose: list site aliases.
-- Usage: `blist`
+#### Warning: `foxlook shell on`
 
-### `bdel`
-- Purpose: delete site alias.
-- Usage: `bdel <alias>`
-- Example: `bdel docs`
+On the **next** sign-in of **this** Windows user, FoxOS starts instead of Explorer. Other Windows accounts are unchanged.
 
-### `gask`
-- Purpose: open ChatGPT in Firefox with prefilled query.
-- Usage: `gask <question>`
-- Example: `gask how to optimize powershell scripts`
+**Rescue path:**
 
-### `ser`
-- Purpose: quick Google search in Firefox.
-- Usage: `ser <terms>`
-- Example: `ser powershell compare object examples`
+1. Ctrl+Alt+Del → Task Manager → File → Run  
+2. `%LOCALAPPDATA%\FoxTerminal\foxos\restore-windows.cmd`  
+   or repo `cmd\fox-restore-windows.bat`  
+3. Or run `foxlook shell off` / `foxlook off` from a working terminal
 
-### `ffbot`
-- Purpose: .NET Firefox watcher utility.
-- Usage: `ffbot`
+If the dock is silent for ~30s after login, Explorer comes back on its own (safety).
 
-### Firefox personal add-on (`FoxTerminal Companion`)
-- Purpose: quick Firefox popup that runs selected FoxTerminal web commands through Native Messaging.
-- Side terminal trigger from address bar:
-  - type `ff`, press Space, press Enter -> opens side terminal panel
-  - type `ff`, press Space, then `history -clear` -> clears Firefox history
-- Shared terminal session mode (sync terminal <-> sidebar):
-  - run `ffsync start`
-  - run `ffsync shell`
-  - then open sidebar with `ff` + Space + Enter
-- Location: `FoxTerminal/firefox-addon/`
-- Install host:
-  - `powershell -ExecutionPolicy Bypass -File .\FoxTerminal\firefox-addon\native-host\install-host.ps1`
-- Load extension temporarily in Firefox:
-  - `about:debugging#/runtime/this-firefox`
-  - Choose `FoxTerminal/firefox-addon/manifest.json`
+### 5.3 Recommended full FoxOS order
+
+```powershell
+l myname mypass
+themes                 # or sw slate
+foxos on
+foxlook on
+foxlook cursor fox 2
+foxlook dock style glass
+home
+settings -Status
+```
+
+Back to classic Windows:
+
+```powershell
+foxlook off
+foxos off
+```
 
 ---
 
-## 4.5 Telegram
+## 6) home · lock · settings · foxsetup
 
-### `tg`
-- Purpose: open Telegram Web or jump to user/url.
-- Usage: `tg [alias|@username|url|tg://...]`
-- Examples:
-  - `tg`
-  - `tg @foxhelper`
+### `foxsetup` — first boot
 
-### `tgub`
-- Purpose: create Telegram alias by username or phone.
-- Usage:
-  - `tgub <@user|user|url> <alias>`
-  - `tgub phone <num> <alias>`
-- Examples:
-  - `tgub @myfriend mf`
-  - `tgub phone +380XXXXXXXXX myphone`
+Wizard: user, theme, FoxOS, logon autostart, hotkeys, idle lock. Runs on a fresh machine or manually: `foxsetup`.
 
-### `tglist`
-- Purpose: list/edit Telegram bindings.
-- Usage: `tglist`
+### `home` — system home
 
----
+After login: day digest, notes, last site, quick actions (Prompt / YTM / Sites / Help / Settings / Lock).
 
-## 4.6 Notes, Files, Text
+```powershell
+l myname mypass
+home
+```
 
-### `wai`
-- Purpose: show current notes location and files.
-- Usage: `wai`
+### `lock` — Fox session lock
 
-### `go`
-- Purpose: move into notes subfolder.
-- Usage: `go <path>`
-- Example: `go files/important`
+```powershell
+lock                  # hide Ghostty + wallpaper lock; Windows stays signed in
+lock -Status
+lock -Unlock          # or Shift+Alt+T and Fox password
+```
 
-### `up`
-- Purpose: go one level up in notes tree.
-- Usage: `up`
+Global: **Shift+Alt+L** (via `foxhotkeys`).  
+With `foxlook winlock on`, **Win+L** also goes to Fox lock.
 
-### `nfile`
-- Purpose: create file in current notes folder.
-- Usage: `nfile <name.ext>`
-- Example: `nfile plan.md`
+### `settings` — system settings
 
-### `nfould`
-- Purpose: create folder in current notes path.
-- Usage: `nfould <name>`
+```powershell
+settings              # interactive TUI (after login)
+settings -Status      # short report: theme, foxos, look, dock, shell, idle…
+settings -Gui         # Control UI in browser (http://127.0.0.1:17321/settings.html)
+settings -StopGui     # stop host
+```
 
-### `fdel`
-- Purpose: delete file in notes (with protection flow).
-- Usage: `fdel <name.ext>`
+### `changelog`
 
-### `edit`
-- Purpose: terminal editor for notes or direct file paths.
-- Usage: `edit <path-or-name>`
-- Examples:
-  - `edit todo.txt`
-  - `edit C:\temp\notes.md`
-
-### `nano`
-- Purpose: Linux-style terminal editing (micro/nano/vim fallback).
-- Usage: `nano <file>`
-
-### `view`
-- Purpose: read-only file view in terminal pager.
-- Usage: `view <file>`
-
-### `hash`
-- Purpose: hash text values.
-- Usage: `hash [fx1|md5|sha1|sha256|ntlm|b64] <text>`
-- Example: `hash sha256 mySecret`
-
-### `unhash`
-- Purpose: attempt hash recovery (offline/rules/bruteforce modes).
-- Usage: `unhash [-offline] [hash]`
-- Example: `unhash -offline 5f4dcc3b5aa765d61d8327deb882cf99`
+```powershell
+changelog             # history of additions/removals (same viewer as notes)
+```
 
 ---
 
-## 4.7 Themes and Visual Modes
+## 7) Command catalog
 
-### `sw`
-- Purpose: system info view + theme switcher.
-- Usage: `sw [themeName] [live] [color|mono] [imagePath]`
-- Examples:
-  - `sw`
-  - `sw slate`
+User-facing commands below. Live inventory is always in `foxhelp`.
 
-### `themes`
-- Purpose: main theme picker menu (arrows + Enter).
-- Usage: `themes`
+### 7.1 Users
 
-### `noir`
-- Purpose: toggle noir mode.
-- Usage: `noir`
+| Command | Usage | Example |
+|---------|-------|---------|
+| `l` | `l <name> <pass>` | `l dmytr secret` |
+| `nuser` | `nuser <name> <pass>` | `nuser fox admin123` |
+| `passwd` | `passwd` | (login required) |
+| `users` | `users` | list |
+| `who` | `who` | current user |
+| `uexit` | `uexit` | log out of Fox user |
 
-### `dnote`
-- Purpose: toggle Death Note style mode.
-- Usage: `dnote`
+### 7.2 System shell
 
-### `apple`
-- Purpose: show Death Note scene as large centered ASCII art.
-- Usage: `apple [imagePath]`
+| Command | Usage | Purpose |
+|---------|-------|---------|
+| `home` | `home` | post-login home |
+| `lock` | `lock [-Status\|-Unlock]` | session lock |
+| `settings` | `settings [-Status\|-Gui\|-StopGui]` | settings |
+| `foxsetup` | `foxsetup` | first-boot wizard |
+| `changelog` | `changelog` | change history |
+| `off` / `shutdown` | `off` | shut down PC (Yes/No, default No) |
 
-### `pride`
-- Purpose: toggle pride mode with multiple style variants.
-- Usage: `pride`
+### 7.3 AI
 
-### `arthas`
-- Purpose: toggle Arthas panel mode.
-- Usage: `arthas`
+| Command | Usage | Purpose |
+|---------|-------|---------|
+| `ask` | `ask "…" [--image path]` | one-shot (Ollama) |
+| `friend` | `friend` | FRIEND chat; exit with `exitt` |
+| `sum` | `sum <file>` | summarize file (needs `OPENAI_API_KEY`) |
 
-### `spider`
-- Purpose: show Spider-Noir panel mode (noir context).
-- Usage: `spider`
+In `friend`: `/clear`, `/help`, `/model`, `/cmds`, `/repo`, `/read <path>`, `/explain <path>`. Phrases like “open youtube” or “notes” exit chat and run that command.
 
-### `shader`
-- Purpose: Ghostty glass shaders for the current theme. On by default.
-- Usage: `shader [on|off|status|toggle]`
-- Examples:
-  - `shader` — show which `.glsl` is active
-  - `shader off` — disable glass for every theme
-  - `shader on` — turn it back on
-  - `ctrl+shift+o` — toggle
+### 7.4 Media
 
-### `foxos`
-- Purpose: the terminal theme paints the Windows wallpaper and window accent.
-- Usage: `foxos [on|off|status|apply]`
-- Examples:
-  - `foxos on` — enable (current wallpaper is saved)
-  - `foxos off` — restore the previous desktop
-  - `sw` / `dnote` / `arthas` — while FoxOS is on, the desktop follows the theme
+| Command | Example | Purpose |
+|---------|---------|---------|
+| `yt` | `yt lofi hip hop` | YouTube in Firefox/Zen |
+| `ytm` | `ytm`, `ytm chill` | YouTube Music |
+| `ytm-ui` | `ytm-ui` | TUI + DJ visualizer |
+| `ytsplit` | `ytsplit` | YouTube \| YTM left/right |
+| `sp` | `sp radiohead` | Spotify |
+| `sp-ui` | `sp-ui` | Spotify DJ UI |
+| `dj` | `dj` | system audio visualizer |
+| `youtube` | `youtube` | open YouTube |
+| `foximg` | `foximg photo.jpg` | photo in terminal |
+| `foxmirror` | `foxmirror` | iPhone screen (USB / Wi‑Fi) |
 
-### `frederik`
-- Purpose: voice/audio reactive waveform visualizer.
-- Usage:
-  - `frederik [-ListMics] [-Source Auto|Mic|System] [-Mic <idx|name>] [-SetMainMic] [-Bars <n>] [-Height <n>]`
+`foxmirror` quick path:
 
----
+```powershell
+foxmirror -Check
+foxmirror -Setup
+foxmirror                 # USB
+foxmirror -Wifi           # after one cable session
+foxmirror -Video -Fps 30
+```
 
-## 4.8 System, Network, Diagnostics
+### 7.5 Web, aliases, sites
 
-### `wifi`
-- Purpose: Wi-Fi status (SSID/signal/channel).
-- Usage: `wifi`
+| Command | Example |
+|---------|---------|
+| `ff` | `ff open github` |
+| `sites` | `sites`, `sites -createn my-tool`, `sites -open my-tool` |
+| `bbind` | create .bat or site alias |
+| `blist` / `bdel` | list / delete alias |
+| `gask` | `gask how does OSC 133 work` |
+| `ser` | `ser powershell hash` |
+| `ffbot` | .NET Firefox watcher |
+| `ffsync` | `ffsync start\|stop\|status\|shell` — sidebar ↔ terminal bridge |
 
-### `reconnect`
-- Purpose: reconnect current or specified Wi-Fi profile.
-- Usage: `reconnect [ssid]`
+### 7.6 Telegram
 
-### `ip`
-- Purpose: show public and local IP addresses.
-- Usage: `ip`
+| Command | Example |
+|---------|---------|
+| `tg` | `tg @friend`, `tg work` |
+| `tgub` | `tgub @user work` or `tgub phone 380… mom` |
+| `tglist` | list/edit binds |
 
-### `weather`
-- Purpose: weather via wttr.in.
-- Usage: `weather [location]`
-- Example: `weather Kyiv`
+### 7.7 Notes and files
 
-### `netping`
-- Purpose: ping default or custom targets.
-- Usage: `netping [targets...]`
-- Example: `netping 8.8.8.8 1.1.1.1 github.com`
+| Command | Example |
+|---------|---------|
+| `wai` | `wai`, `wai -pin` |
+| `go` / `up` | `go files/work` |
+| `nfile` / `nfould` | `nfile plan.md` |
+| `fdel` | `fdel old.txt` (password) |
+| `edit` / `nano` / `view` | `edit plan.md` |
+| `hash` / `unhash` | `hash sha256 hello` |
 
-### `disk`
-- Purpose: disk usage by drive.
-- Usage: `disk`
+### 7.8 Themes and visual modes
 
-### `ftime`
-- Purpose: current date/time output.
-- Usage: `ftime`
+| Command | Purpose |
+|---------|---------|
+| `sw [theme]` | system info + arrows change theme; Ctrl+E exits |
+| `themes` | main picker (Fox, Arthas, Pride, Noir, Death Note…) |
+| `noir` | B/W mode (toggle) |
+| `dnote` | Death Note style + intro |
+| `apple` | Death Note scene as large ASCII |
+| `pride` | rainbow styles; arrows in `sw` |
+| `arthas` | Arthas dark/light panel |
+| `spider` | Spider-Noir panel (in noir) |
+| `shader` | `shader on\|off\|status` — per-theme GLSL glass |
+| `frederik` | mic/system waveform |
+| `foxos` | desktop skin |
+| `foxlook` | Windows look |
 
-### `fday`
-- Purpose: daily summary (time + weather + wifi + ip).
-- Usage: `fday [location]`
+### 7.9 System, network, diagnostics
 
-### `chek`
-- Purpose: verify you are inside Ghostty and report shell, host and env signals.
-- Usage: `chek`
+| Command | Example |
+|---------|---------|
+| `wifi` / `reconnect` | status / reconnect |
+| `ip` / `netping` | `netping 1.1.1.1 github.com` |
+| `weather` / `ftime` / `fday` | `fday Kyiv` |
+| `disk` | drive usage |
+| `chek` / `sixel` | Ghostty? / inline images? |
+| `foxscan` | `foxscan -Deep` |
+| `foxbg` | interactive background cleaner |
+| `clear` / `texit` | clear / kill terminal |
 
-### `sixel`
-- Purpose: check inline-image support. Ghostty implements the Kitty graphics protocol
-  (not SIXEL), so this reports the session state, `image-storage-limit`, and which
-  renderers are installed (`chafa`, `timg`, `kitten`).
-- Usage: `sixel [-Test]`
+### 7.10 Window layout
 
-### `foxscan`
-- Purpose: heuristic suspicious script scanner.
-- Usage: `foxscan [-Deep] [-IncludeLow] [-IncludeWorkspace] [-Top <n>] [-Path <dir1,dir2,...>]`
-- Example: `foxscan -Deep -Top 30`
+| Command | Example |
+|---------|---------|
+| `interface` | `interface -Split`, `-Keys`, `-Gui` |
+| `term` | `term -Status\|-Apply\|-Edit\|-New\|-Doctor` |
+| `apps` | `apps firefox / telegram / spotify` |
+| `appbind` | `appbind add code "C:\…\Code.exe"` |
 
-### `foxbg`
-- Purpose: interactive background process cleaner.
-- Usage: `foxbg [-IncludeLow] [-Top <n>] [-MinMemoryMB <n>]`
+### 7.11 FoxOS Life and Companion
 
-### `clear`
-- Purpose: clear terminal screen.
-- Usage: `clear`
+| Command | Purpose |
+|---------|---------|
+| `foxlife` | native window: notes, finance, tables, AI (`-Status`, `-Rebuild`) |
+| `foxaddon` | `foxaddon -Install\|-Pack\|-OpenFolder` |
+| `foxzen` | `foxzen status\|default\|theme\|host\|addon` — Zen as primary browser |
 
-### `texit`
-- Purpose: force-exit current terminal process.
-- Usage: `texit`
+### 7.12 Hotkeys, snapshots, packaging
 
----
-
-## 4.9 Ghostty, Splits, Layout
-
-### `interface`
-- Purpose: create Ghostty splits and list the split keybinds. Splits are native to
-  Ghostty, so no tmux, mintty or bash is involved anymore.
-- Usage: `interface [-Split down|right|auto] [-TwoWindows] [-Keys] [-Gui]`
-- Examples:
-  - `interface` — interactive menu
-  - `interface -Split right`
-  - `interface -Keys` — print the keybind reference
-  - `interface -Gui` — Windows GUI window-arranger fallback
-
-### `term`
-- Purpose: manage the FoxTerminal Ghostty config.
-- Usage: `term [-Status] [-Apply] [-Edit] [-New] [-Doctor]`
-- Examples:
-  - `term -Status` — config path, Ghostty version, whether this is a Ghostty session
-  - `term -Apply` — reinstall `FoxTerminal/ghostty/config` (backs up the old one)
-  - `term -Edit` — open the config in your editor
-  - `term -Doctor` — check binary, config, font, shell integration
-
-### `apps`
-- Purpose: arrange up to 4 app windows.
-- Usage: `apps <app1> / <app2> [/ <app3> [/ <app4>]]`
-- Example: `apps firefox / spotify / telegram`
-
-### `appbind`
-- Purpose: bind app alias to exe path and optional args/title match.
-- Usage: `appbind [add|del|list] ...`
+| Command | Example |
+|---------|---------|
+| `foxhotkeys` | `foxhotkeys -Status\|-Restart\|-Stop` |
+| `foxinfo` | hotkey binding manager |
+| `build` | `build demo`, `build -list`, `build -restore demo` |
+| `foxpack` | `foxpack`, `foxpack -Full -Open` |
+| `foxreset` | hard reset caches / prompt |
+| `foxdeps` | `foxdeps -Check\|-Install` |
+| `foxtest` | `foxtest -Group info`, `foxtest -Only chek,term` |
+| `foxhelp` | interactive help |
 
 ---
 
-## 4.10 Hotkeys and Binding Tools
+## 8) Workflows and guides
 
-### `foxhotkeys`
-- Purpose: global hotkey daemon.
-- Usage: `foxhotkeys [-Stop] [-Restart] [-Status]`
-- FoxTerminal: `Shift+Alt+T` show, `Shift+Ctrl+Alt+T` close (Space variants still show/hide).
+### A) Morning work
 
-### `foxinfo`
-- Purpose: manage hotkey mappings and FoxTerminal path config.
-- Usage: `foxinfo`
+```powershell
+l myname mypass
+home
+fday Kyiv
+ytm lofi coding
+wai
+nfile standup.md
+edit standup.md
+```
 
----
+### B) Full FoxOS desktop
 
-## 4.11 Snapshots, Reset, Packaging
+```powershell
+foxsetup                 # if not done yet
+foxos on
+foxlook on
+foxlook cursor fox 2
+foxlook dock style pill
+home
+```
 
-### `build`
-- Purpose: save/list/restore/delete configuration snapshots.
-- Usage: `build <name> | -list | -restore <name> | -delete <name>`
-- Examples:
-  - `build mysetup`
-  - `build -list`
-  - `build -restore mysetup`
+### C) Demo / stream
 
-### `foxpack`
-- Purpose: package FoxTerminal as shareable zip.
-- Usage: `foxpack [-Full] [-Open] [-OutPath <path>]`
-- Modes:
-  - default: clean package (no personal data);
-  - `-Full`: includes current binds/notes/theme (`users.json` is still cleared for safety).
-- Examples:
-  - `foxpack`
-  - `foxpack -Full -Open`
-  - `foxpack -OutPath C:\Exports`
+```powershell
+themes
+apps firefox / telegram / spotify
+ytm-ui
+build demo-ready
+```
 
-### `foxreset`
-- Purpose: hard reset caches and shell initialization state.
-- Usage: `foxreset [-Git] [-NoGit]`
+### D) Network diagnostics
 
-### `foxdeps`
-- Purpose: check/install FoxTerminal dependencies.
-- Usage: `foxdeps [-Check] [-Install]`
+```powershell
+wifi
+ip
+netping 8.8.8.8 1.1.1.1 github.com
+reconnect
+netping github.com
+```
 
-### `foxtest`
-- Purpose: smoke-test every FoxTerminal command and report what broke.
-- Usage: `foxtest [-List] [-Quiet] [-Only <names>] [-Group all|info|tui|bat] [-Timeout <s>]`
-- How it decides what "working" means:
-  - commands that should finish on their own are run and must exit cleanly
-  - menu-driven commands only have to draw their interface and reach the point where
-    they wait for a key
-  - commands that would change settings, close the terminal, or need the ffsync daemon
-    are skipped on purpose; `foxtest -List` shows the reason for each
-- Examples:
-  - `foxtest` - full run, roughly 6 minutes
-  - `foxtest -Group info` - only the commands that exit on their own
-  - `foxtest -Only chek,term,sixel` - just those three
-- Notes: adding a command to `cmd\` without listing it makes `foxtest` report it as not
-  covered, so the manifest at the top of `cmd\foxtest.ps1` stays in sync.
+### E) Hand environment to a teammate
 
-### `foxhelp`
-- Purpose: interactive help menu.
-- Usage: `foxhelp`
+```powershell
+build transfer-base
+foxpack                  # clean zip, no personal data
+# or:
+foxpack -Full -OutPath C:\Exports -Open
+```
 
----
+Teammate: unzip → `FoxTerminal\install.ps1` → `foxsetup`.
 
-## 5) Practical Workflows (Step-by-Step)
+### F) Safe theme / look experiment
 
-### Workflow A: Morning Setup
+```powershell
+build before-look
+foxlook on
+foxlook cursor neon 3
+# ...experiments...
+# if bad:
+build -restore before-look
+foxlook off
+```
 
-1. `who` - confirm active user.
-2. `fday Kyiv` - quick context summary.
-3. `sites` - open local tools.
-4. `ytm lofi coding` - background music.
-5. `wai` - verify notes location.
-6. `nfile standup.md`
-7. `edit standup.md` - write today plan.
+### G) iPhone on the PC
 
-### Workflow B: Demo Preparation
-
-1. `themes` - pick visual style.
-2. `apps firefox / telegram / spotify` - arrange windows.
-3. `sp-ui` or `ytm-ui` - keyboard media controls.
-4. `ser demo checklist` - quick lookup.
-5. `build demo-ready` - snapshot state before presentation.
-
-### Workflow C: Share Environment with Teammate
-
-1. `build transfer-base`
-2. `foxpack` (clean package)
-3. Optional: `foxpack -Full` (personal setup)
-4. Share zip, receiver runs `install.ps1`.
-
-### Workflow D: Network Diagnostics
-
-1. `wifi`
-2. `ip`
-3. `netping 8.8.8.8 1.1.1.1 github.com`
-4. If unstable: `reconnect`
-5. Run `netping` again.
+```powershell
+foxmirror -Setup
+foxmirror                # cable
+# later wireless:
+foxmirror -Wifi
+```
 
 ---
 
-## 6) Working with `sites` and Local Web Apps
+## 9) Local sites
 
-`sites` is ideal for lightweight local tools:
+`sites` manages the `sites/` folder. Examples: `fox-terminal`, `hub`, `fox-utils`, `web-ui-guide`, games, forge tools, etc.
 
-- typing trainers;
-- personal dashboards;
-- static utilities without backend setup.
+```powershell
+sites
+sites -createn my-dashboard
+sites -open my-dashboard
+```
 
-Typical flow:
+Suggested layout:
 
-1. Create: `sites -createn my-tool`
-2. Open folder: `sites -open my-tool`
-3. Add `index.html`, `assets/css`, `assets/js`
-4. Return to launcher: `sites`
+```
+sites/my-dashboard/
+  index.html
+  assets/css/style.css
+  assets/js/main.js
+```
 
-Tip: keep a consistent structure (`index.html`, `assets/css/style.css`, `assets/js/main.js`) for easier maintenance.
-
----
-
-## 7) Theme and Style Strategy
-
-FoxTerminal supports fast style switching:
-
-- neutral daily themes (`themes`, `sw`);
-- dark cinematic style (`noir`, `spider`);
-- thematic visual mode (`dnote`, `apple`);
-- palette-driven styles (`pride`, `arthas`).
-
-Recommended:
-
-- use calm themes for long sessions;
-- use high-contrast themes for demos/streams;
-- before `foxpack -Full`, decide if you want to share current visual state.
+System presentation: `sites/fox-terminal/` — themes, commands, Ghostty, AI, media, hotkeys, ecosystem, settings.
 
 ---
 
-## 7.5) Ghostty Features You Get for Free
+## 10) Themes and visuals
 
-Everything below is already configured in `FoxTerminal/ghostty/config`.
+- Daily work: calm themes via `themes` / `sw slate` (or another palette entry).
+- Demo / stream: `noir`, `pride`, `arthas`, `dnote`.
+- Glass overlay: `shader on` (GLSL under `FoxTerminal/ghostty/shaders/`).
+- Desktop follows theme: `foxos on` — rain and accent track `sw`.
 
-| Feature | Keys | What it does |
-|---------|------|--------------|
-| Quick terminal | `ctrl+backquote` (global) or `ctrl+shift+backquote` | Quake-style drop-down from the top of the screen, 45% height, autohides on blur |
-| Splits | `ctrl+shift+enter` / `j` / `l` | Native panes, no tmux; unfocused panes dim to 85% |
-| Split zoom | `ctrl+shift+z` | Expand the focused pane to the whole window and back |
-| Equalize splits | `ctrl+shift+e` | Reset all panes to equal size |
-| Resize split | `ctrl+alt+arrows` | Resize the focused pane by 40 pixels |
-| Jump to prompt | `ctrl+shift+up` / `down` | Hop between prompts using OSC 133 shell integration |
-| Scrollback search | `ctrl+shift+f` | Search history with FoxNight-colored highlights |
-| Scrollback to file | `ctrl+shift+u` | Dump the whole 32 MB buffer to a file and open it |
-| Command palette | `ctrl+shift+p` | FoxTerminal commands registered as palette entries |
-| Terminal inspector | `ctrl+shift+i` | Live VT debugger: escape sequences, cells, fonts, renderer stats |
-| Config reload | `ctrl+shift+comma` | Apply config edits without restarting |
-| Fox shortcuts | `ctrl+shift+h/k/s/g` | Run `foxhelp`, `chek`, `sw`, `term` |
+Before `foxpack -Full`, decide whether to share your theme and look profile.
 
-Passive features that need no keys: Kitty graphics for inline images (`sixel` reports the
-state, `chafa`/`timg` render), desktop notifications when a long command finishes while
-unfocused, OSC 9;4 progress bars in the title and taskbar, `background-opacity 0.92` with
-a 20px blur, Nerd Font ligatures via `calt`/`liga`, paste protection for suspicious
-multi-line text, `ssh-terminfo` installing `xterm-ghostty` on remote hosts, and
-`window-save-state always` restoring the session after a restart.
-
-Platform caveats worth knowing:
-
-- The global `ctrl+backquote` works on macOS and on some Linux compositors. On Windows the
-  system-wide hotkey comes from the `foxhotkeys` AHK daemon (`Shift+Alt+T` show,
-  `Shift+Ctrl+Alt+T` close; Space variants still show/hide), while
-  `ctrl+shift+backquote` always works from inside Ghostty.
-- On Linux the quick terminal requires Wayland with `wlr-layer-shell-v1`, so it is
-  unavailable on GNOME.
-- Tabs, the `gtk-*` keys and `window-titlebar-*` are GTK-only. macOS and Windows silently
-  ignore them.
-- `auto-update` and `quick-terminal-screen` are macOS-only.
+Edit terminal visuals only in `FoxTerminal/ghostty/config`, then `ctrl+shift+,`.
 
 ---
 
-## 8) Security and Data Hygiene
+## 11) Ghostty features and keys
 
-1. Do not store plaintext secrets in notes.
-2. Do not share `-Full` packages without reviewing content.
-3. Use `build` snapshots before major config changes.
-4. Run `foxscan -Deep` if you suspect risky scripts.
-5. Use `foxbg` if background process behavior looks suspicious.
-6. Rotate passwords through `passwd`.
+Already wired in `ghostty/config`:
 
----
+| Feature | Keys | Effect |
+|---------|------|--------|
+| Quick terminal | `ctrl+`` ` or `ctrl+shift+`` ` | Quake dropdown from top |
+| Splits | `ctrl+shift+enter` / `j` / `l` | Native panes |
+| Zoom split | `ctrl+shift+z` | Pane full window |
+| Equalize | `ctrl+shift+e` | Equal pane sizes |
+| Resize | `ctrl+alt+arrows` | ±40 px |
+| Jump prompt | `ctrl+shift+↑/↓` | OSC 133 |
+| Search | `ctrl+shift+f` | Scrollback search |
+| Scrollback → file | `ctrl+shift+u` | Dump buffer |
+| Palette | `ctrl+shift+p` | FoxTerminal commands |
+| Inspector | `ctrl+shift+i` | VT / fonts / render |
+| Reload config | `ctrl+shift+,` | No restart |
+| Fox shortcuts | `ctrl+shift+h/k/s/g/o` | help / chek / sw / term / shader |
 
-## 9) Troubleshooting
+**Global (Windows, AHK `foxhotkeys`):**
 
-### Command not found
-- Ensure `cmd` is in `PATH`.
-- Run direct script if needed:
-  - `powershell -ExecutionPolicy Bypass -File .\cmd\foxhelp.ps1`
+| Keys | Action |
+|------|--------|
+| `Shift+Alt+T` | Show FoxTerminal |
+| `Shift+Ctrl+Alt+T` | Close |
+| `Shift+Alt+Space` / `Shift+Ctrl+Space` | Show / hide |
+| `Shift+Alt+L` | Fox `lock` |
 
-### AI commands not responding
-- Check Ollama service and model:
-  - `ollama serve`
-  - `ollama pull qwen3-vl`
-
-### Splits or keybinds do nothing
-- Confirm you are in Ghostty: `chek`. Splits and keybinds come from Ghostty itself, so
-  they are unavailable in any other terminal.
-- Confirm the config is installed: `term -Status`, then `term -Apply` if it is missing.
-- Reload after edits: `ctrl+shift+,`.
-- Diagnose everything at once: `term -Doctor`.
-
-### Glyphs render as boxes
-- A Nerd Font is missing. Run `foxdeps -Install` or set `font-family` in the config to a
-  font you actually have, then `ctrl+shift+,`.
-
-### Firefox integration mismatch
-- Test basic open:
-  - `ff open youtube`
-- Check aliases:
-  - `blist`
-- Recreate binding via `bbind` if needed.
-
-### `foxpack` package not expected
-- Default mode is clean package.
-- Use `-Full` for personal notes/binds/theme.
+Passive: Kitty graphics, long-command notifications, OSC 9;4 progress, opacity 0.92 + blur, Nerd Font ligatures, paste protection, `window-save-state always`.
 
 ---
 
-## 10) Clean Daily Operating Pattern
+## 12) Zen / Firefox Companion
 
-### Daily cycle
+```powershell
+foxaddon -Install
+foxaddon -Pack
+foxzen status
+foxzen default
+foxzen theme
+foxzen host
+foxzen addon
+ffsync start
+```
 
-1. Login: `l <name> <pass>`
-2. Context: `who`, `fday`
-3. Work: `sites`, media tools, notes commands
-4. Diagnostics if needed: `wifi`, `ip`, `netping`
-5. End-of-session:
-   - `build daily-YYYYMMDD`
-   - `uexit` (optional)
-
-### Configuration change cycle
-
-1. `build before-theme-change`
-2. Apply changes with `themes` / `sw` / visual commands
-3. Verify with `foxhelp`
-4. Save stable point: `build after-theme-change`
-5. Rollback if needed: `build -restore before-theme-change`
+Companion provides sidebar, themes, and a bridge to the terminal. Files: `FoxTerminal/firefox-addon/`, `FoxTerminal/zen/`.
 
 ---
 
-## 11) Quick Command Cheat Sheet
+## 13) AI (FRIEND / ask)
 
-### Auth
-- `nuser`, `l`, `who`, `users`, `passwd`, `uexit`
+```powershell
+ollama serve
+ollama pull qwen3-vl
 
-### AI
-- `ask`, `friend`, `sum`
+ask "Explain this file"
+ask "What is in this image?" --image C:\path\img.png
+friend
+```
 
-### Media
-- `yt`, `ytm`, `ytm-ui`, `ytsplit`, `sp`, `sp-ui`, `dj`, `youtube`
+Optional env vars (new terminal after `setx`):
 
-### Web/Alias
-- `ff`, `sites`, `bbind`, `blist`, `bdel`, `gask`, `ser`, `ffbot`
+```
+OLLAMA_URL=http://localhost:11434
+FOXTERM_OLLAMA_MODEL=qwen3-vl
+FOXTERM_OLLAMA_SYSTEM=...
+FOXTERM_OLLAMA_AUTOSTART=1
+FOXTERM_OLLAMA_LOW_POWER=1
+FOXTERM_FRIEND_MAX_TURNS=25
+```
 
-### Telegram
-- `tg`, `tgub`, `tglist`
+`foxlife` also embeds an AI assistant in its own window.
+
+---
+
+## 14) Security
+
+1. Do not store passwords/tokens in plain notes.
+2. Default `foxpack` is clean; inspect any `-Full` pack before sharing.
+3. `build` before experimenting with `foxlook shell` / themes.
+4. `foxscan -Deep` for suspicious scripts; `foxbg` for odd processes.
+5. Use `foxlook shell on` only if you know the rescue path.
+6. Change password with `passwd`.
+
+Optional from the FoxTerminal folder (admin):
+
+```powershell
+.\DisableBloat
+.\DisableAds
+.\Status
+.\Enable
+```
+
+---
+
+## 15) Troubleshooting
+
+| Symptom | What to do |
+|---------|------------|
+| Command not found | Check PATH / open Ghostty from the installer shortcut; or `powershell -File .\cmd\foxhelp.ps1` |
+| Not Ghostty | `chek`, `term -Doctor`, `term -Apply` |
+| Boxes instead of icons | `foxdeps -Install` (Nerd Font), then `ctrl+shift+,` |
+| AI silent | `ollama serve`, `ollama pull qwen3-vl` |
+| Splits missing | Ghostty only; `term -Status` |
+| FoxOS not painting | Windows only; `foxos status`; check `FOXTERM_FOXOS` |
+| No Explorer after `shell on` | Ctrl+Alt+Del → Task Manager → Run → `restore-windows.cmd` |
+| Wrong `foxpack` | Default is clean; personal state needs `-Full` |
+| Firefox/Zen won’t open | `foxzen status`, `ff open youtube`, `blist` |
+
+---
+
+## 16) Cheat sheets
+
+### Auth and home
+`nuser` · `l` · `who` · `uexit` · `home` · `lock` · `settings` · `foxsetup`
+
+### FoxOS
+`foxos on/off` · `foxlook on/off` · `foxlook cursor …` · `foxlook dock …` · `foxlook shell off`
+
+### AI / media
+`ask` · `friend` · `yt` · `ytm` · `ytm-ui` · `sp` · `sp-ui` · `dj` · `foxmirror`
 
 ### Notes
-- `wai`, `go`, `up`, `nfile`, `nfould`, `fdel`, `edit`, `nano`, `view`
+`wai` · `go` · `up` · `nfile` · `edit` · `view` · `changelog`
 
-### Hash
-- `hash`, `unhash`
+### System
+`fday` · `wifi` · `ip` · `netping` · `chek` · `term` · `foxhelp` · `foxtest`
 
-### System/Network
-- `wifi`, `reconnect`, `ip`, `weather`, `netping`, `disk`, `ftime`, `fday`, `chek`, `sixel`
-
-### Ghostty/Terminal
-- `term`, `chek`, `interface`, `apps`, `appbind`, `clear`, `texit`
-
-### Themes
-- `sw`, `themes`, `noir`, `dnote`, `apple`, `pride`, `arthas`, `spider`, `frederik`
-
-### Service
-- `foxscan`, `foxbg`, `foxdeps`, `foxtest`, `foxreset`, `foxhelp`, `build`, `foxpack`, `foxhotkeys`, `foxinfo`
+### Snapshots
+`build` · `foxpack` · `foxreset` · `foxdeps`
 
 ---
 
-## 12) Ready-to-Use Command Sets
+## 17) Ready-made command packs
 
-### Focus Coding
+### Focus coding
 
 ```powershell
 themes
@@ -765,17 +728,27 @@ nfile sprint.md
 edit sprint.md
 ```
 
-### Network Debug
+### Full FoxOS morning
+
+```powershell
+l myname mypass
+foxos on
+foxlook on
+home
+fday
+ytm lofi
+```
+
+### Network debug
 
 ```powershell
 wifi
 ip
 netping 1.1.1.1 8.8.8.8 github.com
 reconnect
-netping github.com
 ```
 
-### Content + Messenger
+### Content + messenger
 
 ```powershell
 ytm chillwave
@@ -783,7 +756,7 @@ tg @teamlead
 sp-ui
 ```
 
-### Backup + Share
+### Backup + share
 
 ```powershell
 build before-share
@@ -791,47 +764,30 @@ foxpack
 foxpack -Full -OutPath C:\Exports -Open
 ```
 
----
+### Safe look experiment
 
-## 13) Naming Conventions
-
-To keep workspace clean and predictable:
-
-- files: prefer `kebab-case` or `snake_case`;
-- build names: `YYYYMMDD-purpose`;
-- notes folders: short and clear names;
-- aliases: short but explicit (`gh`, `yt`, `docs`, `teamtg`).
-
----
-
-## 14) Productivity Tips
-
-1. Starting with `fday` gives instant environment context.
-2. `apps` + `appbind` creates a repeatable workspace layout.
-3. `build` before experiments prevents painful recovery.
-4. Use `friend` for sessions, `ask` for one-shot requests.
-5. `foxpack` is useful both for sharing and deployment snapshots.
+```powershell
+build before-look
+foxlook export
+foxlook on
+foxlook cursor preview
+# rollback:
+foxlook off
+build -restore before-look
+```
 
 ---
 
-## 15) Final Summary
+## Summary
 
-FoxTerminal is a full shell ecosystem, not just aliases:
+FoxTerminal = **terminal + commands + FoxOS desktop + system shell + sites + AI + companion**.
 
-- user identity and local state;
-- notes and file tooling;
-- web/media launch workflow;
-- AI and helper tools;
-- visual modes and themes;
-- diagnostics and backend control;
-- snapshots and packaging for repeatability.
+Stable daily flow:
 
-If you want a stable and efficient routine:
+1. `foxsetup` once → then `l` → `home`
+2. Work via `sites` + notes + `ytm` / `friend`
+3. Desktop optionally via `foxos` + `foxlook`
+4. Snapshot before experiments: `build`
+5. Share with `foxpack`
 
-1. start with `fday`;
-2. work through `sites` + notes commands;
-3. snapshot often with `build`;
-4. package with `foxpack` when sharing setup.
-
-That workflow keeps daily usage consistent and avoids scattered, fragile manual setup.
-
+Live help anytime: **`foxhelp`**.

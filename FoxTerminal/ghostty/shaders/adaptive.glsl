@@ -1,6 +1,7 @@
 // FoxTerminal - pane-local glass. One program for the window.
 // Each split keeps its own look because OSC tints the pane background
 // and we classify that color. Text (bright pixels) is never touched.
+// Tuned for fewer texture fetches and cheaper rain than the first pass.
 
 float foxHash(vec2 p) {
     return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
@@ -17,6 +18,12 @@ vec3 foxHsv(vec3 c) {
 
 vec3 foxNightTint(vec3 accent) {
     return mix(vec3(0.043, 0.059, 0.102), accent, 0.12);
+}
+
+// Cheap squared distance — enough for nearest-tint matching.
+float foxDist2(vec3 a, vec3 b) {
+    vec3 d = a - b;
+    return dot(d, d);
 }
 
 int foxNearestTint(vec3 probe) {
@@ -49,9 +56,9 @@ int foxNearestTint(vec3 probe) {
     accents[25] = vec3(0.804, 0.835, 0.878);
 
     int best = -1;
-    float bestD = 0.10;
+    float bestD = 0.010; // ~0.10 linear distance squared
     for (int i = 0; i < 26; i++) {
-        float d = distance(probe, foxNightTint(accents[i]));
+        float d = foxDist2(probe, foxNightTint(accents[i]));
         if (d < bestD) {
             bestD = d;
             best = i;
@@ -125,42 +132,46 @@ vec3 foxAccent(int style) {
     return vec3(0.863, 0.478, 0.078);
 }
 
+// 8 samples instead of 24 — enough to catch Ghostty split seams.
 float foxDivider(vec2 uv, vec2 res) {
     vec3 mark = vec3(0.478, 0.635, 0.969);
     float hit = 0.0;
-    for (int i = 1; i <= 6; i++) {
-        float s = float(i);
-        hit = max(hit, 1.0 - smoothstep(0.06, 0.16, distance(texture(iChannel0, uv + vec2(s, 0.0) / res).rgb, mark)));
-        hit = max(hit, 1.0 - smoothstep(0.06, 0.16, distance(texture(iChannel0, uv - vec2(s, 0.0) / res).rgb, mark)));
-        hit = max(hit, 1.0 - smoothstep(0.06, 0.16, distance(texture(iChannel0, uv + vec2(0.0, s) / res).rgb, mark)));
-        hit = max(hit, 1.0 - smoothstep(0.06, 0.16, distance(texture(iChannel0, uv - vec2(0.0, s) / res).rgb, mark)));
+    for (int i = 1; i <= 2; i++) {
+        float s = float(i) * 2.5;
+        hit = max(hit, 1.0 - smoothstep(0.05, 0.14, distance(texture(iChannel0, uv + vec2(s, 0.0) / res).rgb, mark)));
+        hit = max(hit, 1.0 - smoothstep(0.05, 0.14, distance(texture(iChannel0, uv - vec2(s, 0.0) / res).rgb, mark)));
+        hit = max(hit, 1.0 - smoothstep(0.05, 0.14, distance(texture(iChannel0, uv + vec2(0.0, s) / res).rgb, mark)));
+        hit = max(hit, 1.0 - smoothstep(0.05, 0.14, distance(texture(iChannel0, uv - vec2(0.0, s) / res).rgb, mark)));
     }
     return hit;
 }
 
+// Two soft rain layers + wet sheen. Cheaper than the old 3-layer loop.
 vec3 foxSlateRain(vec2 uv, vec2 res, vec3 col, vec3 accent) {
     float rain = 0.0;
-    for (int k = 0; k < 3; k++) {
+    for (int k = 0; k < 2; k++) {
         float layer = float(k);
-        float cols = 85.0 + layer * 35.0;
-        float id = floor(uv.x * cols + layer * 3.7);
-        float h = foxHash(vec2(id, 8.1 + layer));
-        if (h < 0.28) {
+        float cols = 72.0 + layer * 48.0;
+        float id = floor(uv.x * cols + layer * 5.1);
+        float h = foxHash(vec2(id, 3.3 + layer));
+        if (h < 0.32) {
             continue;
         }
-        float speed = 0.22 + h * 0.35;
-        float y = fract(uv.y * (0.85 + 0.2 * h) + iTime * speed + h);
+        float speed = 0.18 + h * 0.42;
+        float y = fract(uv.y * (0.78 + 0.22 * h) + iTime * speed + h * 0.7);
         float x = abs(fract(uv.x * cols) - 0.5);
-        float thin = 1.0 - smoothstep(0.0, 0.42, x * 22.0);
-        float body = smoothstep(1.0, 0.15, y) * smoothstep(0.0, 0.08, y + 0.02);
-        rain += thin * body * (0.35 + 0.65 * h);
+        float thin = 1.0 - smoothstep(0.0, 0.38, x * 20.0);
+        float body = smoothstep(1.0, 0.12, y) * smoothstep(0.0, 0.10, y + 0.03);
+        float tip = smoothstep(0.0, 0.18, y) * (1.0 - smoothstep(0.18, 0.42, y));
+        rain += thin * (body * 0.85 + tip * 0.55) * (0.40 + 0.60 * h);
     }
 
     float edge = min(min(uv.x, 1.0 - uv.x), min(uv.y, 1.0 - uv.y));
-    float glow = 1.0 - smoothstep(0.0, 0.028, edge);
+    float glow = 1.0 - smoothstep(0.0, 0.032, edge);
+    float sheen = 0.5 + 0.5 * sin(uv.x * 9.0 + uv.y * 4.0 + iTime * 0.22);
 
-    vec3 wet = col + accent * rain * 0.10;
-    wet = mix(wet, accent, glow * 0.03);
+    vec3 wet = col + accent * rain * 0.11;
+    wet = mix(wet, accent, glow * 0.035 + sheen * rain * 0.018);
     return wet;
 }
 
@@ -170,15 +181,18 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec4 src = texture(iChannel0, uv);
     vec3 col = src.rgb;
     float lum = dot(col, vec3(0.299, 0.587, 0.114));
-    if (lum > 0.26) {
+
+    // Leave glyphs alone — biggest win for clarity and GPU.
+    if (lum > 0.24) {
         fragColor = src;
         return;
     }
 
+    // Two downward probes instead of four.
     vec3 probe = col;
     float probeLum = lum;
-    for (int i = 1; i <= 4; i++) {
-        vec3 s = texture(iChannel0, clamp(uv + vec2(0.0, -float(i) * 3.0) / res, 0.0, 1.0)).rgb;
+    for (int i = 1; i <= 2; i++) {
+        vec3 s = texture(iChannel0, clamp(uv + vec2(0.0, -float(i) * 4.0) / res, 0.0, 1.0)).rgb;
         float sl = dot(s, vec3(0.299, 0.587, 0.114));
         if (sl < probeLum) {
             probe = s;
@@ -189,15 +203,14 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     int style = foxStyle(foxHsv(probe), probe);
     vec3 accent = foxAccent(style);
     float edge = min(min(uv.x, 1.0 - uv.x), min(uv.y, 1.0 - uv.y));
-    float winRim = 1.0 - smoothstep(0.0, 0.045, edge);
+    float winRim = 1.0 - smoothstep(0.0, 0.042, edge);
     float seam = foxDivider(uv, res);
     float rim = max(winRim, seam * 0.55);
     float top = smoothstep(0.80, 1.0, uv.y) * (1.0 - seam);
-    float sides = max(1.0 - smoothstep(0.0, 0.08, uv.x), 1.0 - smoothstep(0.0, 0.08, 1.0 - uv.x));
-    sides = max(sides, seam);
 
     if (style == 19) {
         col = foxSlateRain(uv, res, col, accent);
+        col = mix(col, accent, rim * 0.04);
     } else if (style == 26) {
         float scan = 0.97 + 0.03 * sin(fragCoord.y * 2.2);
         float n = foxHash(fragCoord) - 0.5;
@@ -229,6 +242,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     } else {
         col = mix(col, accent, rim * 0.11);
     }
+
+    // Soft dither kills gradient banding without a visible grain.
+    col += (foxHash(fragCoord + iTime) - 0.5) * (1.0 / 255.0);
 
     fragColor = vec4(col, src.a);
 }

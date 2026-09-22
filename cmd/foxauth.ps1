@@ -227,12 +227,20 @@ function Test-FoxPromptRepeat {
 }
 
 function global:Get-OhMyPoshPromptText {
+    if (Get-Command Test-FoxSessionLocked -ErrorAction SilentlyContinue) {
+        if (Test-FoxSessionLocked) {
+            if (-not (Unlock-FoxSession)) { exit }
+        }
+    }
     if (Get-Command Test-WaiPinSuspended -ErrorAction SilentlyContinue) {
         try { if (Test-WaiPinSuspended) { return "" } } catch {}
     }
     Invoke-FoxSyncTerminalInbox
     if (-not $global:FOXTERM_SYNC_SUPPRESS_POLL) {
         Write-FoxSyncSidebarEvents
+    }
+    if (Get-Command Import-FoxControlTheme -ErrorAction SilentlyContinue) {
+        try { Import-FoxControlTheme | Out-Null } catch {}
     }
     Repair-TerminalColors
     Invoke-WaiPinPromptHook
@@ -427,6 +435,9 @@ function Save-ActiveTheme([string]$name) {
         $name | Set-Content -Path (Get-ThemePath) -Encoding UTF8
     }
     Clear-FoxThemeCache
+    if (Get-Command Save-FoxUserWorld -ErrorAction SilentlyContinue) {
+        try { Save-FoxUserWorld } catch {}
+    }
 }
 
 function Get-OhMyPoshConfigPath {
@@ -597,6 +608,28 @@ if (Test-Path $shaderLibPath) { . $shaderLibPath }
 
 $foxosLibPath = Join-Path $PSScriptRoot "foxos-lib.ps1"
 if (Test-Path $foxosLibPath) { . $foxosLibPath }
+
+$foxcursorLibPath = Join-Path $PSScriptRoot "foxcursor-lib.ps1"
+if (Test-Path $foxcursorLibPath) {
+    try { . $foxcursorLibPath } catch { Write-Warning ("foxcursor-lib.ps1 failed: " + $_.Exception.Message) }
+}
+
+$foxlookLibPath = Join-Path $PSScriptRoot "foxlook-lib.ps1"
+if (Test-Path $foxlookLibPath) {
+    try { . $foxlookLibPath } catch { Write-Warning ("foxlook-lib.ps1 failed: " + $_.Exception.Message) }
+}
+
+$foxsysLibPath = Join-Path $PSScriptRoot "foxsys-lib.ps1"
+if (Test-Path $foxsysLibPath) {
+    try { . $foxsysLibPath } catch { Write-Warning ("foxsys-lib.ps1 failed: " + $_.Exception.Message) }
+}
+if (-not (Get-Command Complete-FoxSession -ErrorAction SilentlyContinue)) {
+    function Complete-FoxSession {
+        param([switch]$Fresh)
+        if (Get-Command Apply-ThemeColors -ErrorAction SilentlyContinue) { Apply-ThemeColors }
+        if (Get-Command Register-FoxConsoleFocusRepair -ErrorAction SilentlyContinue) { Register-FoxConsoleFocusRepair }
+    }
+}
 
 function Get-ThemePalette {
     if ($global:FOXTERM_PALETTE_CACHE) { return $global:FOXTERM_PALETTE_CACHE }
@@ -989,12 +1022,20 @@ function Stop-FoxSyncLiveBridge {
 }
 
 function global:New-FoxPrompt {
+    if (Get-Command Test-FoxSessionLocked -ErrorAction SilentlyContinue) {
+        if (Test-FoxSessionLocked) {
+            if (-not (Unlock-FoxSession)) { exit }
+        }
+    }
     if (Get-Command Test-WaiPinSuspended -ErrorAction SilentlyContinue) {
         try { if (Test-WaiPinSuspended) { return "" } } catch {}
     }
     Invoke-FoxSyncTerminalInbox
     if (-not $global:FOXTERM_SYNC_SUPPRESS_POLL) {
         Write-FoxSyncSidebarEvents
+    }
+    if (Get-Command Import-FoxControlTheme -ErrorAction SilentlyContinue) {
+        try { Import-FoxControlTheme | Out-Null } catch {}
     }
     Invoke-WaiPinPromptHook
     $p = Get-ThemePalette
@@ -1910,15 +1951,29 @@ function Ensure-Login {
     Ensure-Utf8Console
     Ensure-FontAssets
     Start-OllamaIfNeeded
+
+    if ((Get-Command Test-FoxSessionLocked -ErrorAction SilentlyContinue) -and (Test-FoxSessionLocked)) {
+        if (Unlock-FoxSession) {
+            Complete-FoxSession -Fresh
+            return $true
+        }
+        exit
+    }
+
+    if ((Get-Command Test-FoxFirstBootNeeded -ErrorAction SilentlyContinue) -and (Test-FoxFirstBootNeeded)) {
+        if (Invoke-FoxFirstBoot) {
+            Complete-FoxSession -Fresh
+            return $true
+        }
+    }
+
     $users = Load-Users
     # A split copies FOXTERM_USER from the parent pane. A new window does not —
     # do not trust current_user.txt alone, or wallpaper/SendKeys could skip the password.
     $name = $env:FOXTERM_USER
     if ($name -and $users.ContainsKey($name)) {
         Set-CurrentUser $name
-        Apply-ThemeColors
-        Register-FoxConsoleFocusRepair
-        Invoke-FoxDeskPending
+        Complete-FoxSession
         return $true
     }
 
@@ -1936,13 +1991,13 @@ function Ensure-Login {
 
         switch ($menu[$choice]) {
             "Test" {
-                if (Ensure-TestUser) { Invoke-FoxDeskPending; return $true }
+                if (Ensure-TestUser) { Complete-FoxSession -Fresh; return $true }
             }
             "Login" {
-                if (Prompt-Login) { Invoke-FoxDeskPending; return $true }
+                if (Prompt-Login) { Complete-FoxSession -Fresh; return $true }
             }
             "Register" {
-                if (Prompt-Register) { Invoke-FoxDeskPending; return $true }
+                if (Prompt-Register) { Complete-FoxSession -Fresh; return $true }
             }
             "Exit" { exit }
         }

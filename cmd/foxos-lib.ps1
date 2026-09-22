@@ -2,6 +2,40 @@
 # When enabled, the active theme paints the Windows wallpaper and DWM accent.
 # Previous wallpaper/accent are saved on first apply and restored by: foxos off
 
+# Lightweight palette helpers when foxauth.ps1 is not loaded yet.
+if (-not (Get-Command Convert-HexToRgb -ErrorAction SilentlyContinue)) {
+    function Convert-HexToRgb([string]$hex) {
+        $h = ($hex -replace '^#', '')
+        if ($h.Length -ne 6) { return @{ r = 0; g = 0; b = 0 } }
+        return @{
+            r = [Convert]::ToInt32($h.Substring(0, 2), 16)
+            g = [Convert]::ToInt32($h.Substring(2, 2), 16)
+            b = [Convert]::ToInt32($h.Substring(4, 2), 16)
+        }
+    }
+}
+if (-not (Get-Command Adjust-Color -ErrorAction SilentlyContinue)) {
+    function Adjust-Color([string]$hex, [double]$factor) {
+        $rgb = Convert-HexToRgb $hex
+        $r = [Math]::Min(255, [Math]::Max(0, [Math]::Round($rgb.r * $factor)))
+        $g = [Math]::Min(255, [Math]::Max(0, [Math]::Round($rgb.g * $factor)))
+        $b = [Math]::Min(255, [Math]::Max(0, [Math]::Round($rgb.b * $factor)))
+        return ("#{0:X2}{1:X2}{2:X2}" -f $r, $g, $b)
+    }
+}
+if (-not (Get-Command Mix-Hex -ErrorAction SilentlyContinue)) {
+    function Mix-Hex([string]$a, [string]$b, [double]$t) {
+        $ha = ($a -replace '^#', ''); $hb = ($b -replace '^#', '')
+        if ($ha.Length -ne 6 -or $hb.Length -ne 6) { return $a }
+        $ar = [Convert]::ToInt32($ha.Substring(0, 2), 16); $ag = [Convert]::ToInt32($ha.Substring(2, 2), 16); $ab = [Convert]::ToInt32($ha.Substring(4, 2), 16)
+        $br = [Convert]::ToInt32($hb.Substring(0, 2), 16); $bg = [Convert]::ToInt32($hb.Substring(2, 2), 16); $bb = [Convert]::ToInt32($hb.Substring(4, 2), 16)
+        $r = [int][Math]::Round($ar + ($br - $ar) * $t)
+        $g = [int][Math]::Round($ag + ($bg - $ag) * $t)
+        $bl = [int][Math]::Round($ab + ($bb - $ab) * $t)
+        return ("#{0:X2}{1:X2}{2:X2}" -f $r, $g, $bl)
+    }
+}
+
 function Get-FoxOsStatePath {
     return (Join-Path $PSScriptRoot "foxos_state.txt")
 }
@@ -19,6 +53,9 @@ function Test-FoxOsEnabled {
 function Save-FoxOsState([bool]$enabled) {
     $value = if ($enabled) { "on" } else { "off" }
     $value | Set-Content -LiteralPath (Get-FoxOsStatePath) -Encoding UTF8
+    if (Get-Command Save-FoxUserWorld -ErrorAction SilentlyContinue) {
+        try { Save-FoxUserWorld } catch {}
+    }
 }
 
 function Get-FoxOsDir {
@@ -278,16 +315,123 @@ function Convert-HexToDrawingColor([string]$hex, [int]$alpha = 255) {
     return [System.Drawing.Color]::FromArgb($alpha, $rgb.r, $rgb.g, $rgb.b)
 }
 
-function Get-FoxOsSkinKey {
-    $theme = "orange"
-    if (Get-Command Get-ActiveThemeName -ErrorAction SilentlyContinue) {
-        $theme = Get-ActiveThemeName
+function Get-FoxOsThemeName {
+    if (Get-Command Get-DiskThemeName -ErrorAction SilentlyContinue) {
+        $n = Get-DiskThemeName
+        if (-not [string]::IsNullOrWhiteSpace($n)) { return $n }
     }
-    $extra = ""
-    if ((Get-Command Test-PrideActive -ErrorAction SilentlyContinue) -and (Test-PrideActive)) {
-        if (Get-Command Load-PrideStyle -ErrorAction SilentlyContinue) {
-            $extra = "-" + (Load-PrideStyle)
+    $path = Join-Path $PSScriptRoot "theme.txt"
+    if (Test-Path -LiteralPath $path) {
+        $n = (Get-Content -LiteralPath $path -Raw -ErrorAction SilentlyContinue).Trim()
+        if (-not [string]::IsNullOrWhiteSpace($n)) { return $n }
+    }
+    return "orange"
+}
+
+function Get-FoxOsPalette {
+    $theme = Get-FoxOsThemeName
+    if ($theme -eq "pride" -and (Get-Command Get-PridePalette -ErrorAction SilentlyContinue)) {
+        $style = if (Get-Command Load-PrideStyle -ErrorAction SilentlyContinue) { Load-PrideStyle } else { "gay" }
+        return (Get-PridePalette $style)
+    }
+    if ($theme -eq "noir") {
+        return @{
+            accent  = "#888888"
+            accent2 = "#A8A8A8"
+            accent3 = "#686868"
+            accent4 = "#C0C0C0"
+            dim     = "#606060"
+            base    = "#0A0A0A"
+            text    = "#E0E0E0"
         }
+    }
+    if ($theme -eq "dnote") {
+        return @{
+            accent  = "#B11212"
+            accent2 = "#D01616"
+            accent3 = "#8F1010"
+            accent4 = "#F2E9E9"
+            dim     = "#8C7A7A"
+            base    = "#050505"
+            text    = "#F2E9E9"
+        }
+    }
+    if ($theme -eq "arthas-light") {
+        return @{
+            accent  = "#E8C36A"
+            accent2 = "#F3D992"
+            accent3 = "#C49D43"
+            accent4 = "#FFE7B8"
+            dim     = "#A88746"
+            base    = "#120F07"
+            text    = "#FFF1D0"
+        }
+    }
+    if ($theme -eq "arthas-dark" -or $theme -eq "arthas") {
+        return @{
+            accent  = "#58B8FF"
+            accent2 = "#86CCFF"
+            accent3 = "#2F86D8"
+            accent4 = "#C1E8FF"
+            dim     = "#3B6F96"
+            base    = "#060A12"
+            text    = "#D7F1FF"
+        }
+    }
+    $hex = "#DC7A14"
+    # Named sw colours — must work even when foxauth Get-ThemeHex is not loaded.
+    switch ($theme) {
+        "blue" { $hex = "#5A8CFF" }
+        "purple" { $hex = "#A05AFF" }
+        "cyan" { $hex = "#46DCC8" }
+        "crimson" { $hex = "#D14A5A" }
+        "rose" { $hex = "#E05A9A" }
+        "magenta" { $hex = "#D44BBD" }
+        "violet" { $hex = "#8356E6" }
+        "indigo" { $hex = "#4E75D8" }
+        "sky" { $hex = "#6FC4F0" }
+        "teal" { $hex = "#36B8B3" }
+        "mint" { $hex = "#6BD3B0" }
+        "emerald" { $hex = "#4CB874" }
+        "lime" { $hex = "#9BD94A" }
+        "gold" { $hex = "#E0B148" }
+        "amber" { $hex = "#E5943A" }
+        "peach" { $hex = "#E7A37C" }
+        "coral" { $hex = "#E07D69" }
+        "ruby" { $hex = "#C83B5C" }
+        "slate" { $hex = "#7D93B0" }
+        "ice" { $hex = "#7CC8E8" }
+        "neon" { $hex = "#7EF06B" }
+        "forest" { $hex = "#4E8C66" }
+        "mocha" { $hex = "#A17A5A" }
+        "black" { $hex = "#111111" }
+        "white" { $hex = "#F2F2F2" }
+        "orange" { $hex = "#DC7A14" }
+        default {
+            if (Get-Command Get-ThemeHex -ErrorAction SilentlyContinue) {
+                try {
+                    $th = Get-ThemeHex $theme
+                    if ($th) { $hex = $th }
+                } catch {}
+            }
+        }
+    }
+    return @{
+        accent  = $hex
+        accent2 = (Adjust-Color $hex 1.15)
+        accent3 = (Adjust-Color $hex 0.85)
+        accent4 = (Adjust-Color $hex 1.3)
+        dim     = (Adjust-Color $hex 0.65)
+        base    = (Mix-Hex "#0B0F1A" $hex 0.12)
+        text    = "#E6E6E6"
+    }
+}
+
+function Get-FoxOsSkinKey {
+    $theme = Get-FoxOsThemeName
+    $extra = ""
+    if ($theme -eq "pride" -and (Get-Command Load-PrideStyle -ErrorAction SilentlyContinue)) {
+        $extra = "-" + (Load-PrideStyle)
     }
     $sz = Get-FoxOsScreenSize
     return ($theme + $extra + "-" + $sz.W + "x" + $sz.H)
@@ -461,10 +605,7 @@ function Set-FoxOsAccent([string]$hex) {
     Set-ItemProperty -Path $dwm -Name "ColorizationAfterglow" -Value $dword -Type DWord
     Set-ItemProperty -Path $dwm -Name "ColorPrevalence" -Value 1 -Type DWord
     Set-ItemProperty -Path $dwm -Name "EnableWindowColorization" -Value 1 -Type DWord
-    $theme = "orange"
-    if (Get-Command Get-ActiveThemeName -ErrorAction SilentlyContinue) {
-        $theme = Get-ActiveThemeName
-    }
+    $theme = Get-FoxOsThemeName
     $inactiveHex = $hex
     if (Get-Command Mix-Hex -ErrorAction SilentlyContinue) {
         $inactiveHex = Mix-Hex $hex (Get-FoxOsNightHex $theme) 0.58
@@ -563,6 +704,7 @@ function Get-FoxOsNightHex([string]$theme) {
     switch ($theme) {
         "noir" { return "#0A0A0A" }
         "dnote" { return "#050505" }
+        "pride" { return "#160814" }
         "arthas-dark" { return "#060A12" }
         "arthas-light" { return "#120F07" }
         default { return "#0B0F1A" }
@@ -603,6 +745,45 @@ function New-FoxOsWallpaper {
     return $OutPath
 }
 
+function Resolve-FoxDockPin([string]$id) {
+    $local = [Environment]::GetFolderPath("LocalApplicationData")
+    $pf = $env:ProgramFiles
+    $paths = @()
+    if ($id -eq "cursor") {
+        $paths = @(
+            (Join-Path $local "Programs\cursor\Cursor.exe"),
+            (Join-Path $local "Programs\Cursor\Cursor.exe"),
+            (Join-Path $pf "Cursor\Cursor.exe")
+        )
+    } elseif ($id -eq "zen") {
+        $paths = @(
+            (Join-Path $pf "Zen Browser\zen.exe"),
+            (Join-Path $local "Zen Browser\zen.exe"),
+            (Join-Path $pf "Zen\zen.exe")
+        )
+    } elseif ($id -eq "term") {
+        $gh = Join-Path $PSScriptRoot "ghostty-lib.ps1"
+        if ((Test-Path -LiteralPath $gh) -and -not (Get-Command Get-GhosttyCommand -ErrorAction SilentlyContinue)) {
+            try { . $gh } catch {}
+        }
+        if (Get-Command Get-GhosttyCommand -ErrorAction SilentlyContinue) {
+            try {
+                $g = Get-GhosttyCommand
+                if ($g -and $g.Path) { return [string]$g.Path }
+            } catch {}
+        }
+        $paths = @(
+            (Join-Path $local "Programs\winghostty\winghostty.exe"),
+            (Join-Path $local "winghostty\bin\winghostty.exe"),
+            (Join-Path $pf "winghostty\winghostty.exe")
+        )
+    }
+    foreach ($p in $paths) {
+        if ($p -and (Test-Path -LiteralPath $p)) { return $p }
+    }
+    return ""
+}
+
 function Get-FoxOsLiveSource {
     return (Join-Path $PSScriptRoot "foxos-live.cs")
 }
@@ -611,6 +792,12 @@ function Get-FoxOsLiveSources {
     $list = @(Get-FoxOsLiveSource)
     $help = Join-Path $PSScriptRoot "foxos-help.cs"
     if (Test-Path -LiteralPath $help) { $list += $help }
+    $dock = Join-Path $PSScriptRoot "foxos-dock.cs"
+    if (Test-Path -LiteralPath $dock) { $list += $dock }
+    $chrome = Join-Path $PSScriptRoot "foxos-chrome.cs"
+    if (Test-Path -LiteralPath $chrome) { $list += $chrome }
+    $quick = Join-Path $PSScriptRoot "foxos-quick.cs"
+    if (Test-Path -LiteralPath $quick) { $list += $quick }
     return $list
 }
 
@@ -631,22 +818,78 @@ function Get-FoxOsLivePidPath {
 }
 
 function Write-FoxOsLiveState {
-    $theme = if (Get-Command Get-ActiveThemeName -ErrorAction SilentlyContinue) {
-        Get-ActiveThemeName
-    } else {
-        "orange"
+    $theme = Get-FoxOsThemeName
+    $p = Get-FoxOsPalette
+    $flag = ""
+    if ($theme -eq "pride" -and (Get-Command Get-PrideFoxFlagColors -ErrorAction SilentlyContinue)) {
+        $style = if (Get-Command Load-PrideStyle -ErrorAction SilentlyContinue) { Load-PrideStyle } else { "gay" }
+        $flag = (@(Get-PrideFoxFlagColors $style) -join ",")
     }
-    $p = Get-ThemePalette
     $fox = Join-Path (Split-Path $PSScriptRoot -Parent) "FoxTerminal\assets\fox.png"
     $obj = @{
         night   = (Get-FoxOsNightHex $theme)
         accent  = $p.accent
         accent2 = $p.accent2
         theme   = $theme
+        flag    = $flag
         fox     = $fox
         cmd     = $PSScriptRoot
         rig     = $(if ($script:FoxOsRigOverride) { $script:FoxOsRigOverride } else { Get-FoxOsRigStyle })
+        wall    = $(if (Get-Command Get-FoxLookWall -ErrorAction SilentlyContinue) { Get-FoxLookWall } else { "overlay" })
+        shell   = "off"
+        dockStyle = "pill"
+        dockPos   = "bottom"
+        dockSize  = "normal"
+        dockHide  = "off"
+        dockWins  = "titles"
+        dockTray  = "full"
+        dockWidgets = "on"
+        dockHome = "on"
+        pinCursor = (Resolve-FoxDockPin "cursor")
+        pinZen    = (Resolve-FoxDockPin "zen")
+        pinTerm   = (Resolve-FoxDockPin "term")
     }
+    if (Get-Command Read-FoxLookState -ErrorAction SilentlyContinue) {
+        $ls = Read-FoxLookState
+        if ($ls.parts.ContainsKey("shell") -and $ls.parts["shell"]) { $obj.shell = "on" }
+        if ($ls.dockStyle) { $obj.dockStyle = [string]$ls.dockStyle }
+        if ($ls.dockPos) { $obj.dockPos = [string]$ls.dockPos }
+        if ($ls.dockSize) { $obj.dockSize = [string]$ls.dockSize }
+        # dockHide/widgets/home may be bool or "on"/"off" — never cast strings with [bool]
+        $hideOn = if ($ls.dockHide -is [bool]) { [bool]$ls.dockHide } else { ("$($ls.dockHide)".ToLowerInvariant() -in @("on","1","true")) }
+        $obj.dockHide = $(if ($hideOn) { "on" } else { "off" })
+        if ($ls.dockWins) { $obj.dockWins = [string]$ls.dockWins }
+        if ($ls.dockTray) { $obj.dockTray = [string]$ls.dockTray }
+        $widOn = if ($null -eq $ls.dockWidgets) { $true } elseif ($ls.dockWidgets -is [bool]) { [bool]$ls.dockWidgets } else { ("$($ls.dockWidgets)".ToLowerInvariant() -in @("on","1","true")) }
+        $obj.dockWidgets = $(if ($widOn) { "on" } else { "off" })
+        $homeOn = if ($null -eq $ls.dockHome) { $true } elseif ($ls.dockHome -is [bool]) { [bool]$ls.dockHome } else { ("$($ls.dockHome)".ToLowerInvariant() -in @("on","1","true")) }
+        $obj.dockHome = $(if ($homeOn) { "on" } else { "off" })
+    } else {
+        # foxlook-lib not loaded — still honor look.json shell/dock flags
+        $lookPath = Join-Path (Get-FoxOsDir) "look.json"
+        if (Test-Path -LiteralPath $lookPath) {
+            try {
+                $lj = Get-Content -LiteralPath $lookPath -Raw -ErrorAction Stop | ConvertFrom-Json
+                if ($lj.parts -and $lj.parts.shell) { $obj.shell = "on" }
+                if ($null -ne $lj.dockHide) {
+                    $hideOn = if ($lj.dockHide -is [bool]) { [bool]$lj.dockHide } else { ("$($lj.dockHide)".ToLowerInvariant() -in @("on","1","true")) }
+                    $obj.dockHide = $(if ($hideOn) { "on" } else { "off" })
+                }
+            } catch {}
+        }
+    }
+    if (Get-Command Ensure-FoxDockPins -ErrorAction SilentlyContinue) {
+        try { Ensure-FoxDockPins | Out-Null } catch {}
+    }
+    # feed desktop widgets
+    try {
+        $desk = Get-FoxOsDeskPath
+        $noteOut = Join-Path (Get-FoxOsDir) "widget-note.txt"
+        if (Test-Path -LiteralPath $desk) {
+            $last = Get-Content -LiteralPath $desk -Tail 1 -ErrorAction SilentlyContinue
+            if ($last) { [System.IO.File]::WriteAllText($noteOut, ("$last".Trim()), (New-Object System.Text.UTF8Encoding $false)) }
+        }
+    } catch {}
     $utf8 = New-Object System.Text.UTF8Encoding($false)
     [System.IO.File]::WriteAllText((Get-FoxOsLiveStatePath), ($obj | ConvertTo-Json -Compress), $utf8)
 }
@@ -751,11 +994,7 @@ function Sync-FoxOsSkin {
     if (-not (Test-FoxOsWindows)) { return $false }
     if (-not (Test-FoxOsEnabled)) { return $false }
 
-    $theme = if (Get-Command Get-ActiveThemeName -ErrorAction SilentlyContinue) {
-        Get-ActiveThemeName
-    } else {
-        "orange"
-    }
+    $theme = Get-FoxOsThemeName
     $key = Get-FoxOsSkinKey
     $lastPath = Get-FoxOsLastPath
     $themeChanged = $true
@@ -775,11 +1014,16 @@ function Sync-FoxOsSkin {
         if ($Force -or -not (Test-Path -LiteralPath $wall)) {
             New-FoxOsWallpaper -Theme $theme -OutPath $wall | Out-Null
         }
-        $p = Get-ThemePalette
+        $p = Get-FoxOsPalette
         Set-FoxOsWallpaper $wall | Out-Null
         Set-FoxOsAccent $p.accent
         Broadcast-FoxOsChange
         $key | Set-Content -LiteralPath $lastPath -Encoding UTF8
+        # Lock screen picture follows the theme while the FoxOS look owns it.
+        if ((Get-Command Test-FoxLookPart -ErrorAction SilentlyContinue) -and (Test-FoxLookEnabled)) {
+            if (Test-FoxLookPart "lockscreen") { try { Apply-FoxLookLockScreen | Out-Null } catch {} }
+            if (Test-FoxLookPart "cursors") { try { Apply-FoxLookCursors | Out-Null } catch {} }
+        }
     }
 
     Start-FoxOsLive | Out-Null
@@ -799,12 +1043,8 @@ function Restart-FoxOsShell {
 }
 
 function Get-FoxOsStatusInfo {
-    $theme = if (Get-Command Get-ActiveThemeName -ErrorAction SilentlyContinue) {
-        Get-ActiveThemeName
-    } else {
-        "orange"
-    }
-    $p = Get-ThemePalette
+    $theme = Get-FoxOsThemeName
+    $p = Get-FoxOsPalette
     return @{
         Enabled  = (Test-FoxOsEnabled)
         Windows  = (Test-FoxOsWindows)

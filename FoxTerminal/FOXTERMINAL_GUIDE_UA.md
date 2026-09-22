@@ -1,781 +1,726 @@
-# FoxTerminal: Повний практичний гайд
+# FoxTerminal: повний гайд по всій системі
 
-Це великий документальний гайд по всьому FoxTerminal: від встановлення і першого запуску до щоденних сценаріїв, темізації, діагностики, роботи з нотатками, AI-командами, гарячими клавішами, збірками та пакуванням.
+Документація українською: від Ghostty-терміналу до FoxOS на робочому столі Windows, команд, сайтів, AI, хоткеїв і щоденних сценаріїв.
 
-Документ орієнтований на реальне використання в Windows-середовищі, з акцентом на PowerShell/CMD запуск, Firefox-інтеграцію, локальні сайти, медіа-сценарії та інструменти персоналізації.
-
----
-
-## 1) Що таке FoxTerminal
-
-FoxTerminal — це набір скриптів, профілів та утиліт для персоналізованого терміналу з фокусом на:
-
-- швидкий доступ до веб/медіа (YouTube, YouTube Music, Spotify, Telegram, пошук);
-- системні інструменти (мережа, диски, час, IP, діагностика);
-- локальні нотатки з багаторівневою структурою;
-- AI-команди для одноразових запитів і діалогового режиму;
-- теми/візуальні режими (включно з noir/pride/arthas/dnote/spider);
-- керування вікнами, хоткеями та нативні split-панелі Ghostty;
-- знімки конфігурації (`build`) і пакування (`foxpack`) для передачі іншому користувачу.
-
-FoxTerminal працює **тільки в Ghostty**. Офіційний Ghostty ще не має Windows-застосунку,
-тому на Windows використовується [winghostty](https://github.com/amanthanvi/winghostty) —
-те саме ядро терміналу на нативному Win32-рантаймі з ідентичним форматом конфіга — з
-PowerShell. На Linux/macOS це офіційна збірка Ghostty з bash. Уся візуалка живе в одному
-файлі `FoxTerminal/ghostty/config`.
+> English version: [`FOXTERMINAL_GUIDE_EN.md`](FOXTERMINAL_GUIDE_EN.md)  
+> Короткий README: [`README.md`](README.md)  
+> Інтерактивна презентація: `sites/fox-terminal/` (відкрий через `sites`)
 
 ---
 
-## 2) Швидкий старт (10 кроків)
+## Зміст
 
-1. Постав Ghostty: `winget install AmanThanvi.winghostty` (Windows),
-   `brew install --cask ghostty` (macOS), пакетний менеджер дистрибутива (Linux).
-2. Постав конфіг FoxTerminal:
-   - `powershell -NoProfile -ExecutionPolicy Bypass -File .\FoxTerminal\install.ps1`
-   - або `bash ./FoxTerminal/install.sh`
-3. Відкрий Ghostty з нового ярлика і перевір усе:
-   - `chek`
-   - `term -Doctor`
-   - `foxtest -Group info` — прогнати команди й переконатись, що вони справді працюють
-4. Дозалежності й довідка:
-   - `foxdeps -Check`, `foxdeps -Install`
-   - `foxhelp`
-5. Зареєструй користувача:
-   - `nuser myname mypass`
-6. Увійди:
-   - `l myname mypass`
-7. Перевір, хто активний:
-   - `who`
-8. Створи першу нотатку:
-   - `nfile hello.txt`
-   - `edit hello.txt`
-9. Протестуй медіа-команду:
-   - `yt lofi hip hop`
-10. Збережи стан у збірку:
-   - `build first-day`
+1. [Що це за система](#1-що-це-за-система)
+2. [Швидкий старт](#2-швидкий-старт)
+3. [Де що лежить](#3-де-що-лежить)
+4. [Шари системи](#4-шари-системи)
+5. [FoxOS і foxlook](#5-foxos-і-foxlook)
+6. [home · lock · settings · foxsetup](#6-home--lock--settings--foxsetup)
+7. [Каталог команд](#7-каталог-команд)
+8. [Сценарії та гайди](#8-сценарії-та-гайди)
+9. [Локальні сайти](#9-локальні-сайти)
+10. [Теми і візуал](#10-теми-і-візуал)
+11. [Ghostty: фішки і клавіші](#11-ghostty-фішки-і-клавіші)
+12. [Zen / Firefox Companion](#12-zen--firefox-companion)
+13. [AI (FRIEND / ask)](#13-ai-friend--ask)
+14. [Безпека](#14-безпека)
+15. [Troubleshooting](#15-troubleshooting)
+16. [Шпаргалки](#16-шпаргалки)
+17. [Готові набори команд](#17-готові-набори-команд)
 
 ---
 
-## 3) Архітектура команд і де що лежить
+## 1) Що це за система
 
-Основна папка команд:
+**FoxTerminal** — не просто alias-и в PowerShell. Це локальна екосистема:
 
-- `cmd/` — головні користувацькі команди (`.ps1`, `.bat`, `.cmd`);
-- `sites/` — локальні міні-сайти та реєстр сайтів;
-- `FoxTerminal/` — скрипти встановлення та файли тем;
-- `FoxTerminal/ghostty/` — конфіг Ghostty і bootstrap-скрипти оболонки
-  (`config`, `foxterminal-boot.ps1`, `foxterminal-boot.sh`);
-- `builds/` — снапшоти конфігурації і службові інсталятори.
+| Шар | Що робить |
+|-----|-----------|
+| **Ghostty** | Термінал: теми, splits, keybinds, shaders, command palette |
+| **cmd/** | 85+ команд: медіа, нотатки, мережа, теми, AI, пакування |
+| **FoxOS (`foxos`)** | Анімований ASCII-шпалери + акцент Windows + desk-prompt |
+| **Fox look (`foxlook`)** | Windows «одягає» FoxOS: dark, курсори, dock, Win-клавіші, shell |
+| **Системна оболонка** | `home`, `lock`, `settings`, `foxsetup` — як міні-ОС після логіну |
+| **Додатки** | `foxlife` (нотатки/фінанси), `sites` (локальні веб-апки), Zen Companion |
+| **builds / foxpack** | Знімки конфіга і zip для передачі іншому ПК |
+
+Працює **тільки в Ghostty**. На Windows — [winghostty](https://github.com/amanthanvi/winghostty) (`winget install AmanThanvi.winghostty`). На Linux/macOS — офіційний Ghostty. Уся візуалка терміналу — у `FoxTerminal/ghostty/config`.
+
+---
+
+## 2) Швидкий старт
+
+### Встановлення (один раз)
+
+```powershell
+winget install AmanThanvi.winghostty
+powershell -NoProfile -ExecutionPolicy Bypass -File .\FoxTerminal\install.ps1
+```
+
+На Linux/macOS: `bash ./FoxTerminal/install.sh`
+
+Інсталер копіює конфіг Ghostty, створює ярлик і (за бажанням) автозапуск при логіні Windows.
+
+### Перший день у терміналі
+
+```powershell
+chek                  # чи це справді Ghostty
+term -Doctor          # діагностика конфіга / шрифту / shell
+foxdeps -Install      # Firefox, Nerd Font, Oh My Posh, AHK, .NET…
+foxsetup              # майстер: юзер, тема, FoxOS, hotkeys, idle lock
+```
+
+Або вручну:
+
+```powershell
+nuser myname mypass
+l myname mypass
+who
+foxhelp
+fday Kyiv
+nfile hello.txt
+edit hello.txt
+ytm lofi
+build first-day
+```
+
+### Якщо хочеш «повний» FoxOS на Windows
+
+```powershell
+l myname mypass
+foxos on              # ASCII rain wallpaper + accent
+foxlook on            # dark Windows, cursors, dock, Win keys
+home                  # системний дім після логіну
+settings              # TUI налаштувань (або settings -Gui)
+```
+
+---
+
+## 3) Де що лежить
+
+```
+FireFoxBot/
+├── cmd/                    ← усі команди (.ps1 + .bat обгортки)
+├── sites/                  ← локальні міні-сайти + hub
+│   └── fox-terminal/       ← інтерактивна презентація / docs UI
+├── FoxTerminal/
+│   ├── ghostty/config      ← єдиний файл візуалу терміналу
+│   ├── ghostty/shaders/    ← GLSL під теми
+│   ├── install.ps1 / .sh
+│   ├── FOXTERMINAL_GUIDE_UA.md   ← цей файл
+│   └── FOXTERMINAL_GUIDE_EN.md
+├── builds/                 ← знімки від команди build
+└── CHANGELOG.md            ← історія змін (читається через changelog)
+```
 
 Важливо:
 
-- Команди часто мають `.ps1` і `.bat` обгортки з однаковими іменами.
-- Частина скриптів — службові (внутрішні) і не призначені для прямого запуску вручну.
-- Головний вхід у довідку: `foxhelp`.
+- Багато команд мають пару `.ps1` + `.bat` з однаковим іменем — у Ghostty можна писати просто `ytm`, `foxos`, `home`.
+- Службові скрипти (`foxauth.ps1`, `foxos-lib.ps1`, `shader-lib.ps1`…) **не** для прямого запуску.
+- Головна довідка в терміналі: **`foxhelp`** (стрілки + Enter).
 
 ---
 
-## 4) Повний каталог команд (по категоріях)
+## 4) Шари системи
 
-Нижче — структурований перелік робочих користувацьких команд із синтаксисом і прикладами.
+Думай про FoxTerminal як про цибулю:
 
-### 4.1 Користувачі та авторизація
+```
+┌─────────────────────────────────────────────┐
+│  Windows desktop (foxlook: dark, dock…)     │
+│  ┌───────────────────────────────────────┐  │
+│  │  FoxOS wallpaper (foxos: rain + fox)  │  │
+│  │  desk prompt: sw slate, ytm, help…    │  │
+│  └───────────────────────────────────────┘  │
+│  Ghostty (термінал + shaders + splits)      │
+│    └── PowerShell + Oh My Posh + cmd\       │
+│         home / settings / notes / media / AI│
+└─────────────────────────────────────────────┘
+```
 
-#### `l`
-- Призначення: логін (або реєстрація, якщо користувач новий).
-- Синтаксис: `l <name> <pass>`
-- Приклади:
-  - `l dmytr qwerty123`
-
-#### `nuser`
-- Призначення: створення нового користувача.
-- Синтаксис: `nuser <name> <pass>`
-- Приклади:
-  - `nuser fox admin123`
-
-#### `passwd`
-- Призначення: зміна пароля (коли користувач залогінений).
-- Синтаксис: `passwd`
-- Приклади:
-  - `passwd`
-
-#### `users`
-- Призначення: показати зареєстрованих користувачів.
-- Синтаксис: `users`
-
-#### `who`
-- Призначення: показати поточного активного користувача.
-- Синтаксис: `who`
-
-#### `uexit`
-- Призначення: вийти з акаунту (logout).
-- Синтаксис: `uexit`
+| Команда | Шар | Коротко |
+|---------|-----|---------|
+| `term`, `chek`, `shader` | Термінал | Конфіг Ghostty, діагностика, скло-шейдери |
+| `sw`, `themes`, `noir`… | Візуал сесії | Палітра, mood-режими |
+| `foxos` | Desktop skin | Шпалери + accent + live rain |
+| `foxlook` | Windows shell | Dark/cursors/dock/Win keys/shell |
+| `home` | UX після логіну | Дайджест дня + швидкі дії |
+| `lock` | Безпека сесії | Ховає термінал, потрібен пароль Fox |
+| `settings` | Керування | TUI або Control UI у браузері |
+| `foxlife` | Окремий застосунок | Нотатки, фінанси, таблиці, AI |
 
 ---
 
-### 4.2 AI-команди
+## 5) FoxOS і foxlook
 
-#### `ask`
-- Призначення: одноразовий запит до AI (Ollama).
-- Синтаксис: `ask "..." [--image <path>]`
-- Приклади:
-  - `ask "Поясни цей скрипт"`
-  - `ask "Що на зображенні?" --image C:\img\photo.png`
+### 5.1 `foxos` — шпалери і акцент
 
-#### `friend`
-- Призначення: інтерактивний чат-режим.
-- Синтаксис: `friend`
-- Корисно в чаті:
-  - `/help`, `/clear`, `/model`, `/cmds`, `/repo`, `/read <path>`, `/explain <path>`
+```powershell
+foxos                 # статус
+foxos on              # увімкнути ASCII rain + Windows accent з теми
+foxos off             # повернути попередні шпалери/акцент
+foxos apply           # перемалювати зараз (тема вже змінена через sw)
+foxos toggle
+```
 
-#### `sum`
-- Призначення: стислий підсумок вмісту файлу через OpenAI.
-- Синтаксис: `sum <file>`
-- Приклад:
-  - `sum .\cmd\foxdeps.ps1`
+Що відбувається при `foxos on`:
 
----
+- анімований ASCII rain з лисицею (як у `sw`);
+- колір акценту Windows береться з поточної теми;
+- пошук / Copilot / погода на таскбарі ховаються, поки FoxOS увімкнений;
+- під лисицею працює **desk prompt** — можна клікнути й набрати команди на кшталт `sw slate`, `ytm`, `help`, `home`.
 
-### 4.3 Медіа та контент
+Вимкнути skin лише для поточної сесії: `$env:FOXTERM_FOXOS = "0"`.
 
-#### `yt`
-- Призначення: пошук YouTube у Firefox.
-- Синтаксис: `yt <query>`
-- Приклад:
-  - `yt cyberpunk ambient`
+### 5.2 `foxlook` — Windows носить FoxOS
 
-#### `ytm`
-- Призначення: YouTube Music (відкрити, шукати, працювати через alias/url).
-- Синтаксис: `ytm [query|alias|url]`
-- Приклади:
-  - `ytm`
-  - `ytm synthwave`
+```powershell
+foxlook               # статус усіх частин
+foxlook on            # увімкнути весь look
+foxlook off           # відновити Windows зі snapshot
+```
 
-#### `ytm-ui`
-- Призначення: TUI-режим управління YouTube Music + DJ-візуалізація.
-- Синтаксис: `ytm-ui`
+Частини (можна вмикати окремо):
 
-#### `ytsplit`
-- Призначення: розкладка вікон YouTube/YTM в split-режим.
-- Синтаксис: `ytsplit [-ReportOnly]`
-- Приклад:
-  - `ytsplit`
+| Частина | Приклад | Ефект |
+|---------|---------|--------|
+| `dark` | `foxlook dark on` | Темні додатки Windows |
+| `icons` | `foxlook icons on` | Ховає іконки робочого столу |
+| `taskbar` | `foxlook taskbar on` | Автоприховування таскбару |
+| `sounds` | `foxlook sounds on` | Вимикає системні звуки |
+| `cursors` | `foxlook cursors on` | Піксельні курсори під тему |
+| `lockscreen` | `foxlook lockscreen on` | Lock screen = FoxOS, без Spotlight |
+| `winkeys` | `foxlook winkeys on` | Win → FoxTerminal, Win+I → settings… |
+| `oem` | `foxlook oem on` | Settings → About: FoxOS (потрібен адмін раз) |
+| `winlock` | `foxlook winlock on` | Win+L → Fox `lock` (Windows lock вимкнено) |
+| `shell` | `foxlook shell on` | **Наступний** логін цього юзера = FoxOS замість Explorer |
 
-#### `sp`
-- Призначення: Spotify (відкрити або шукати).
-- Синтаксис: `sp [query|url]`
-- Приклад:
-  - `sp dark ambient`
+#### Курсори
 
-#### `sp-ui`
-- Призначення: Spotify DJ UI (Play/Next/Prev тощо).
-- Синтаксис: `sp-ui`
+```powershell
+foxlook cursor pixel
+foxlook cursor chunky 2
+foxlook cursor neon 3
+foxlook cursor fox
+foxlook cursor inverted
+foxlook cursor preview     # PNG-прев’ю всіх стилів
+```
 
-#### `dj`
-- Призначення: візуалізатор аудіо-рівня.
-- Синтаксис: `dj`
+Стилі: `pixel` | `chunky` | `neon` | `fox` | `inverted`. Розмір: `1` | `2` | `3`.
 
-#### `youtube`
-- Призначення: швидко відкрити YouTube у Firefox.
-- Синтаксис: `youtube`
+#### Шпалери: overlay vs behind
 
----
+```powershell
+foxlook wall overlay   # rain як вікно (desk prompt працює) — за замовчуванням
+foxlook wall behind    # rain під іконками (Win+D безпечний; desk prompt вимкнений)
+```
 
-### 4.4 Веб, Firefox, alias-менеджмент
+#### Dock
 
-#### `ff`
-- Призначення: відкривати URL/alias у Firefox.
-- Синтаксис: `ff open [alias-or-url]`
-- Приклади:
-  - `ff open youtube`
-  - `ff open https://developer.mozilla.org`
+```powershell
+foxlook dock style pill      # rail | pill | glass | slim
+foxlook dock place bottom    # top | bottom
+foxlook dock size normal     # compact | normal | large
+foxlook dock hide on
+foxlook dock apps titles     # titles | dots | off
+foxlook dock tray clock      # full | clock | off
+foxlook dock widgets on
+foxlook dock home on
+```
 
-#### `sites`
-- Призначення: каталог локальних сайтів, scaffold/відкриття папки сайту.
-- Синтаксис: `sites [-createn <name>] [-open <name>]`
-- Приклади:
-  - `sites`
-  - `sites -createn fox-lab`
-  - `sites -open fox-lab`
+#### Профіль look (експорт / імпорт)
 
-#### `bbind`
-- Призначення: створити custom-команду `.bat` або alias сайту для `ff`.
-- Синтаксис: `bbind`
+```powershell
+foxlook export                 # JSON на Desktop
+foxlook export D:\looks\work.json
+foxlook import D:\looks\work.json
+```
 
-#### `blist`
-- Призначення: список alias-ів сайтів.
-- Синтаксис: `blist`
+#### ⚠ `foxlook shell on` — уважно
 
-#### `bdel`
-- Призначення: видалити alias сайту.
-- Синтаксис: `bdel <alias>`
-- Приклад:
-  - `bdel docs`
+Після наступного входу **цього** Windows-користувача стартує FoxOS, а не Explorer. Інший обліковий запис Windows не змінюється.
 
-#### `gask`
-- Призначення: відкрити ChatGPT у Firefox з передзаповненим запитом.
-- Синтаксис: `gask <question>`
-- Приклад:
-  - `gask як оптимізувати powershell скрипт`
+**Рятувальний шлях:**
 
-#### `ser`
-- Призначення: швидкий Google-пошук у Firefox.
-- Синтаксис: `ser <terms>`
-- Приклад:
-  - `ser powershell compare object examples`
+1. Ctrl+Alt+Del → Task Manager → File → Run  
+2. `%LOCALAPPDATA%\FoxTerminal\foxos\restore-windows.cmd`  
+   або `cmd\fox-restore-windows.bat` з репо  
+3. Або: `foxlook shell off` / `foxlook off` з робочого терміналу
 
-#### `ffbot`
-- Призначення: .NET watcher, що працює з відкриттям URL при подіях вікна Firefox.
-- Синтаксис: `ffbot`
+Якщо dock мовчить ~30 с після логіну — Explorer повертається сам (safety).
 
-#### Персональний Firefox аддон (`FoxTerminal Companion`)
-- Призначення: швидкий popup у Firefox, який запускає web-команди FoxTerminal через Native Messaging.
-- Запуск бічного терміналу з адресного рядка:
-  - введи `ff`, натисни Space, потім Enter -> відкриється sidebar-термінал
-  - введи `ff`, натисни Space, потім `history -clear` -> очистка історії Firefox
-- Режим спільної сесії (синхрон sidebar <-> термінал):
-  - виконай `ffsync start`
-  - запусти `ffsync shell`
-  - після цього відкрий sidebar через `ff` + Space + Enter
-- Розташування: `FoxTerminal/firefox-addon/`
-- Встановити native host:
-  - `powershell -ExecutionPolicy Bypass -File .\FoxTerminal\firefox-addon\native-host\install-host.ps1`
-- Підключити аддон тимчасово у Firefox:
-  - `about:debugging#/runtime/this-firefox`
-  - Обрати `FoxTerminal/firefox-addon/manifest.json`
+### 5.3 Рекомендований порядок «повного FoxOS»
+
+```powershell
+l myname mypass
+themes                 # або sw slate
+foxos on
+foxlook on
+foxlook cursor fox 2
+foxlook dock style glass
+home
+settings -Status
+```
+
+Повернути класичний Windows:
+
+```powershell
+foxlook off
+foxos off
+```
 
 ---
 
-### 4.5 Telegram
+## 6) home · lock · settings · foxsetup
 
-#### `tg`
-- Призначення: відкрити Telegram Web або перейти до користувача/URL.
-- Синтаксис: `tg [alias|@username|url|tg://...]`
-- Приклади:
-  - `tg`
-  - `tg @foxhelper`
+### `foxsetup` — перший запуск
 
-#### `tgub`
-- Призначення: створення Telegram-аліасів за юзернеймом/телефоном.
-- Синтаксис:
-  - `tgub <@user|user|url> <alias>`
-  - `tgub phone <num> <alias>`
-- Приклади:
-  - `tgub @myfriend mf`
-  - `tgub phone +380XXXXXXXXX myphone`
+Майстер: користувач, тема, FoxOS, logon autostart, hotkeys, idle lock. Запускається автоматично на свіжій машині або вручну: `foxsetup`.
 
-#### `tglist`
-- Призначення: показ/редагування Telegram alias-баз.
-- Синтаксис: `tglist`
+### `home` — системний дім
 
----
+Після логіну показує дайджест дня, нотатки, останній сайт і швидкі дії: Prompt / YTM / Sites / Help / Settings / Lock.
 
-### 4.6 Нотатки, файли, текст
+```powershell
+l myname mypass
+home
+```
 
-#### `wai`
-- Призначення: де ти зараз у notes-дереві + список файлів.
-- Синтаксис: `wai`
+### `lock` — блокування Fox-сесії
 
-#### `go`
-- Призначення: перейти в підпапку notes.
-- Синтаксис: `go <path>`
-- Приклад:
-  - `go files/important`
+```powershell
+lock                  # сховати Ghostty + wallpaper lock; Windows лишається залогіненим
+lock -Status
+lock -Unlock          # або Shift+Alt+T і пароль Fox
+```
 
-#### `up`
-- Призначення: на рівень вище в notes.
-- Синтаксис: `up`
+Глобально: **Shift+Alt+L** (через `foxhotkeys`).  
+Якщо увімкнено `foxlook winlock on`, то **Win+L** теж іде в Fox lock.
 
-#### `nfile`
-- Призначення: створити файл у поточній папці notes.
-- Синтаксис: `nfile <name.ext>`
-- Приклад:
-  - `nfile plan.md`
+### `settings` — налаштування системи
 
-#### `nfould`
-- Призначення: створити папку в поточній позиції notes.
-- Синтаксис: `nfould <name>`
+```powershell
+settings              # інтерактивне TUI (після логіну)
+settings -Status      # короткий звіт: theme, foxos, look, dock, shell, idle…
+settings -Gui         # Control UI у браузері (http://127.0.0.1:17321/settings.html)
+settings -StopGui     # зупинити host
+```
 
-#### `fdel`
-- Призначення: видалити файл у notes (з перевіркою).
-- Синтаксис: `fdel <name.ext>`
+У settings видно й можна крутити: тему, FoxOS, look, dock, cursor, shader, logon, hotkeys, idle lock.
 
-#### `edit`
-- Призначення: редагування файлів у терміналі.
-- Синтаксис: `edit <path-or-name>`
-- Приклад:
-  - `edit todo.txt`
-  - `edit C:\temp\notes.md`
+### `changelog`
 
-#### `nano`
-- Призначення: Linux-style редагування (micro/nano/vim, з fallback).
-- Синтаксис: `nano <file>`
-
-#### `view`
-- Призначення: read-only перегляд файлу у pager-режимі.
-- Синтаксис: `view <file>`
-
-#### `hash`
-- Призначення: хешування рядка.
-- Синтаксис: `hash [fx1|md5|sha1|sha256|ntlm|b64] <text>`
-- Приклад:
-  - `hash sha256 mySecret`
-
-#### `unhash`
-- Призначення: спроба відновлення хешу (офлайн/правила/брутфорс сценарії).
-- Синтаксис: `unhash [-offline] [hash]`
-- Приклад:
-  - `unhash -offline 5f4dcc3b5aa765d61d8327deb882cf99`
+```powershell
+changelog             # історія доданого/прибраного (той самий viewer, що й для notes)
+```
 
 ---
 
-### 4.7 Теми, режими, візуальні профілі
+## 7) Каталог команд
 
-#### `sw`
-- Призначення: системний info-екран + перемикач тем.
-- Синтаксис: `sw [themeName] [live] [color|mono] [imagePath]`
-- Приклади:
-  - `sw`
-  - `sw slate`
+Нижче — робочі користувацькі команди. Повний живий список завжди в `foxhelp`.
 
-#### `themes`
-- Призначення: головний пікер тем (стрілки + Enter).
-- Синтаксис: `themes`
+### 7.1 Користувачі
 
-#### `noir`
-- Призначення: toggle noir-режиму (ч/б стиль).
-- Синтаксис: `noir`
+| Команда | Синтаксис | Приклад |
+|---------|-----------|---------|
+| `l` | `l <name> <pass>` | `l dmytr secret` |
+| `nuser` | `nuser <name> <pass>` | `nuser fox admin123` |
+| `passwd` | `passwd` | (потрібен логін) |
+| `users` | `users` | список |
+| `who` | `who` | хто активний |
+| `uexit` | `uexit` | вийти з Fox-юзера |
 
-#### `dnote`
-- Призначення: Death Note-режим із особливими стилями/ефектами.
-- Синтаксис: `dnote`
+### 7.2 Системна оболонка
 
-#### `apple`
-- Призначення: ASCII-сцена Death Note у fullscreen-стилі.
-- Синтаксис: `apple [imagePath]`
+| Команда | Синтаксис | Навіщо |
+|---------|-----------|--------|
+| `home` | `home` | дім після логіну |
+| `lock` | `lock [-Status\|-Unlock]` | блокування сесії |
+| `settings` | `settings [-Status\|-Gui\|-StopGui]` | налаштування |
+| `foxsetup` | `foxsetup` | first-boot wizard |
+| `changelog` | `changelog` | історія змін |
+| `off` / `shutdown` | `off` | вимкнути ПК (Yes/No, default No) |
 
-#### `pride`
-- Призначення: toggle pride-режиму (кілька прапорних стилів).
-- Синтаксис: `pride`
+### 7.3 AI
 
-#### `arthas`
-- Призначення: toggle Arthas mode з панеллю/перемиканнями.
-- Синтаксис: `arthas`
+| Команда | Синтаксис | Навіщо |
+|---------|-----------|--------|
+| `ask` | `ask "…" [--image path]` | одноразовий запит (Ollama) |
+| `friend` | `friend` | чат FRIEND; вихід: `exitt` |
+| `sum` | `sum <file>` | резюме файлу (потрібен `OPENAI_API_KEY`) |
 
-#### `spider`
-- Призначення: Spider-Noir панель (працює в контексті noir-стилізації).
-- Синтаксис: `spider`
+У чаті `friend`: `/clear`, `/help`, `/model`, `/cmds`, `/repo`, `/read <path>`, `/explain <path>`. Фрази на кшталт «open youtube», «notes» закривають чат і запускають команду.
 
-#### `shader`
-- Призначення: Ghostty glass-шейдери під поточну тему. За замовчуванням увімкнені.
-- Синтаксис: `shader [on|off|status|toggle]`
-- Приклади:
-  - `shader` — стан і який `.glsl` зараз активний
-  - `shader off` — вимкнути скло для всіх тем
-  - `shader on` — увімкнути знову
-  - `ctrl+shift+o` — toggle
+### 7.4 Медіа
 
-#### `foxos`
-- Призначення: тема термінала фарбує шпалери Windows і акцент рамок.
-- Синтаксис: `foxos [on|off|status|apply]`
-- Приклади:
-  - `foxos on` — увімкнути (поточні шпалери зберігаються)
-  - `foxos off` — повернути стіл як було
-  - `sw` / `dnote` / `arthas` — поки FoxOS увімкнений, робочий стіл міняється разом із темою
+| Команда | Приклад | Навіщо |
+|---------|---------|--------|
+| `yt` | `yt lofi hip hop` | YouTube у Firefox/Zen |
+| `ytm` | `ytm`, `ytm chill` | YouTube Music |
+| `ytm-ui` | `ytm-ui` | TUI + DJ visualizer |
+| `ytsplit` | `ytsplit` | YouTube \| YTM ліворуч/праворуч |
+| `sp` | `sp radiohead` | Spotify |
+| `sp-ui` | `sp-ui` | Spotify DJ UI |
+| `dj` | `dj` | visualizer рівня системи |
+| `youtube` | `youtube` | просто відкрити YouTube |
+| `foximg` | `foximg photo.jpg` | фото в терміналі |
+| `foxmirror` | `foxmirror` | екран iPhone (USB / Wi‑Fi) |
 
-#### `frederik`
-- Призначення: голосова/аудіо-reactive візуалізація.
-- Синтаксис:
-  - `frederik [-ListMics] [-Source Auto|Mic|System] [-Mic <idx|name>] [-SetMainMic] [-Bars <n>] [-Height <n>]`
+`foxmirror` (коротко):
 
----
+```powershell
+foxmirror -Check
+foxmirror -Setup
+foxmirror                 # USB
+foxmirror -Wifi           # після одного разу з кабелем
+foxmirror -Video -Fps 30
+```
 
-### 4.8 Система, мережа, діагностика
+### 7.5 Веб, alias, сайти
 
-#### `wifi`
-- Призначення: статус Wi-Fi (SSID/сигнал/канал).
-- Синтаксис: `wifi`
+| Команда | Приклад |
+|---------|---------|
+| `ff` | `ff open github` |
+| `sites` | `sites`, `sites -createn my-tool`, `sites -open my-tool` |
+| `bbind` | створити .bat або site-alias |
+| `blist` / `bdel` | список / видалити alias |
+| `gask` | `gask how does OSC 133 work` |
+| `ser` | `ser powershell hash` |
+| `ffbot` | .NET watcher для Firefox |
+| `ffsync` | `ffsync start\|stop\|status\|shell` — міст sidebar ↔ термінал |
 
-#### `reconnect`
-- Призначення: перепідключення до Wi-Fi.
-- Синтаксис: `reconnect [ssid]`
+### 7.6 Telegram
 
-#### `ip`
-- Призначення: публічний і локальні IP.
-- Синтаксис: `ip`
+| Команда | Приклад |
+|---------|---------|
+| `tg` | `tg @friend`, `tg work` |
+| `tgub` | `tgub @user work` або `tgub phone 380… mom` |
+| `tglist` | список/редагування binds |
 
-#### `weather`
-- Призначення: погода через wttr.in.
-- Синтаксис: `weather [location]`
-- Приклад:
-  - `weather Kyiv`
+### 7.7 Нотатки і файли
 
-#### `netping`
-- Призначення: ping перевірки стандартних або кастомних цілей.
-- Синтаксис: `netping [targets...]`
-- Приклад:
-  - `netping 8.8.8.8 1.1.1.1 github.com`
+| Команда | Приклад |
+|---------|---------|
+| `wai` | `wai`, `wai -pin` |
+| `go` / `up` | `go files/work` |
+| `nfile` / `nfould` | `nfile plan.md` |
+| `fdel` | `fdel old.txt` (з паролем) |
+| `edit` / `nano` / `view` | `edit plan.md` |
+| `hash` / `unhash` | `hash sha256 hello` |
 
-#### `disk`
-- Призначення: використання дисків.
-- Синтаксис: `disk`
+### 7.8 Теми і візуальні режими
 
-#### `ftime`
-- Призначення: поточні дата/час.
-- Синтаксис: `ftime`
+| Команда | Навіщо |
+|---------|--------|
+| `sw [theme]` | system info + стрілки міняють тему; Ctrl+E вихід |
+| `themes` | головний picker (Fox, Arthas, Pride, Noir, Death Note…) |
+| `noir` | Ч/Б режим (toggle) |
+| `dnote` | Death Note стиль + intro |
+| `apple` | сцена Death Note великим ASCII |
+| `pride` | rainbow стилі; стрілки в `sw` |
+| `arthas` | панель Arthas dark/light |
+| `spider` | Spider-Noir панель (у noir) |
+| `shader` | `shader on\|off\|status` — GLSL скло під тему |
+| `frederik` | waveform з мікрофона / системи |
+| `foxos` | desktop skin |
+| `foxlook` | Windows look |
 
-#### `fday`
-- Призначення: daily summary (час + погода + wifi + ip).
-- Синтаксис: `fday [location]`
+### 7.9 Система, мережа, діагностика
 
-#### `chek`
-- Призначення: перевірка, що ти в Ghostty; звіт про shell, host і env-сигнали.
-- Синтаксис: `chek`
+| Команда | Приклад |
+|---------|---------|
+| `wifi` / `reconnect` | статус / перепідключення |
+| `ip` / `netping` | `netping 1.1.1.1 github.com` |
+| `weather` / `ftime` / `fday` | `fday Kyiv` |
+| `disk` | використання дисків |
+| `chek` / `sixel` | Ghostty? / inline images? |
+| `foxscan` | `foxscan -Deep` |
+| `foxbg` | інтерактивне чищення фону |
+| `clear` / `texit` | очистити / вбити термінал |
 
-#### `sixel`
-- Призначення: перевірка вбудованих картинок. Ghostty реалізує Kitty graphics protocol
-  (не SIXEL), тож команда показує стан сесії, `image-storage-limit` і які рендерери
-  встановлені (`chafa`, `timg`, `kitten`).
-- Синтаксис: `sixel [-Test]`
+### 7.10 Layout вікон
 
-#### `foxscan`
-- Призначення: евристичний пошук підозрілих скриптів.
-- Синтаксис: `foxscan [-Deep] [-IncludeLow] [-IncludeWorkspace] [-Top <n>] [-Path <dir1,dir2,...>]`
-- Приклад:
-  - `foxscan -Deep -Top 30`
+| Команда | Приклад |
+|---------|---------|
+| `interface` | `interface -Split`, `-Keys`, `-Gui` |
+| `term` | `term -Status\|-Apply\|-Edit\|-New\|-Doctor` |
+| `apps` | `apps firefox / telegram / spotify` |
+| `appbind` | `appbind add code "C:\…\Code.exe"` |
 
-#### `foxbg`
-- Призначення: інтерактивне керування фоновими процесами.
-- Синтаксис: `foxbg [-IncludeLow] [-Top <n>] [-MinMemoryMB <n>]`
+### 7.11 FoxOS Life і Companion
 
-#### `clear`
-- Призначення: очистити екран.
-- Синтаксис: `clear`
+| Команда | Навіщо |
+|---------|--------|
+| `foxlife` | нативне вікно: notes, finance, tables, AI (`-Status`, `-Rebuild`) |
+| `foxaddon` | `foxaddon -Install\|-Pack\|-OpenFolder` |
+| `foxzen` | `foxzen status\|default\|theme\|host\|addon` — Zen як основний браузер |
 
-#### `texit`
-- Призначення: force-exit поточного процесу терміналу.
-- Синтаксис: `texit`
+### 7.12 Хоткеї, знімки, пакування
 
----
-
-### 4.9 Ghostty, splits, layout
-
-#### `interface`
-- Призначення: створення split-панелей Ghostty і довідка по keybinds. Splits тепер
-  нативні, тому ні tmux, ні mintty, ні bash більше не потрібні.
-- Синтаксис: `interface [-Split down|right|auto] [-TwoWindows] [-Keys] [-Gui]`
-- Приклади:
-  - `interface` — інтерактивне меню
-  - `interface -Split right`
-  - `interface -Keys` — список keybinds
-  - `interface -Gui` — Windows GUI-розкладка вікон (fallback)
-
-#### `term`
-- Призначення: менеджер Ghostty-конфіга FoxTerminal.
-- Синтаксис: `term [-Status] [-Apply] [-Edit] [-New] [-Doctor]`
-- Приклади:
-  - `term -Status` — шлях до конфіга, версія Ghostty, чи це Ghostty-сесія
-  - `term -Apply` — перевстановити `FoxTerminal/ghostty/config` (зі бекапом)
-  - `term -Edit` — відкрити конфіг у редакторі
-  - `term -Doctor` — перевірка бінаря, конфіга, шрифта, shell integration
-
-#### `apps`
-- Призначення: розкладка до 4 вікон застосунків.
-- Синтаксис: `apps <app1> / <app2> [/ <app3> [/ <app4>]]`
-- Приклад:
-  - `apps firefox / spotify / telegram`
-
-#### `appbind`
-- Призначення: прив’язка alias до exe/аргументів/матчингу заголовка.
-- Синтаксис: `appbind [add|del|list] ...`
+| Команда | Приклад |
+|---------|---------|
+| `foxhotkeys` | `foxhotkeys -Status\|-Restart\|-Stop` |
+| `foxinfo` | менеджер біндингів хоткеїв |
+| `build` | `build demo`, `build -list`, `build -restore demo` |
+| `foxpack` | `foxpack`, `foxpack -Full -Open` |
+| `foxreset` | hard reset кешів / prompt |
+| `foxdeps` | `foxdeps -Check\|-Install` |
+| `foxtest` | `foxtest -Group info`, `foxtest -Only chek,term` |
+| `foxhelp` | інтерактивна довідка |
 
 ---
 
-### 4.10 Хоткеї та керування прив’язками
+## 8) Сценарії та гайди
 
-#### `foxhotkeys`
-- Призначення: глобальний daemon гарячих клавіш.
-- Синтаксис: `foxhotkeys [-Stop] [-Restart] [-Status]`
-- FoxTerminal: `Shift+Alt+T` показати, `Shift+Ctrl+Alt+T` закрити (Space-варіанти теж show/hide).
+### A) Робочий ранок
 
-#### `foxinfo`
-- Призначення: менеджер гарячих клавіш і FoxTerminal-шляху.
-- Синтаксис: `foxinfo`
+```powershell
+l myname mypass
+home
+fday Kyiv
+ytm lofi coding
+wai
+nfile standup.md
+edit standup.md
+```
 
----
+### B) Повний FoxOS desktop
 
-### 4.11 Знімки, reset, пакування
+```powershell
+foxsetup                 # якщо ще не проходив
+foxos on
+foxlook on
+foxlook cursor fox 2
+foxlook dock style pill
+home
+```
 
-#### `build`
-- Призначення: створення/список/відновлення/видалення снапшотів конфігурації.
-- Синтаксис: `build <name> | -list | -restore <name> | -delete <name>`
-- Приклади:
-  - `build mysetup`
-  - `build -list`
-  - `build -restore mysetup`
+### C) Демо / стрім
 
-#### `foxpack`
-- Призначення: запакувати FoxTerminal у zip для передачі.
-- Синтаксис: `foxpack [-Full] [-Open] [-OutPath <path>]`
-- Режими:
-  - стандартний: clean-збірка (без персональних даних);
-  - `-Full`: включає поточні binds/notes/theme (але `users.json` чиститься для безпеки).
-- Приклади:
-  - `foxpack`
-  - `foxpack -Full -Open`
-  - `foxpack -OutPath C:\Exports`
+```powershell
+themes
+apps firefox / telegram / spotify
+ytm-ui
+build demo-ready
+```
 
-#### `foxreset`
-- Призначення: жорсткий reset кешів/ініціалізації оточення.
-- Синтаксис: `foxreset [-Git] [-NoGit]`
+### D) Мережева діагностика
 
-#### `foxdeps`
-- Призначення: перевірка/автоінсталяція залежностей FoxTerminal.
-- Синтаксис: `foxdeps [-Check] [-Install]`
+```powershell
+wifi
+ip
+netping 8.8.8.8 1.1.1.1 github.com
+reconnect
+netping github.com
+```
 
-#### `foxtest`
-- Призначення: прогнати кожну команду FoxTerminal і показати, що зламалось.
-- Синтаксис: `foxtest [-List] [-Quiet] [-Only <назви>] [-Group all|info|tui|bat] [-Timeout <с>]`
-- Що вважається «працює»:
-  - команди, які мають завершитись самі, реально запускаються й повинні вийти без помилок
-  - меню достатньо намалювати інтерфейс і дійти до очікування клавіші
-  - те, що змінює налаштування, закриває термінал або потребує демона ffsync,
-    свідомо пропускається; `foxtest -List` показує причину для кожного
-- Приклади:
-  - `foxtest` — повний прогін, приблизно 6 хвилин
-  - `foxtest -Group info` — тільки команди, що завершуються самі
-  - `foxtest -Only chek,term,sixel` — лише ці три
-- Примітка: якщо додати команду в `cmd\` і не внести її в манiфест, `foxtest` окремо
-  повідомить, що вона не покрита. Манiфест — на початку `cmd\foxtest.ps1`.
+### E) Передача оточення колезі
 
-#### `foxhelp`
-- Призначення: інтерактивне меню довідки.
-- Синтаксис: `foxhelp`
+```powershell
+build transfer-base
+foxpack                  # clean zip без особистих даних
+# або:
+foxpack -Full -OutPath C:\Exports -Open
+```
 
----
+Колега: розпакувати → `FoxTerminal\install.ps1` → `foxsetup`.
 
-## 5) Реальні сценарії використання (покроково)
+### F) Безпечний експеримент з темою / look
 
-### Сценарій A: “Робочий ранок”
+```powershell
+build before-look
+foxlook on
+foxlook cursor neon 3
+# ...експерименти...
+# якщо погано:
+build -restore before-look
+foxlook off
+```
 
-1. `who` — перевірити активного користувача.
-2. `fday Kyiv` — короткий технічний ранковий дайджест.
-3. `sites` — відкрити локальні інструменти.
-4. `ytm lofi coding` — запустити фон.
-5. `wai` — перевірити папку нотаток.
-6. `nfile standup.md`
-7. `edit standup.md` — швидко заповнити план дня.
+### G) iPhone на екрані ПК
 
-### Сценарій B: “Швидка підготовка демо”
-
-1. `themes` — вибрати візуальний стиль.
-2. `apps firefox / telegram / spotify` — розкласти вікна.
-3. `sp-ui` або `ytm-ui` — керувати аудіо без миші.
-4. `ser demo checklist` — швидкий пошук.
-5. `build demo-ready` — зафіксувати стан перед показом.
-
-### Сценарій C: “Передача оточення колезі”
-
-1. `build transfer-base` — знімок поточного стану.
-2. `foxpack` — clean zip без персональних даних.
-3. (за потреби) `foxpack -Full` — включити твої notes/binds/theme.
-4. Передати zip, колега запускає `install.ps1`.
-
-### Сценарій D: “Мережева перевірка”
-
-1. `wifi`
-2. `ip`
-3. `netping 8.8.8.8 1.1.1.1 github.com`
-4. Якщо мережа нестабільна: `reconnect`
-5. Повторити `netping`.
+```powershell
+foxmirror -Setup
+foxmirror                # кабель
+# пізніше без кабелю:
+foxmirror -Wifi
+```
 
 ---
 
-## 6) Робота з `sites` та локальними веб-додатками
+## 9) Локальні сайти
 
-`sites` керує локальними mini-apps. Це зручно для:
+`sites` керує папкою `sites/`. Зараз є, зокрема: `fox-terminal`, `hub`, `fox-utils`, `web-ui-guide`, ігри, forge-тули тощо.
 
-- типінг-тренажерів;
-- персональних web-дашбордів;
-- локальних утиліт без підняття бекенду.
+```powershell
+sites                         # список / відкрити
+sites -createn my-dashboard   # каркас нової папки
+sites -open my-dashboard      # відкрити в VS Code / Cursor
+```
 
-Базовий потік:
+Рекомендована структура нового сайту:
 
-1. Створення: `sites -createn my-tool`
-2. Відкриття папки: `sites -open my-tool`
-3. Наповнення `index.html`, `assets/css`, `assets/js`
-4. Повернення в список: `sites`
+```
+sites/my-dashboard/
+  index.html
+  assets/css/style.css
+  assets/js/main.js
+```
 
-Порада: тримай назви сайтів короткими та читабельними, а структуру однаковою (`index.html`, `assets/css/style.css`, `assets/js/main.js`) — це полегшує підтримку.
-
----
-
-## 7) Тема, стиль, mood-профілі
-
-FoxTerminal підтримує швидку зміну “настрою” інтерфейсу:
-
-- нейтральний/робочий режим (`themes`, `sw`);
-- темний кінематографічний (`noir`, `spider`);
-- стилізований тематичний (`dnote`, `apple`);
-- палітра-режими (`pride`, `arthas`).
-
-Рекомендована практика:
-
-- для щоденної роботи: спокійні теми;
-- для стріму/демо: контрастні стилі;
-- перед пакуванням `foxpack -Full`: перевір, чи хочеш передавати поточну тему.
+Презентація самої системи: `sites/fox-terminal/` — теми, команди, Ghostty, AI, media, hotkeys, ecosystem, settings.
 
 ---
 
-## 7.5) Фішки Ghostty, які вже налаштовані
+## 10) Теми і візуал
 
-Усе нижче вже прописано в `FoxTerminal/ghostty/config`.
+- Щоденна робота: спокійні теми через `themes` / `sw slate` (або інша з палітри).
+- Демо / стрім: `noir`, `pride`, `arthas`, `dnote`.
+- Скло поверх усього: `shader on` (GLSL з `FoxTerminal/ghostty/shaders/`).
+- Desktop під тему: `foxos on` — rain і accent підхоплюють `sw`.
+
+Перед `foxpack -Full` подумай, чи хочеш віддавати свою тему й look-профіль.
+
+Редагування візуалу терміналу — лише `FoxTerminal/ghostty/config`, потім `ctrl+shift+,`.
+
+---
+
+## 11) Ghostty: фішки і клавіші
+
+Усе вже в `ghostty/config`:
 
 | Фішка | Клавіші | Що робить |
 |-------|---------|-----------|
-| Quick terminal | `ctrl+backquote` (глобально) або `ctrl+shift+backquote` | Quake-drop-down згори екрана, 45% висоти, ховається при втраті фокуса |
-| Splits | `ctrl+shift+enter` / `j` / `l` | Нативні панелі без tmux; неактивні затемнені до 85% |
-| Split zoom | `ctrl+shift+z` | Розгорнути активну панель на все вікно і назад |
-| Equalize splits | `ctrl+shift+e` | Вирівняти розміри всіх панелей |
-| Resize split | `ctrl+alt+стрілки` | Змінити розмір панелі на 40 пікселів |
-| Jump to prompt | `ctrl+shift+up` / `down` | Стрибок між промптами через OSC 133 |
-| Пошук по історії | `ctrl+shift+f` | Пошук з підсвіткою в кольорах FoxNight |
-| Історія у файл | `ctrl+shift+u` | Вивантажити весь 32 MB буфер у файл і відкрити |
-| Command palette | `ctrl+shift+p` | Команди FoxTerminal як записи палітри |
-| Terminal inspector | `ctrl+shift+i` | Live-дебагер VT: escape-послідовності, комірки, шрифти, рендер |
-| Перезавантаження конфіга | `ctrl+shift+comma` | Застосувати правки без перезапуску |
-| Fox-шорткати | `ctrl+shift+h/k/s/g` | `foxhelp`, `chek`, `sw`, `term` |
+| Quick terminal | `ctrl+`` ` або `ctrl+shift+`` ` | Quake-dropdown згори |
+| Splits | `ctrl+shift+enter` / `j` / `l` | Нативні панелі |
+| Zoom split | `ctrl+shift+z` | Панель на весь екран |
+| Equalize | `ctrl+shift+e` | Вирівняти панелі |
+| Resize | `ctrl+alt+стрілки` | ±40 px |
+| Jump prompt | `ctrl+shift+↑/↓` | OSC 133 |
+| Search | `ctrl+shift+f` | Пошук у scrollback |
+| Scrollback → file | `ctrl+shift+u` | Вивантажити буфер |
+| Palette | `ctrl+shift+p` | Команди FoxTerminal |
+| Inspector | `ctrl+shift+i` | VT / шрифти / render |
+| Reload config | `ctrl+shift+,` | Без рестарту |
+| Fox shortcuts | `ctrl+shift+h/k/s/g/o` | help / chek / sw / term / shader |
 
-Пасивні фішки без клавіш: Kitty graphics для картинок у терміналі (`sixel` покаже стан,
-рендерять `chafa`/`timg`), desktop-нотифікації про завершені довгі команди у неактивному
-вікні, OSC 9;4 прогрес-бари в заголовку і на таскбарі, `background-opacity 0.92` з 20px
-blur, лігатури Nerd Font через `calt`/`liga`, захист від вставки підозрілого
-багаторядкового тексту, `ssh-terminfo` який ставить `xterm-ghostty` на віддаленому хості,
-і `window-save-state always` — сесія відновлюється після рестарту.
+**Глобальні (Windows, AHK `foxhotkeys`):**
 
-Платформні обмеження, про які варто знати:
+| Клавіші | Дія |
+|---------|-----|
+| `Shift+Alt+T` | Показати FoxTerminal |
+| `Shift+Ctrl+Alt+T` | Закрити |
+| `Shift+Alt+Space` / `Shift+Ctrl+Space` | Show / hide |
+| `Shift+Alt+L` | Fox `lock` |
 
-- Глобальний `ctrl+backquote` працює на macOS і на частині Linux-композиторів. На Windows
-  системний хоткей дає AHK-демон `foxhotkeys` (`Shift+Alt+T` показати, `Shift+Ctrl+Alt+T`
-  закрити; Space-варіанти теж show/hide), а всередині Ghostty завжди працює
-  `ctrl+shift+backquote`.
-- На Linux quick terminal вимагає Wayland із `wlr-layer-shell-v1` — тобто на GNOME він
-  недоступний.
-- Таби, `gtk-*` ключі і `window-titlebar-*` — GTK-only. На macOS і Windows Ghostty просто
-  ігнорує їх без помилок.
-- `auto-update` і `quick-terminal-screen` реалізовані лише на macOS.
+Пасивне: Kitty graphics, нотифікації довгих команд, OSC 9;4 прогрес, opacity 0.92 + blur, Nerd Font ligatures, захист від підозрілої вставки, `window-save-state always`.
 
 ---
 
-## 8) Безпека та hygiene
+## 12) Zen / Firefox Companion
 
-1. Не клади секрети в `notes` у відкритому вигляді.
-2. Не передавай `-Full` пакети без перевірки вмісту.
-3. Регулярно використовуй `build` перед великими змінами.
-4. Для підозрілих скриптів запускай `foxscan -Deep`.
-5. Якщо є дивна активність процесів — `foxbg`.
-6. Паролі міняй через `passwd`.
+```powershell
+foxaddon -Install          # Native Messaging host
+foxaddon -Pack             # зібрати .xpi
+foxzen status              # який браузер відкриває FoxTerminal
+foxzen default             # зробити Zen основним
+foxzen theme               # userChrome теми FoxTerminal
+foxzen host                # реєстрація native host
+foxzen addon               # rebuild + replace addon у профілі Zen
+ffsync start               # синхрон sidebar ↔ термінал
+```
 
----
-
-## 9) Troubleshooting: часті проблеми
-
-### Проблема: команда не знайдена
-- Перевір, чи `cmd` шлях у `PATH`.
-- Використай повний запуск:
-  - `powershell -ExecutionPolicy Bypass -File .\cmd\foxhelp.ps1`
-
-### Проблема: AI-команди не відповідають
-- Перевір Ollama:
-  - `ollama serve`
-  - `ollama pull qwen3-vl`
-- Перевір змінні оточення (якщо налаштовані кастомно).
-
-### Проблема: splits або keybinds не працюють
-- Перевір, що ти в Ghostty: `chek`. Splits і keybinds дає сам Ghostty, тому в інших
-  терміналах їх просто немає.
-- Перевір, що конфіг встановлено: `term -Status`, і `term -Apply` якщо його немає.
-- Після правок конфіга — `ctrl+shift+,`.
-- Повна діагностика: `term -Doctor`.
-
-### Проблема: замість іконок квадратики
-- Немає Nerd Font. Запусти `foxdeps -Install` або поміняй `font-family` у конфігу на
-  шрифт, який реально стоїть, і натисни `ctrl+shift+,`.
-
-### Проблема: Firefox-інтеграція працює некоректно
-- Перевір `ff open youtube`.
-- Перевір alias-таблиці:
-  - `blist`
-- За потреби перествори binding через `bbind`.
-
-### Проблема: зіп з `foxpack` “не той”
-- За замовчуванням це clean-пак.
-- Для передачі персонального стану потрібен `-Full`.
+Companion дає sidebar, теми, bridge до терміналу. Файли: `FoxTerminal/firefox-addon/`, `FoxTerminal/zen/`.
 
 ---
 
-## 10) Практика “чистого” робочого процесу
+## 13) AI (FRIEND / ask)
 
-### Базовий цикл щоденної роботи
+```powershell
+ollama serve
+ollama pull qwen3-vl
 
-1. Логін: `l <name> <pass>`
-2. Статус: `who`, `fday`
-3. Робота: `sites`, `ytm`, `notes` команди
-4. Перевірки: `wifi`, `ip`, `netping` за потреби
-5. Кінець сесії:
-   - `build daily-YYYYMMDD`
-   - `uexit` (якщо потрібно)
+ask "Explain this file"
+ask "What is in this image?" --image C:\path\img.png
+friend
+```
 
-### Цикл змін конфігурації
+Опційні змінні (після `setx` — новий термінал):
 
-1. `build before-theme-change`
-2. Зміни через `themes` / `sw` / інші режими
-3. Тест команди `foxhelp`
-4. Якщо все ок — `build after-theme-change`
-5. Якщо щось зламалося — `build -restore before-theme-change`
+```
+OLLAMA_URL=http://localhost:11434
+FOXTERM_OLLAMA_MODEL=qwen3-vl
+FOXTERM_OLLAMA_SYSTEM=...
+FOXTERM_OLLAMA_AUTOSTART=1
+FOXTERM_OLLAMA_LOW_POWER=1
+FOXTERM_FRIEND_MAX_TURNS=25
+```
+
+`foxlife` також має вбудованого AI-асистента у своєму вікні.
 
 ---
 
-## 11) Шпаргалка команд (коротко)
+## 14) Безпека
 
-### Авторизація
-- `nuser`, `l`, `who`, `users`, `passwd`, `uexit`
+1. Не клади паролі/токени у відкриті notes.
+2. `foxpack` без `-Full` — для чужих машин; `-Full` перевіряй перед відправкою.
+3. `build` перед експериментами з `foxlook shell` / темами.
+4. `foxscan -Deep` для підозрілих скриптів; `foxbg` для дивних процесів.
+5. `foxlook shell on` — тільки якщо розумієш rescue-шлях.
+6. Пароль міняй через `passwd`.
 
-### AI
-- `ask`, `friend`, `sum`
+Опційно з папки FoxTerminal (адмін):
 
-### Медіа
-- `yt`, `ytm`, `ytm-ui`, `ytsplit`, `sp`, `sp-ui`, `dj`, `youtube`
+```powershell
+.\DisableBloat     # важкі служби
+.\DisableAds       # реклама / підказки Windows
+.\Status
+.\Enable           # повернути назад
+```
 
-### Веб/alias
-- `ff`, `sites`, `bbind`, `blist`, `bdel`, `gask`, `ser`, `ffbot`
+---
 
-### Telegram
-- `tg`, `tgub`, `tglist`
+## 15) Troubleshooting
+
+| Симптом | Що зробити |
+|---------|------------|
+| Команда не знайдена | Перевір PATH / відкрий Ghostty з ярлика інсталера; або `powershell -File .\cmd\foxhelp.ps1` |
+| Не Ghostty | `chek`, `term -Doctor`, `term -Apply` |
+| Квадратики замість іконок | `foxdeps -Install` (Nerd Font), `ctrl+shift+,` |
+| AI мовчить | `ollama serve`, `ollama pull qwen3-vl` |
+| Splits не працюють | Тільки в Ghostty; `term -Status` |
+| FoxOS не малює | Windows only; `foxos status`; скинь `FOXTERM_FOXOS` |
+| Після `shell on` немає Explorer | Ctrl+Alt+Del → Task Manager → Run → `restore-windows.cmd` |
+| `foxpack` «не той» | За замовчуванням clean; персональне — `-Full` |
+| Firefox/Zen не відкриває | `foxzen status`, `ff open youtube`, `blist` |
+
+---
+
+## 16) Шпаргалки
+
+### Авторизація і дім
+`nuser` · `l` · `who` · `uexit` · `home` · `lock` · `settings` · `foxsetup`
+
+### FoxOS
+`foxos on/off` · `foxlook on/off` · `foxlook cursor …` · `foxlook dock …` · `foxlook shell off`
+
+### AI / медіа
+`ask` · `friend` · `yt` · `ytm` · `ytm-ui` · `sp` · `sp-ui` · `dj` · `foxmirror`
 
 ### Нотатки
-- `wai`, `go`, `up`, `nfile`, `nfould`, `fdel`, `edit`, `nano`, `view`
+`wai` · `go` · `up` · `nfile` · `edit` · `view` · `changelog`
 
-### Хеші
-- `hash`, `unhash`
+### Система
+`fday` · `wifi` · `ip` · `netping` · `chek` · `term` · `foxhelp` · `foxtest`
 
-### Система/мережа
-- `wifi`, `reconnect`, `ip`, `weather`, `netping`, `disk`, `ftime`, `fday`, `chek`, `sixel`
-
-### Інтерфейс/термінал
-- `term`, `chek`, `interface`, `apps`, `appbind`, `clear`, `texit`
-
-### Теми
-- `sw`, `themes`, `noir`, `dnote`, `apple`, `pride`, `arthas`, `spider`, `frederik`
-
-### Сервісні
-- `foxscan`, `foxbg`, `foxdeps`, `foxtest`, `foxreset`, `foxhelp`, `build`, `foxpack`, `foxhotkeys`, `foxinfo`
+### Знімки
+`build` · `foxpack` · `foxreset` · `foxdeps`
 
 ---
 
-## 12) Приклади готових командних наборів
+## 17) Готові набори команд
 
-### Набір “Focus coding”
+### Focus coding
 
 ```powershell
 themes
@@ -785,17 +730,27 @@ nfile sprint.md
 edit sprint.md
 ```
 
-### Набір “Network debug”
+### Full FoxOS morning
+
+```powershell
+l myname mypass
+foxos on
+foxlook on
+home
+fday
+ytm lofi
+```
+
+### Network debug
 
 ```powershell
 wifi
 ip
 netping 1.1.1.1 8.8.8.8 github.com
 reconnect
-netping github.com
 ```
 
-### Набір “Content + messenger”
+### Content + messenger
 
 ```powershell
 ytm chillwave
@@ -803,7 +758,7 @@ tg @teamlead
 sp-ui
 ```
 
-### Набір “Backup + share”
+### Backup + share
 
 ```powershell
 build before-share
@@ -811,47 +766,30 @@ foxpack
 foxpack -Full -OutPath C:\Exports -Open
 ```
 
----
+### Safe look experiment
 
-## 13) Рекомендований стандарт іменування
-
-Щоб не плутатись у нотатках та збірках:
-
-- файли: `kebab-case` або `snake_case`;
-- збірки: `YYYYMMDD-purpose`;
-- папки нотаток: короткі, без зайвих пробілів;
-- alias-и: мінімум символів, але зрозумілі (`gh`, `yt`, `docs`, `teamtg`).
-
----
-
-## 14) Поради по продуктивності
-
-1. Звичка починати з `fday` економить час на діагностиці контексту.
-2. `apps` + `appbind` дають швидкий “рабочий layout” за один виклик.
-3. `build` перед експериментами рятує від втрати конфігурації.
-4. `friend` краще для сесій, `ask` краще для точкових запитів.
-5. `foxpack` корисний не тільки для передачі, а й як знімок розгортання.
+```powershell
+build before-look
+foxlook export
+foxlook on
+foxlook cursor preview
+# rollback:
+foxlook off
+build -restore before-look
+```
 
 ---
 
-## 15) Підсумок
+## Підсумок
 
-FoxTerminal — це не просто набір alias-ів, а цілісне shell-оточення:
+FoxTerminal = **термінал + команди + FoxOS desktop + системна оболонка + сайти + AI + companion**.
 
-- авторизація + персональні дані;
-- файлово-нотатковий контур;
-- браузерно-медійний контур;
-- AI-контур;
-- візуальні режими;
-- системна діагностика;
-- інструменти пакування і відновлення.
+Стабільний щоденний flow:
 
-Якщо хочеш максимально стабільний flow:
+1. `foxsetup` один раз → далі `l` → `home`
+2. Робота: `sites` + notes + `ytm` / `friend`
+3. Desktop: за бажанням `foxos` + `foxlook`
+4. Перед експериментами — `build`
+5. Для передачі — `foxpack`
 
-1. починай день з `fday`;
-2. працюй через `sites` + `notes`;
-3. зберігай стани через `build`;
-4. перед передачею середовища — `foxpack`.
-
-Цього достатньо, щоб вести щоденну роботу в одному узгодженому середовищі без хаотичного перемикання між десятком окремих утиліт.
-
+Жива довідка в будь-який момент: **`foxhelp`**.

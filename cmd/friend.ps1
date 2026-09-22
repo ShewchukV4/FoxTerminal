@@ -25,6 +25,7 @@ $openTriggers = @(
     @{ patterns = @("open youtube music ui", "youtube music ui", "open ytm ui", "ytm ui", "ytm-ui", "open ytm-ui"); script = "ytm-ui"; args = @() },
     @{ patterns = @("open telegram", "telegram", "tg"); script = "tg"; args = @() },
     @{ patterns = @("open notes", "notes", "note", "wai"); script = "wai"; args = @() },
+    @{ patterns = @("open foxlife", "foxlife", "fox life", "open life"); script = "foxlife"; args = @() },
 
     # Quick utilities
     @{ patterns = @("open weather", "weather"); script = "weather"; args = @() },
@@ -870,6 +871,14 @@ while ($true) {
                 $contentToStore = $assistantReply
             }
             $messages.Add(@{ role = "assistant"; content = $contentToStore }) | Out-Null
+            if (Get-Command Set-FoxUserWorldValue -ErrorAction SilentlyContinue) {
+                $snip = (($contentToStore -replace '\s+', ' ').Trim())
+                if ($snip.Length -gt 60) { $snip = $snip.Substring(0, 60) }
+                Set-FoxUserWorldValue "lastFriend" $snip | Out-Null
+            }
+            if (Get-Command Write-FoxToast -ErrorAction SilentlyContinue) {
+                Write-FoxToast "friend ready"
+            }
             Trim-MessageHistory -msgList $messages -maxPairs $maxTurns
         }
         Write-Host ""

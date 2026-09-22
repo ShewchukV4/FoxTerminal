@@ -50,21 +50,12 @@ function Resolve-YtmBrowser {
         $custom = [string]$env:FOXTERM_YTM_BROWSER
         if (-not [string]::IsNullOrWhiteSpace($custom) -and (Test-Path $custom)) { return $custom }
     } catch { }
-
-    $pf = [string]$env:ProgramFiles
-    $pfx86 = ""
-    try { $pfx86 = [string]${env:ProgramFiles(x86)} } catch { $pfx86 = "" }
-
-    $candidates = @(
-        (Join-Path $pfx86 "Microsoft\Edge\Application\msedge.exe"),
-        (Join-Path $pf "Microsoft\Edge\Application\msedge.exe"),
-        (Join-Path $pf "Google\Chrome\Application\chrome.exe"),
-        (Join-Path $pfx86 "Google\Chrome\Application\chrome.exe"),
-        (Join-Path $pf "Mozilla Firefox\firefox.exe"),
-        (Join-Path $pfx86 "Mozilla Firefox\firefox.exe")
-    )
-    foreach ($c in $candidates) {
-        try { if ($c -and (Test-Path $c)) { return $c } } catch { }
+    $lib = Join-Path $PSScriptRoot "fox-browser.ps1"
+    if (Test-Path -LiteralPath $lib) {
+        . $lib
+        if (Get-Command Resolve-FoxBrowserPath -ErrorAction SilentlyContinue) {
+            return (Resolve-FoxBrowserPath)
+        }
     }
     return $null
 }
@@ -93,15 +84,17 @@ function Start-YtmUrl([string]$url) {
     try {
         if ($browser) {
             $name = [System.IO.Path]::GetFileName($browser)
-            if ($name -match '(?i)^firefox') {
-                Start-Process -FilePath $browser -ArgumentList @("--new-tab", $url) | Out-Null
+            if ($name -match '(?i)^(zen|firefox)') {
+                Start-Process -FilePath $browser -ArgumentList @("-new-tab", $url) | Out-Null
             } elseif ($name -match '(?i)^(msedge|chrome)') {
-                Start-Process -FilePath $browser -ArgumentList @("--disable-features=PwaLinkCapturing,DesktopPWAsLinkCapturing", "--new-window", $url) | Out-Null
+                Start-Process -FilePath $browser -ArgumentList @("-new-tab", $url) | Out-Null
             } else {
-                Start-Process -FilePath $browser -ArgumentList @($url) | Out-Null
+                Start-Process -FilePath $browser -ArgumentList @("-new-tab", $url) | Out-Null
             }
         } else {
-            Start-Process $url | Out-Null
+            if (Get-Command Open-FoxBrowserUrl -ErrorAction SilentlyContinue) {
+                Open-FoxBrowserUrl -Url $url -Mode tab | Out-Null
+            }
         }
         return $true
     } catch {
