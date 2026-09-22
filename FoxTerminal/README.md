@@ -4,7 +4,7 @@ Full system docs (guides + examples):
 
 - Українською: [`FOXTERMINAL_GUIDE_UA.md`](FOXTERMINAL_GUIDE_UA.md)
 - English: [`FOXTERMINAL_GUIDE_EN.md`](FOXTERMINAL_GUIDE_EN.md)
-- **Linux / Kali:** [`linux/LINUX_GUIDE_UA.md`](linux/LINUX_GUIDE_UA.md) · [`linux/COMMANDS_LINUX.md`](linux/COMMANDS_LINUX.md) · [`linux/`](linux/)
+- **Linux / Kali:** [`linux/CURSOR_MEGAGUIDE_UA.md`](linux/CURSOR_MEGAGUIDE_UA.md) ★ · [`linux/`](linux/)
 - Interactive site: `sites/fox-terminal/` (open with `sites`)
 
 This is a portable terminal setup built exclusively for **[Ghostty](https://ghostty.org)**.

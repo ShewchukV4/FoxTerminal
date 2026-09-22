@@ -1,13 +1,19 @@
 # FoxTerminal — Linux pack
 
-Папка для Kali / Linux / macOS-агентів і людей, які працюють не на Windows.
+Папка для Kali / Linux і **Cursor на іншому ПК**.
 
 | Файл | Навіщо |
 |------|--------|
-| [`AGENTS.md`](AGENTS.md) | Пам’ять проєкту (копія кореневого) |
-| [`LINUX_GUIDE_UA.md`](LINUX_GUIDE_UA.md) | **Повний гайд:** команди, стіл, пропорції екрана, оптимізація |
-| [`COMMANDS_LINUX.md`](COMMANDS_LINUX.md) | Швидка шпаргалка: Windows-команда → Linux-еквівалент |
+| **[`CURSOR_MEGAGUIDE_UA.md`](CURSOR_MEGAGUIDE_UA.md)** | ★ **Гігантський гайд для Cursor** — читай цей першим |
+| [`AGENTS.md`](AGENTS.md) | Коротка пам’ять агента |
+| [`LINUX_GUIDE_UA.md`](LINUX_GUIDE_UA.md) | Стіл, пропорції екрана, оптимізація |
+| [`COMMANDS_LINUX.md`](COMMANDS_LINUX.md) | Windows-команда → Linux |
 
-Читай спочатку: **`LINUX_GUIDE_UA.md`**.
+**Промпт на іншому ПК:**
 
-Повний системний гайд (кросплатформа): [`../FOXTERMINAL_GUIDE_UA.md`](../FOXTERMINAL_GUIDE_UA.md).
+```
+Прочитай повністю FoxTerminal/linux/CURSOR_MEGAGUIDE_UA.md
+і працюй за ним. Відповідай українською.
+```
+
+Повний системний гайд: [`../FOXTERMINAL_GUIDE_UA.md`](../FOXTERMINAL_GUIDE_UA.md).

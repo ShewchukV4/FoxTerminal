@@ -24,7 +24,10 @@
 
 Повна документація:
 
-- **Linux / Kali pack:** `FoxTerminal/linux/` → почни з `LINUX_GUIDE_UA.md` (стіл, пропорції екрана, оптимізація, команди)
+- **Linux / Kali pack:** `FoxTerminal/linux/`  
+  - ★ **`CURSOR_MEGAGUIDE_UA.md`** — гігантський гайд для Cursor на іншому ПК  
+  - `LINUX_GUIDE_UA.md` — стіл, пропорції, оптимізація  
+  - `COMMANDS_LINUX.md` — Windows → Linux
 - `FoxTerminal/FOXTERMINAL_GUIDE_UA.md` (UA, уся система)
 - `FoxTerminal/FOXTERMINAL_GUIDE_EN.md` (EN)
 - `FoxTerminal/README.md`
@@ -103,11 +106,11 @@ bash ./FoxTerminal/install.sh
 
 ```
 Ти працюєш у репозиторії FoxTerminal (FireFoxBot).
-Спочатку прочитай AGENTS.md, потім FoxTerminal/FOXTERMINAL_GUIDE_UA.md і CHANGELOG.md.
-Якщо сесія на Linux/Kali — обов’язково FoxTerminal/linux/LINUX_GUIDE_UA.md і COMMANDS_LINUX.md.
-Відповідай українською. Продовжуй роботу над системою з того контексту.
-Не вимикай і не вмикай foxlook shell без мого явного «так».
-На Linux foxos/foxlook — Windows-only; давай еквіваленти зі linux-гайда.
+Спочатку прочитай FoxTerminal/linux/CURSOR_MEGAGUIDE_UA.md (головне).
+Далі за потреби: AGENTS.md, FOXTERMINAL_GUIDE_UA.md, CHANGELOG.md.
+Відповідай українською. Продовжуй з того контексту.
+Не вмикай foxlook shell без мого «так».
+На Linux foxos/foxlook — Windows-only; еквіваленти з MEGAGUIDE §9–11.
 ```
 
 ---
