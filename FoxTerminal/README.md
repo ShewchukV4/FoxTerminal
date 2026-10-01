@@ -4,6 +4,7 @@ Full system docs (guides + examples):
 
 - Українською: [`FOXTERMINAL_GUIDE_UA.md`](FOXTERMINAL_GUIDE_UA.md)
 - English: [`FOXTERMINAL_GUIDE_EN.md`](FOXTERMINAL_GUIDE_EN.md)
+- **Windows (інший ПК):** [`windows/CURSOR_MEGAGUIDE_UA.md`](windows/CURSOR_MEGAGUIDE_UA.md) ★ · [`windows/HARDWARE_SCREEN.md`](windows/HARDWARE_SCREEN.md)
 - **Linux / Kali:** [`linux/CURSOR_MEGAGUIDE_UA.md`](linux/CURSOR_MEGAGUIDE_UA.md) ★ · [`linux/`](linux/)
 - Interactive site: `sites/fox-terminal/` (open with `sites`)
 

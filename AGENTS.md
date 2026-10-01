@@ -24,8 +24,11 @@
 
 Повна документація:
 
+- **Windows (інший ПК):** `FoxTerminal/windows/`  
+  - ★ **`CURSOR_MEGAGUIDE_UA.md`** — перенос + залізо + екрани для Cursor  
+  - `HARDWARE_SCREEN.md` — таблиці DPI / GPU / монітори  
 - **Linux / Kali pack:** `FoxTerminal/linux/`  
-  - ★ **`CURSOR_MEGAGUIDE_UA.md`** — гігантський гайд для Cursor на іншому ПК  
+  - ★ **`CURSOR_MEGAGUIDE_UA.md`** — гігантський гайд для Cursor на Linux  
   - `LINUX_GUIDE_UA.md` — стіл, пропорції, оптимізація  
   - `COMMANDS_LINUX.md` — Windows → Linux
 - `FoxTerminal/FOXTERMINAL_GUIDE_UA.md` (UA, уся система)
@@ -106,11 +109,13 @@ bash ./FoxTerminal/install.sh
 
 ```
 Ти працюєш у репозиторії FoxTerminal (FireFoxBot).
-Спочатку прочитай FoxTerminal/linux/CURSOR_MEGAGUIDE_UA.md (головне).
+Windows-ПК: спочатку FoxTerminal/windows/CURSOR_MEGAGUIDE_UA.md
+  (зніми залізо/монітори, піджени FoxOS/Ghostty).
+Linux/Kali: FoxTerminal/linux/CURSOR_MEGAGUIDE_UA.md.
 Далі за потреби: AGENTS.md, FOXTERMINAL_GUIDE_UA.md, CHANGELOG.md.
-Відповідай українською. Продовжуй з того контексту.
+Відповідай українською.
 Не вмикай foxlook shell без мого «так».
-На Linux foxos/foxlook — Windows-only; еквіваленти з MEGAGUIDE §9–11.
+На Linux foxos/foxlook — Windows-only.
 ```
 
 ---

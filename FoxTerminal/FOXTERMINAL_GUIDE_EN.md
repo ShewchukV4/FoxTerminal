@@ -4,7 +4,8 @@ Full English documentation: from the Ghostty terminal to FoxOS on the Windows de
 
 > Українська версія: [`FOXTERMINAL_GUIDE_UA.md`](FOXTERMINAL_GUIDE_UA.md)  
 > Short README: [`README.md`](README.md)  
-> **Linux / Kali pack:** [`linux/LINUX_GUIDE_UA.md`](linux/LINUX_GUIDE_UA.md)  
+> **Windows other PC:** [`windows/CURSOR_MEGAGUIDE_UA.md`](windows/CURSOR_MEGAGUIDE_UA.md)  
+> **Linux / Kali pack:** [`linux/CURSOR_MEGAGUIDE_UA.md`](linux/CURSOR_MEGAGUIDE_UA.md)  
 > Interactive presentation: `sites/fox-terminal/` (open via `sites`)
 
 ---
