@@ -26,6 +26,7 @@
 
 - **Windows (інший ПК):** `FoxTerminal/windows/`  
   - ★ **`CURSOR_MEGAGUIDE_UA.md`** — перенос + залізо + екрани для Cursor  
+  - ★ **`VERIFY_ALL.md`** — кожна команда + Alt+Tab / таскбар / Win  
   - `HARDWARE_SCREEN.md` — таблиці DPI / GPU / монітори  
 - **Linux / Kali pack:** `FoxTerminal/linux/`  
   - ★ **`CURSOR_MEGAGUIDE_UA.md`** — гігантський гайд для Cursor на Linux  

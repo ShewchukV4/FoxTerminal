@@ -7,6 +7,8 @@
 Прочитай повністю FoxTerminal/windows/CURSOR_MEGAGUIDE_UA.md
 і працюй за ним. Відповідай українською.
 Спочатку зніми залізо й усі монітори (розділ 10), потім піджени FoxOS/Ghostty під них.
+Обов’язково: прожени КОЖНУ команду (розділ 23 / VERIFY_ALL.md)
+і перевір усю оболонку Windows — Alt+Tab, таскбар, Win-меню, lock, dock.
 ```
 
 Репо: `https://github.com/ShewchukV4/FoxTerminal` · дзеркало `shew4uk/FoxTerminal`.
@@ -15,6 +17,7 @@
 
 - `AGENTS.md` — коротка пам’ять Windows-паку  
 - `HARDWARE_SCREEN.md` — швидка таблиця DPI / моніторів / GPU  
+- **`VERIFY_ALL.md`** — прогін кожної команди + Alt+Tab / таскбар  
 - `../FOXTERMINAL_GUIDE_UA.md` — повний системний гайд  
 - `../linux/CURSOR_MEGAGUIDE_UA.md` — якщо раптом Linux  
 - `../../CHANGELOG.md` · `../../AGENTS.md`
@@ -46,6 +49,7 @@
 20. [Пам’ять розмов](#20-память-розмов)
 21. [Готові промпти](#21-готові-промпти)
 22. [Шпаргалка одним екраном](#22-шпаргалка-одним-екраном)
+23. [★ Повна перевірка: кожна команда + Alt+Tab / таскбар](#23--повна-перевірка-кожна-команда--alttab--таскбар)
 
 ---
 
@@ -64,7 +68,7 @@
 7. Не клади секрети в репо.  
 8. Після правок `ghostty/config` — нагадай `ctrl+shift+,`.  
 9. На новому ПК шляхи інші — завжди через `%USERPROFILE%` / репо-корінь, не копіюй чужі `C:\Users\...` наосліп.  
-10. Якщо є 2+ монітори — спитай **primary** і чи «розширити» / «дублювати».
+10. Агент **зобов’язаний** після підгонки прогнати перевірку **кожной команди** і **оболонки Windows** (Alt+Tab, таскбар, Win-меню, dock) — див. §23 і [`VERIFY_ALL.md`](VERIFY_ALL.md). Без звіту PASS/FAIL перенос не вважається завершеним.
 
 **Перший хід у новому чаті:**
 
@@ -72,7 +76,8 @@
 1) Підтверди: прочитав windows/CURSOR_MEGAGUIDE_UA.md
 2) Зніми CPU/GPU/RAM/диски + усі display (розділ 10–11)
 3) Запропонуй профіль Low/Mid/High/Ultra і конкретні значення Fox/Ghostty
-4) Чекай задачу або одразу запропонуй чекліст переносу §5
+4) Після підгонки — повний прогін §23 / VERIFY_ALL.md (команди + Alt+Tab/таскбар)
+5) Видай підсумкову таблицю PASS/FAIL
 ```
 
 ---
@@ -195,12 +200,13 @@ git remote -v
 - [ ] Опційно: `DisableBloat` / `DisableAds` від адміна  
 - [ ] Cursor: Open Folder на корінь репо + промпт з шапки  
 
-### Фаза E — перевірка
+### Фаза E — перевірка (обов’язково)
 
-- [ ] `foxtest -Group info`  
-- [ ] `fday`  
-- [ ] Splits `ctrl+shift+enter`  
-- [ ] На 2+ моніторах: Ghostty на primary, wallpaper не роз’їхався  
+- [ ] `foxtest -List` → зрозуміти план  
+- [ ] `foxtest -Group info` → усі info-команди  
+- [ ] За [`VERIFY_ALL.md`](VERIFY_ALL.md): **кожна** команда вручну або через foxtest + ручні TUI  
+- [ ] Оболонка Windows: **Alt+Tab**, **таскбар**, Win-меню, Win+L/Fox lock, dock, desk prompt  
+- [ ] Підсумкова таблиця PASS/FAIL у чаті юзеру  
 
 ---
 
@@ -674,6 +680,15 @@ quick 38% · не fullscreen Ghostty на весь span · 2–3 колонки 
 Після кожного кроку — коротко статус. Не вмикай foxlook shell.
 ```
 
+### Повна перевірка команд + оболонка
+
+```
+За FoxTerminal/windows/VERIFY_ALL.md і CURSOR_MEGAGUIDE §23:
+прожени foxtest, кожну команду (PASS/FAIL/SKIP),
+і всю оболонку Windows — Alt+Tab, таскбар, Win-меню, dock, foxos, lock.
+Видай фінальний звіт. Не вмикай foxlook shell. Не роби texit/off/foxreset.
+```
+
 ### Піджени під мої екрани
 
 ```
@@ -714,12 +729,59 @@ home
 
 # Cursor: Open Folder на корінь репо
 # «Прочитай FoxTerminal/windows/CURSOR_MEGAGUIDE_UA.md»
+# потім обов’язково VERIFY_ALL (команди + Alt+Tab/таскбар)
+
+foxtest -List
+foxtest -Group info
 ```
 
 **Rescue shell:** `%LOCALAPPDATA%\FoxTerminal\foxos\restore-windows.cmd`  
 **Палітра:** `#0B0F1A` / `#E6E6E6` / `#DC7A14`  
-**Репо:** https://github.com/ShewchukV4/FoxTerminal
+**Репо:** https://github.com/ShewchukV4/FoxTerminal  
+**Повна перевірка:** [`VERIFY_ALL.md`](VERIFY_ALL.md)
 
 ---
 
-*Кінець Windows CURSOR MEGAGUIDE. При зміні foxlook DPI-поведінки — оновлюй §11–12 і HARDWARE_SCREEN.md.*
+## 23) ★ Повна перевірка: кожна команда + Alt+Tab / таскбар
+
+Це **обов’язковий** етап на іншому Windows-ПК. Детальний протокол і шаблон звіту: **[`VERIFY_ALL.md`](VERIFY_ALL.md)**.
+
+### Навіщо
+
+Після переносу мало «начебто працює». Треба підтвердити:
+
+1. **Кожну** користувацьку команду (foxtest + ручні TUI + not covered).  
+2. **Усю оболонку**, яку чіпає FoxOS/foxlook: таскбар, **Alt+Tab**, Win+Tab, меню Win, курсори, dock, lock, hotkeys, Ghostty splits.
+
+### Мінімальний порядок для агента
+
+```powershell
+chek
+foxtest -List
+foxtest -Group info
+# далі за VERIFY_ALL.md §2 (оболонка) і §3 (ручні команди)
+foxos status
+foxlook status
+foxhotkeys -Status
+```
+
+Потім **вручну / з юзером** (агент дає інструкції й фіксує відповіді):
+
+1. **Alt+Tab** / **Alt+Shift+Tab** / **Win+Tab** — список вікон читабельний.  
+2. **Таскбар** — autohide, трей, іконки вікон, клік по Ghostty.  
+3. **Win** / Win+E / Win+I — згідно `foxlook winkeys`.  
+4. **Win+D** — стіл + rain/desk prompt.  
+5. **Shift+Alt+T** / **Shift+Alt+L** — show / lock.  
+6. Dock + cursor на реальному DPI.
+
+### Заборонено в автопрогоні
+
+`foxlook shell on` · `texit` · `off`/`shutdown` · `foxreset` без дозволу · довгий `unhash` · видалення notes.
+
+### Готово лише коли
+
+У чаті є звіт як у `VERIFY_ALL.md` §4 з рядками по **T\*** (таскбар), **A\*** (Alt+Tab), **W\*** (Win), **F\*** (foxos/look) і зведенням команд PASS/FAIL.
+
+---
+
+*Кінець Windows CURSOR MEGAGUIDE. При зміні foxlook DPI-поведінки — оновлюй §11–12 і HARDWARE_SCREEN.md. При нових командах — оновлюй VERIFY_ALL.md і foxtest manifest.*
