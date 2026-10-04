@@ -7,6 +7,7 @@ Full system docs (guides + examples):
 - **Windows (інший ПК):** [`windows/CURSOR_MEGAGUIDE_UA.md`](windows/CURSOR_MEGAGUIDE_UA.md) ★ · [`windows/VERIFY_ALL.md`](windows/VERIFY_ALL.md) ★ · [`windows/HARDWARE_SCREEN.md`](windows/HARDWARE_SCREEN.md)
 - **Linux / Kali:** [`linux/CURSOR_MEGAGUIDE_UA.md`](linux/CURSOR_MEGAGUIDE_UA.md) ★ · [`linux/`](linux/)
 - Interactive site: `sites/fox-terminal/` (open with `sites`)
+- In-terminal docs browser: **`foxdocs`** (Left = read in terminal, Right = open + Explorer, Back at bottom)
 
 This is a portable terminal setup built exclusively for **[Ghostty](https://ghostty.org)**.
 Everything visual — the FoxNight palette, fonts, opacity, blur, padding, splits, tabs,

@@ -455,6 +455,39 @@ Noir полагодили: шорткати більше не скидали р�
 
 ---
 
+## 2026-10-04 — pulse, Alt+Tab E, тихий sw, гайди Windows
+
+Сесія на основному Windows-ПК (ultrawide 3440×1440, Ryzen + RTX 5060 Laptop): оболонка FoxOS, vitals, чистка RAM.
+
+### Додано
+
+| Що | Навіщо |
+|----|--------|
+| **`pulse`** | live CPU/GPU/RAM + **оцінка ноута** `/100` (A…F), feeling, trend sparkline, батарея; `-Once` = знімок |
+| **`pulse apps`** | стрілки вибирають важку апку → Enter закриває; **Back** / Esc назад у vitals; з live — клавіша **A** |
+| **`sw -<тема>`** | тиха зміна кольору без лисиці (`sw -slate`, `sw -orange`…); `sw` / `sw slate` лишає UI + стрілки |
+| **Alt+Tab → E** | тримаєш Alt, жмеш **E** (або Del) — закриває вибране вікно; прапорець `alttab.open` + `alttab-close.req` |
+
+### Виправлено
+
+- Alt+Tab slide: без крутіння `Form.Opacity` під час DWM-мініатюр; окремий poll `.req` ~33 ms (не 400 ms під Cursor/браузером); soft-close на вихід.
+- `foxlook taskbar`: hard-hide лише коли shell/dock on; інакше тільки autohide + показ таскбару.
+- `foxhotkeys` стартує разом із `foxos-live` (інакше Fox Alt+Tab не ловився).
+- `sw -колір` більше не ламається як «невідомий параметр» powershell `-File` (без `param()` — аргументи в `$args`).
+
+### Документація
+
+- Windows pack: `CURSOR_MEGAGUIDE_UA.md`, `VERIFY_ALL.md`, кореневий `AGENTS.md` — `pulse` / `sw -theme` / Alt+E у шпаргалці й прогоні на інший ноут.
+- Гайди UA/EN, linux `COMMANDS_LINUX`, README — той самий шар + команда **`foxdocs`** (список усіх гайдів/історії).
+
+### Додано (пізніше того ж дня)
+
+| Що | Навіщо |
+|----|--------|
+| **`foxdocs`** | інтерактивний список усіх гайдів / CHANGELOG / AGENTS / Windows+Linux pack; **←** відкрити в терміналі, **→** кнопка «Open + Explorer», **Back** внизу |
+
+---
+
 ## Що зникло за весь час
 
 | Коли | Що |

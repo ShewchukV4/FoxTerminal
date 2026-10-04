@@ -295,7 +295,18 @@ function Apply-FoxLookTaskbar {
     $cur = [FoxLookNative]::GetTaskbarState()
     Save-FoxLookBackupValue "taskbarState" $cur
     if (($cur -band 1) -eq 0) { [FoxLookNative]::SetTaskbarState(1) }
-    try { [FoxLookNative]::HideTaskbars() } catch {}
+    # Hard-hide only when FoxOS shell/dock owns the bar. Otherwise autohide
+    # alone — ShowWindow(0) left users with no taskbar when shell was off.
+    $shellOn = $false
+    try {
+        $s = Read-FoxLookState
+        if ($s.parts.ContainsKey("shell") -and [bool]$s.parts["shell"]) { $shellOn = $true }
+    } catch {}
+    if ($shellOn) {
+        try { [FoxLookNative]::HideTaskbars() } catch {}
+    } else {
+        try { [FoxLookNative]::ShowTaskbars() } catch {}
+    }
     return $true
 }
 
@@ -664,12 +675,24 @@ function Set-FoxLookWinKeys([bool]$on) {
     $want = if ($on) { "on" } else { "off" }
     $cur = ""
     if (Test-Path -LiteralPath $path) { $cur = (Get-Content -LiteralPath $path -Raw -ErrorAction SilentlyContinue).Trim() }
-    if ($cur -eq $want) { return $true }
-    $want | Set-Content -LiteralPath $path -Encoding ASCII
-    if (Test-FoxLookHotkeysRunning) {
-        $hk = Join-Path $PSScriptRoot "foxhotkeys.ps1"
-        if (Test-Path -LiteralPath $hk) { try { & $hk -Restart | Out-Null } catch {} }
+    if ($cur -ne $want) {
+        $want | Set-Content -LiteralPath $path -Encoding ASCII
     }
+    # Fox Alt+Tab lives in foxhotkeys while foxos-live runs — keep the daemon up
+    # when winkeys is on (previously we only restarted if it was already alive).
+    $hk = Join-Path $PSScriptRoot "foxhotkeys.ps1"
+    if (-not (Test-Path -LiteralPath $hk)) { return $true }
+    try {
+        if ($on) {
+            if (Test-FoxLookHotkeysRunning) {
+                if ($cur -ne $want) { & $hk -Restart | Out-Null }
+            } else {
+                & $hk | Out-Null
+            }
+        } elseif (Test-FoxLookHotkeysRunning -and $cur -ne $want) {
+            & $hk -Restart | Out-Null
+        }
+    } catch {}
     return $true
 }
 

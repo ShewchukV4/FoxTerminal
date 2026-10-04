@@ -69,7 +69,11 @@ bash ./FoxTerminal/install.sh
 - AI: `ask`, `friend` (Ollama / qwen3-vl); вихід з friend: `exitt`
 - Life app: `foxlife`
 - iPhone screen: `foxmirror`
-- Знімки: `build <name>`, `foxpack`, `changelog`
+- Vitals / RAM: `pulse`, `pulse -Once`, `pulse apps` (стрілки закрити апку, Back назад); у live — **A**
+- Теми: `sw` / `sw slate` = лисиця; `sw -slate` = тільки колір без UI
+- Alt+Tab (foxos-live + foxhotkeys): **E** / Del закриває вікно
+- Гайди / історія: `foxdocs` (← термінал, → Explorer, Back внизу), `changelog`
+- Знімки: `build <name>`, `foxpack`
 
 ---
 
@@ -82,6 +86,10 @@ bash ./FoxTerminal/install.sh
 - Актуальний код запушений на **обидва** репо (master)
 - Локальні IDE-чати Cursor **не синхроняться** в хмару; контекст між компами = цей файл + гайди в git
 - Cloud Agent стартує з нуля — завжди читай `AGENTS.md` + UA-гайд
+- **⛔ NEVER COMMIT / NEVER PUBLISH — GitHub 2FA recovery (лише власник ПК):**  
+  - `%LOCALAPPDATA%\FoxTerminal\GITHUB\github-recovery-codes.txt`  
+  - `.foxlocal/GITHUB/github-recovery-codes.txt` (у `.gitignore`)  
+  Ніхто крім власника не має цього бачити. Агенту: при 2FA можна прочитати локально; **ніколи** не `git add`, не коміть, не пуш, не клади в PR/issue/чат/гайди/zip/`foxpack`. Якщо файл раптом у `git status` — прибери зі стейджу і зупинись.
 
 ---
 
@@ -92,6 +100,7 @@ bash ./FoxTerminal/install.sh
 3. Користувач клонував на Kali; порожній clone був через те, що ShewchukV4 спочатку був empty — пізніше push пройшов.
 4. Запит collaborator прийнято від імені shew4uk; код залито в ShewchukV4.
 5. Пояснено: звичайні Cursor-чати локальні; Cloud Agent не наслідує цей тред автоматично.
+6. 2026-10-04: `pulse` (+ apps), `sw -<тема>`, Alt+Tab **E**, фікс taskbar/Alt+Tab slide; гайди Windows оновлено; **`foxdocs`** — браузер усіх гайдів/історії.
 
 ---
 
@@ -102,7 +111,7 @@ bash ./FoxTerminal/install.sh
 3. Не вмикай `foxlook shell on` без явного підтвердження і нагадування про rescue.
 4. Зміни документуй у дусі існуючих гайдів; тримай UA і EN узгодженими, якщо чіпаєш docs.
 5. Службові `*-lib.ps1` не для прямого запуску користувачем.
-6. Секрети / `.env` / токени в репо не класти.
+6. **НІКОЛИ** не комітити / не пушити секрети, `.env`, токени, recovery-коди. Папка `.foxlocal/GITHUB/` і `%LOCALAPPDATA%\FoxTerminal\GITHUB/` — тільки локально для власника; публікувати заборонено.
 
 ---
 

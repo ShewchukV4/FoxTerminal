@@ -475,7 +475,9 @@ namespace FoxOsLive {
         DeskWidgets widgets;
         HomeLaunch homeWin;
         bool homeShown;
+        bool hadShell;
         DateTime pinsStamp;
+        System.Windows.Forms.Timer reqTimer;
         float foxBoot; // 0..1 entrance
         Color morphFromNight;
         float morphT = 1f; // 1 = idle
@@ -543,7 +545,8 @@ namespace FoxOsLive {
             timer.Tick += delegate {
                 bool covered = !promptFocus && ForegroundIsCovered();
                 bool animating = foxBoot < 1f || morphT < 1f;
-                int want = animating ? 16 : (promptFocus ? 70 : (covered ? 400 : 100));
+                bool altBusy = altTab != null && !altTab.IsDisposed && altTab.Visible;
+                int want = (animating || altBusy) ? 16 : (promptFocus ? 70 : (covered ? 400 : 100));
                 if (timer.Interval != want) timer.Interval = want;
                 if (foxBoot < 1f) {
                     foxBoot += 0.045f;
@@ -558,7 +561,7 @@ namespace FoxOsLive {
                 LoadLockFlag();
                 CheckIdleLock();
                 LoadDesk();
-                if (covered && !animating) {
+                if (covered && !animating && !altBusy) {
                     if ((DateTime.UtcNow - lastCoveredPaint).TotalMilliseconds > 1000) {
                         lastCoveredPaint = DateTime.UtcNow;
                         Invalidate();
@@ -575,7 +578,16 @@ namespace FoxOsLive {
                 }
                 Invalidate();
             };
-            Shown += delegate { Attach(); timer.Start(); };
+            // Separate fast poll so Alt+Tab / desk requests aren't stuck on the
+            // 400ms "covered" paint interval (felt like a broken slide).
+            reqTimer = new System.Windows.Forms.Timer();
+            reqTimer.Interval = 33;
+            reqTimer.Tick += delegate { PeekHelpRequest(); };
+            Shown += delegate {
+                Attach();
+                timer.Start();
+                reqTimer.Start();
+            };
         }
 
         void Log(string msg) {
@@ -739,9 +751,25 @@ namespace FoxOsLive {
             }
         }
 
+        void ShowWinBars() {
+            try {
+                IntPtr t = Native.FindWindow("Shell_TrayWnd", null);
+                if (t != IntPtr.Zero) Native.ShowWindow(t, 5);
+                Native.EnumWindows(delegate(IntPtr h, IntPtr l) {
+                    var cls = new StringBuilder(40);
+                    Native.GetClassName(h, cls, cls.Capacity);
+                    if (cls.ToString() == "Shell_SecondaryTrayWnd") Native.ShowWindow(h, 5);
+                    return true;
+                }, IntPtr.Zero);
+            } catch { }
+        }
+
         void EnsureDock() {
             if (!state.Shell) {
+                bool had = hadShell || docks.Count > 0;
                 KillDocks();
+                if (had) ShowWinBars();
+                hadShell = false;
                 // Tear down shell-only chrome, but never dispose AltTab here —
                 // EnsureDock runs every tick and was killing the slide mid-animation.
                 if (widgets != null) {
@@ -754,6 +782,7 @@ namespace FoxOsLive {
                 }
                 return;
             }
+            hadShell = true;
             int want = Screen.AllScreens.Length;
             if (docks.Count == want) {
                 bool ok = true;
@@ -1180,6 +1209,14 @@ namespace FoxOsLive {
                 if (!sessionLocked) ShowAltTab(raw != "back");
                 return;
             }
+            string atClose = Path.Combine(dir, "alttab-close.req");
+            if (File.Exists(atClose)) {
+                try { File.Delete(atClose); } catch { }
+                if (!sessionLocked && altTab != null && !altTab.IsDisposed && altTab.Visible) {
+                    altTab.CloseSelected();
+                }
+                return;
+            }
             string hm = Path.Combine(dir, "home.req");
             if (File.Exists(hm)) {
                 try { File.Delete(hm); } catch { }
@@ -1446,6 +1483,7 @@ namespace FoxOsLive {
         }
 
         void Poll() {
+            // PeekHelpRequest runs on reqTimer (33ms); keep a backup call here.
             PeekHelpRequest();
             if ((DateTime.UtcNow - lastPoll).TotalMilliseconds < 400) return;
             lastPoll = DateTime.UtcNow;

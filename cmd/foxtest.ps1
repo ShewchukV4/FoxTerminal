@@ -39,6 +39,8 @@ $infoCommands = [ordered]@{
     "foxscan"       = @("-Top", "3")
     "ftime"         = @()
     "disk"          = @()
+    "pulse"         = @("-Once")
+    "foxdocs"       = @("-List")
     "ip"            = @()
     "wifi"          = @()
     "who"           = @()
@@ -81,7 +83,7 @@ $slowCommands = @{
 $tuiCommands = @(
     "foxhelp", "themes", "sw-script", "sites", "ytm-ui", "sp-ui", "friend",
     "interface", "term", "tglist", "foxinfo", "unhash", "nfile", "nfould",
-    "fdel", "go", "up", "edit", "changelog", "passwd", "nuser", "l", "bbind", "bdel",
+    "fdel", "go", "up", "edit", "changelog", "foxdocs", "passwd", "nuser", "l", "bbind", "bdel",
     "foxpack", "dnote", "ytm", "sp", "dj", "home", "foxsetup"
 )
 

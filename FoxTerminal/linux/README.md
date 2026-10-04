@@ -16,4 +16,5 @@
 і працюй за ним. Відповідай українською.
 ```
 
-Повний системний гайд: [`../FOXTERMINAL_GUIDE_UA.md`](../FOXTERMINAL_GUIDE_UA.md).
+Повний системний гайд: [`../FOXTERMINAL_GUIDE_UA.md`](../FOXTERMINAL_GUIDE_UA.md).  
+У терміналі (pwsh): **`foxdocs`** — усі гайди/історія списком.

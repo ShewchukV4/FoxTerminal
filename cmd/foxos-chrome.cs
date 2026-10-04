@@ -180,7 +180,9 @@ namespace FoxOsLive {
         [DllImport("dwmapi.dll")] static extern int DwmUnregisterThumbnail(IntPtr thumb);
         [DllImport("dwmapi.dll")] static extern int DwmUpdateThumbnailProperties(IntPtr thumb, ref ThumbProps props);
         [DllImport("user32.dll")] static extern IntPtr SendMessage(IntPtr h, uint msg, IntPtr w, IntPtr l);
+        [DllImport("user32.dll")] static extern bool PostMessage(IntPtr h, uint msg, IntPtr w, IntPtr l);
         [DllImport("user32.dll", EntryPoint = "GetClassLongPtrW")] static extern IntPtr GetClassLongPtr(IntPtr h, int n);
+        const uint WM_CLOSE = 0x0010;
 
         [StructLayout(LayoutKind.Sequential)]
         struct ThumbProps {
@@ -195,7 +197,9 @@ namespace FoxOsLive {
         const uint TNP_DEST = 0x1;
         const uint TNP_OPACITY = 0x4;
         const uint TNP_VISIBLE = 0x8;
-        const uint TNP_CLIENT = 0x10;
+        // Keep Opacity fixed while DWM thumbs are live — Form.Opacity toggles
+        // WS_EX_LAYERED and kills/flickers thumbnails mid-slide.
+        const double BoardOpacity = 1.0;
 
         readonly List<FoxWin> wins = new List<FoxWin>();
         readonly List<IntPtr> thumbs = new List<IntPtr>();
@@ -204,10 +208,12 @@ namespace FoxOsLive {
         readonly Font small;
         readonly System.Windows.Forms.Timer hold;
         readonly System.Windows.Forms.Timer slideTimer;
+        readonly QuickUi.SoftOut soft = new QuickUi.SoftOut();
         Color night, accent;
         int sel;
         int restY;
         float slide; // 0..1 entrance
+        bool closing;
         const int ThumbW = 148;
         const int ThumbH = 90;
         const int Gap = 12;
@@ -225,27 +231,49 @@ namespace FoxOsLive {
             SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint | ControlStyles.OptimizedDoubleBuffer, true);
             // No TransparencyKey — DWM thumbnails need a real window surface.
             BackColor = Color.FromArgb(18, 20, 26);
-            Opacity = 0.92;
+            Opacity = BoardOpacity;
             titleFont = new Font("Consolas", 13f, FontStyle.Bold, GraphicsUnit.Pixel);
             small = new Font("Consolas", 11f, FontStyle.Regular, GraphicsUnit.Pixel);
             KeyPreview = true;
             hold = new System.Windows.Forms.Timer();
             hold.Interval = 40;
             hold.Tick += delegate {
-                if ((Control.ModifierKeys & Keys.Alt) == 0) Commit();
+                if (!closing && (Control.ModifierKeys & Keys.Alt) == 0) Commit();
             };
             slideTimer = new System.Windows.Forms.Timer();
             slideTimer.Interval = 16;
             slideTimer.Tick += TickSlide;
         }
 
+        protected override CreateParams CreateParams {
+            get {
+                var cp = base.CreateParams;
+                cp.ExStyle |= Native.WS_EX_TOOLWINDOW;
+                return cp;
+            }
+        }
+
         void TickSlide(object s, EventArgs e) {
-            if (slide >= 1f) { slide = 1f; slideTimer.Stop(); PlaceThumbs(); Invalidate(); return; }
-            slide += (1f - slide) * 0.28f + 0.04f;
+            if (closing) {
+                if (!soft.Tick(this)) {
+                    slideTimer.Stop();
+                    closing = false;
+                    Opacity = BoardOpacity;
+                }
+                return;
+            }
+            if (slide >= 1f) {
+                slide = 1f;
+                Top = restY;
+                slideTimer.Stop();
+                PlaceThumbs();
+                Invalidate();
+                return;
+            }
+            slide += (1f - slide) * 0.34f + 0.05f;
             if (slide > 0.995f) slide = 1f;
             float ease = 1f - (1f - slide) * (1f - slide);
-            Top = restY + (int)((1f - ease) * 56f);
-            Opacity = 0.72 + 0.20 * ease;
+            Top = restY + (int)((1f - ease) * 48f);
             PlaceThumbs();
             Invalidate();
         }
@@ -260,10 +288,30 @@ namespace FoxOsLive {
             Invalidate();
         }
 
+        static string AltTabFlagPath() {
+            string root = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            return Path.Combine(root, "FoxTerminal", "foxos", "alttab.open");
+        }
+
+        static void SetAltTabFlag(bool on) {
+            try {
+                string p = AltTabFlagPath();
+                string dir = Path.GetDirectoryName(p);
+                if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
+                if (on) File.WriteAllText(p, "1");
+                else if (File.Exists(p)) File.Delete(p);
+            } catch { }
+        }
+
         public void ShowCycle(bool forward) {
+            if (closing) {
+                soft.Cancel();
+                closing = false;
+                Opacity = BoardOpacity;
+            }
             bool first = !Visible;
             if (first) EnumWins();
-            if (wins.Count == 0) { Hide(); return; }
+            if (wins.Count == 0) { Hide(); SetAltTabFlag(false); return; }
             if (first) {
                 sel = wins.Count > 1 ? 1 : 0;
                 if (!forward) sel = wins.Count - 1;
@@ -273,11 +321,12 @@ namespace FoxOsLive {
             LayoutBoard();
             if (first) {
                 restY = Top;
-                Top = restY + 56;
+                Top = restY + 48;
                 slide = 0f;
-                Opacity = 0.72;
+                Opacity = BoardOpacity;
                 Show();
                 Activate();
+                SetAltTabFlag(true);
                 hold.Start();
                 RegisterThumbs();
                 slideTimer.Start();
@@ -286,12 +335,41 @@ namespace FoxOsLive {
             Invalidate();
         }
 
+        public void CloseSelected() {
+            if (closing || wins.Count == 0) return;
+            int i = sel;
+            if (i < 0 || i >= wins.Count) return;
+            IntPtr h = wins[i].Hwnd;
+            try { PostMessage(h, WM_CLOSE, IntPtr.Zero, IntPtr.Zero); } catch { }
+            if (thumbs.Count == wins.Count && thumbs[i] != IntPtr.Zero) {
+                try { DwmUnregisterThumbnail(thumbs[i]); } catch { }
+                thumbs[i] = IntPtr.Zero;
+            }
+            if (wins[i].Face != null) {
+                try { wins[i].Face.Dispose(); } catch { }
+                wins[i].Face = null;
+            }
+            wins.RemoveAt(i);
+            if (thumbs.Count > i) thumbs.RemoveAt(i);
+            if (wins.Count == 0) {
+                BeginClose(false);
+                return;
+            }
+            if (sel >= wins.Count) sel = wins.Count - 1;
+            LayoutBoard();
+            // keep restY stable while open; only width may change
+            if (Visible) Top = Math.Min(Top, restY + 48);
+            RegisterThumbs();
+            PlaceThumbs();
+            Invalidate();
+        }
+
         void LayoutBoard() {
             int n = Math.Max(1, wins.Count);
             int inner = n * ThumbW + (n - 1) * Gap;
-            int w = Math.Min(Screen.PrimaryScreen.WorkingArea.Width - 40, inner + Pad * 2);
-            int h = ThumbH + 58;
             Rectangle sb = Screen.PrimaryScreen.WorkingArea;
+            int w = Math.Min(sb.Width - 40, inner + Pad * 2);
+            int h = ThumbH + 58;
             restY = sb.Bottom - h - 40;
             Bounds = new Rectangle(sb.X + (sb.Width - w) / 2, Visible ? Top : restY, w, h);
         }
@@ -305,10 +383,17 @@ namespace FoxOsLive {
             Native.EnumWindows(delegate(IntPtr h, IntPtr l) {
                 if (!Native.IsWindowVisible(h)) return true;
                 if (Native.GetWindow(h, 4) != IntPtr.Zero) return true;
+                int ex = Native.GetWindowLong(h, Native.GWL_EXSTYLE);
+                if ((ex & Native.WS_EX_TOOLWINDOW) != 0) return true;
+                int st = Native.GetWindowLong(h, Native.GWL_STYLE);
+                if ((st & Native.WS_CAPTION) == 0) return true;
+                uint cloaked;
+                if (Native.DwmGetWindowAttribute(h, Native.DWMWA_CLOAKED, out cloaked, 4) == 0 && cloaked != 0) return true;
                 var sb = new StringBuilder(256);
                 Native.GetWindowText(h, sb, 256);
                 string title = (sb.ToString() ?? "").Trim();
                 if (title.Length == 0) return true;
+                if (title == "FoxOS Dock" || title == "FoxOS Live") return true;
                 uint pid;
                 Native.GetWindowThreadProcessId(h, out pid);
                 try {
@@ -352,11 +437,12 @@ namespace FoxOsLive {
         }
 
         void PlaceThumbs() {
-            if (thumbs.Count != wins.Count) return;
+            if (closing || thumbs.Count != wins.Count) return;
             for (int i = 0; i < wins.Count; i++) {
                 if (thumbs[i] == IntPtr.Zero) continue;
                 Rectangle box = SlotRect(i);
-                // inset so our border stays visible; client-only = no desktop bleed outside window
+                // inset so our border stays visible; full window (not client-only)
+                // so minimized / empty-client apps still show a preview frame
                 var dest = new Native.RECT {
                     L = box.X + 3,
                     T = box.Y + 3,
@@ -364,11 +450,11 @@ namespace FoxOsLive {
                     B = box.Bottom - 3
                 };
                 var props = new ThumbProps();
-                props.Flags = TNP_DEST | TNP_VISIBLE | TNP_OPACITY | TNP_CLIENT;
+                props.Flags = TNP_DEST | TNP_VISIBLE | TNP_OPACITY;
                 props.Dest = dest;
                 props.Opacity = 255;
                 props.Visible = true;
-                props.ClientOnly = true;
+                props.ClientOnly = false;
                 try { DwmUpdateThumbnailProperties(thumbs[i], ref props); } catch { }
             }
         }
@@ -395,23 +481,32 @@ namespace FoxOsLive {
             return bmp;
         }
 
-        void Commit() {
+        void BeginClose(bool activateSel) {
+            if (closing) return;
             hold.Stop();
-            slideTimer.Stop();
             ClearThumbs();
-            if (sel >= 0 && sel < wins.Count && activate != null) activate(wins[sel].Hwnd);
-            Hide();
+            IntPtr target = IntPtr.Zero;
+            if (activateSel && sel >= 0 && sel < wins.Count) target = wins[sel].Hwnd;
+            closing = true;
+            soft.Begin(this);
+            if (!slideTimer.Enabled) slideTimer.Start();
+            if (target != IntPtr.Zero && activate != null) activate(target);
         }
+
+        void Commit() { BeginClose(true); }
 
         protected override void OnKeyDown(KeyEventArgs e) {
             if (e.KeyCode == Keys.Escape) {
-                hold.Stop();
-                slideTimer.Stop();
-                ClearThumbs();
-                Hide();
+                BeginClose(false);
+                e.Handled = true;
                 return;
             }
-            if (e.KeyCode == Keys.Tab) {
+            if ((e.KeyCode == Keys.E || e.KeyCode == Keys.Delete) && !closing) {
+                CloseSelected();
+                e.Handled = true;
+                return;
+            }
+            if (e.KeyCode == Keys.Tab && !closing) {
                 ShowCycle(!e.Shift);
                 e.Handled = true;
             }
@@ -420,7 +515,13 @@ namespace FoxOsLive {
 
         protected override void OnVisibleChanged(EventArgs e) {
             base.OnVisibleChanged(e);
-            if (!Visible) ClearThumbs();
+            if (!Visible) {
+                ClearThumbs();
+                closing = false;
+                soft.Cancel();
+                Opacity = BoardOpacity;
+                SetAltTabFlag(false);
+            }
         }
 
         protected override void OnPaint(PaintEventArgs e) {
@@ -447,7 +548,7 @@ namespace FoxOsLive {
                     Rectangle box = SlotRect(i);
                     // fallback icon under DWM (shows if thumb fails / minimized)
                     g.FillRectangle(slotBg, box);
-                    if (wins[i].Face != null && (i >= thumbs.Count || thumbs[i] == IntPtr.Zero)) {
+                    if (wins[i].Face != null && (i >= thumbs.Count || thumbs[i] == IntPtr.Zero || closing)) {
                         g.DrawImage(wins[i].Face, box);
                     } else if (wins[i].Face != null) {
                         // tiny icon badge bottom-left as identity cue
@@ -465,7 +566,7 @@ namespace FoxOsLive {
 
                 g.DrawString(wins[sel].Title, titleFont, ink, new Rectangle(Pad, Height - 34, Width - Pad * 2, 18),
                     new StringFormat { Alignment = StringAlignment.Center, Trimming = StringTrimming.EllipsisCharacter });
-                g.DrawString("hold alt · tab cycle · esc cancel", small, mute, new Rectangle(0, Height - 16, Width, 14),
+                g.DrawString("hold alt · tab cycle · e close · esc cancel", small, mute, new Rectangle(0, Height - 16, Width, 14),
                     new StringFormat { Alignment = StringAlignment.Center });
             }
 

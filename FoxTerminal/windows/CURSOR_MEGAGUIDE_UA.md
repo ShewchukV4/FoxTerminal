@@ -253,9 +253,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\FoxTerminal\install.ps1
 | AI | `ask`, `friend` | ✅ + Ollama |
 | Media | `yt`, `ytm`, `sp`, … | ✅ + Firefox |
 | Life | `foxlife` | ✅ + .NET |
-| Pack | `build`, `foxpack`, `changelog` | ✅ |
+| Pack | `build`, `foxpack`, `changelog`, `foxdocs` | ✅ |
 
-Довідка в терміналі: **`foxhelp`**.  
+Довідка в терміналі: **`foxhelp`**. Усі гайди/історія: **`foxdocs`**.  
 Повний каталог: `FOXTERMINAL_GUIDE_UA.md` §7 / `foxhelp.ps1` known[].
 
 Короткі критичні:
@@ -582,8 +582,28 @@ Companion: `foxaddon -Install`, `foxzen status`.
 - Startup: лише Ghostty task якщо треба + `foxhotkeys`.  
 - Game Mode / зайві overlays вимкни, якщо краде GPU у shader.  
 - Живлення ноута: Balanced; на батареї — профіль Mid/Low.  
-- `foxbg` — прибрати важкі фонові апки.  
+- `foxbg` — підозрілі фонові скрипти.  
+- **`pulse` / `pulse apps`** — vitals ноута + інтерактивне закриття важких ап (Discord/Steam/…); Defender / FoxTerminal / Cursor не чіпати.  
 - SSD: не клади `builds\` гігантські медіа без потреби.
+
+### ★ Не забути на новому ноуті (після 2026-10-04)
+
+```powershell
+pulse                 # оцінка ноута /100 + CPU GPU RAM (live); Ctrl+E вихід
+pulse -Once           # один знімок
+pulse apps            # стрілки → Enter закрити апку; Back/Esc → vitals
+# у live pulse також клавіша A = apps
+
+sw -slate             # змінити тему БЕЗ лисиці (будь-який колір: -orange -noir …)
+sw                    # лисиця + стрілки
+sw slate              # лисиця одразу на цій темі + стрілки
+
+# Alt+Tab (поки foxos-live + foxhotkeys):
+#   Tab / Shift+Tab — цикл; E або Del — закрити вікно; Esc — скасувати
+foxhotkeys -Status    # має бути running, інакше Fox Alt+Tab не працює
+```
+
+На ноутах з **16 ГБ RAM** одразу після логіну прожени `pulse -Once` і за потреби `pulse apps` — Cursor + браузер + Discord легко з’їдають 90%+ RAM.
 
 ---
 
@@ -727,6 +747,11 @@ foxlook export
 foxhotkeys -Restart
 home
 
+pulse -Once           # vitals + оцінка ноута
+# pulse apps          # якщо RAM забита — стрілки закрити важке
+sw -slate             # тиха тема без UI (або інший колір)
+foxdocs               # усі гайди/історія (← термінал, → Explorer, Back)
+
 # Cursor: Open Folder на корінь репо
 # «Прочитай FoxTerminal/windows/CURSOR_MEGAGUIDE_UA.md»
 # потім обов’язково VERIFY_ALL (команди + Alt+Tab/таскбар)
@@ -738,7 +763,9 @@ foxtest -Group info
 **Rescue shell:** `%LOCALAPPDATA%\FoxTerminal\foxos\restore-windows.cmd`  
 **Палітра:** `#0B0F1A` / `#E6E6E6` / `#DC7A14`  
 **Репо:** https://github.com/ShewchukV4/FoxTerminal  
-**Повна перевірка:** [`VERIFY_ALL.md`](VERIFY_ALL.md)
+**Повна перевірка:** [`VERIFY_ALL.md`](VERIFY_ALL.md)  
+**Vitals / RAM:** `pulse` · `pulse apps` · `sw -<тема>` · Alt+Tab+**E**  
+**Docs:** `foxdocs` · `changelog` · цей MEGAGUIDE · `VERIFY_ALL.md`
 
 ---
 
@@ -767,12 +794,13 @@ foxhotkeys -Status
 
 Потім **вручну / з юзером** (агент дає інструкції й фіксує відповіді):
 
-1. **Alt+Tab** / **Alt+Shift+Tab** / **Win+Tab** — список вікон читабельний.  
+1. **Alt+Tab** / **Alt+Shift+Tab** / **Win+Tab** — список вікон читабельний; **E** закриває вибране (Fox Alt+Tab).  
 2. **Таскбар** — autohide, трей, іконки вікон, клік по Ghostty.  
 3. **Win** / Win+E / Win+I — згідно `foxlook winkeys`.  
 4. **Win+D** — стіл + rain/desk prompt.  
 5. **Shift+Alt+T** / **Shift+Alt+L** — show / lock.  
-6. Dock + cursor на реальному DPI.
+6. Dock + cursor на реальному DPI.  
+7. **`pulse -Once`** + коротко **`pulse apps`** (Back без убивства системи) · **`sw -slate`** без лисиці.
 
 ### Заборонено в автопрогоні
 

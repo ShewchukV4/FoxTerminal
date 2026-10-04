@@ -62,7 +62,8 @@ foxtest -Quiet
 | A3 | Win+Tab | Timeline / Task View | Відкривається, не чорний екран |
 | A4 | Alt+Tab з Fox-темою | Під час foxlook on | Читабельні прев’ю, не «з’їдені» dark-режимом |
 | A5 | Перемикання Ghostty ↔ Firefox | Alt+Tab Enter | Фокус коректний |
-| A6 | Закрити з Alt+Tab | Alt+Tab потім Del (якщо юзер ок) | Опційно; не обов’язково |
+| A6 | Закрити з Alt+Tab | Alt+Tab → **E** або Del (якщо юзер ок) | Вікно закрилось, стрічка лишилась |
+| A7 | Slide / прев’ю | Тримай Alt, подивись strip | Slide-in без миготіння мініатюр; `foxhotkeys` running |
 
 ### 2.3 Меню Пуск / Win-клавіші (foxlook winkeys)
 
@@ -116,7 +117,7 @@ foxtest -Quiet
 
 ### 3.1 Автоматично через foxtest -Group info (обов’язково всі)
 
-`chek`, `term -Status`, `sixel`, `interface -Keys`, `foxdeps -Check`, `build -list`, `sites` (list), `foxaddon`/`foxzen`/`ffsync`/`foxhotkeys` -Status, `foxbg -Top 3`, `foxscan -Top 3`, `ftime`, `disk`, `ip`, `wifi`, `who`, `users`, `blist`, `apps`, `appbind`, `hash`, `netping`, `weather`, `fday`, `shader status`, `foxos status`, `lock -Status`, `settings -Status`, `foxlife -Status`, … (усе що в `foxtest` info).
+`chek`, `term -Status`, `sixel`, `interface -Keys`, `foxdeps -Check`, `build -list`, `sites` (list), `foxaddon`/`foxzen`/`ffsync`/`foxhotkeys` -Status, `foxbg -Top 3`, `foxscan -Top 3`, `ftime`, `disk`, **`pulse -Once`**, `ip`, `wifi`, `who`, `users`, `blist`, `apps`, `appbind`, `hash`, `netping`, `weather`, `fday`, `shader status`, `foxos status`, `lock -Status`, `settings -Status`, `foxlife -Status`, … (усе що в `foxtest` info).
 
 ### 3.2 Ручний прогін / TUI (відкрив → закрив Esc/Ctrl+E)
 
@@ -124,6 +125,9 @@ foxtest -Quiet
 |---------|---------------|-----------|
 | `foxhelp` | меню малюється | — |
 | `sw` | панель + стрілки теми | не лишати назавжди в odd theme без відкату |
+| `sw -slate` (або інший `-колір`) | один рядок `theme …`, **без** лисиці | — |
+| `pulse` | картка оцінки + vitals; **A** → apps | не закривати Defender / Fox / Cursor |
+| `pulse apps` | список → Back без закриття | Enter лише на тестову апку з дозволу |
 | `themes` | picker | — |
 | `noir` / `pride` / `arthas` / `dnote` / `spider` | toggle → назад | — |
 | `apple` | сцена → Esc | — |
@@ -169,6 +173,8 @@ foxtest -Quiet
 ### 3.6 Пак / сервіс
 
 | `changelog` | viewer |
+| `foxdocs` | список гайдів; ← термінал, → Explorer, Back внизу |
+| `foxdocs -List` | шляхи без TUI (також у foxtest info) |
 | `build -list` | OK |
 | `foxpack` | SKIP або dry — не обов’язково писати zip |
 | `foxtest` | вже зверху |

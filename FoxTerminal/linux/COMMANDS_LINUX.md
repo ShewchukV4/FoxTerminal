@@ -31,6 +31,7 @@ fox() { pwsh -NoProfile -File "$FOX/cmd/$1.ps1" "${@:2}"; }
 | `weather Kyiv` | `curl wttr.in/Kyiv` або ⚠️ `fox weather Kyiv` |
 | `foxscan -Deep` | ⚠️ `fox foxscan -Deep` |
 | `foxbg` | `btop` / `htop` / `killall …` |
+| `pulse` / `pulse apps` | ❌ Windows-only → `btop` / `htop` / `nvidia-smi` |
 | `clear` | `clear` / `ctrl+l` |
 | `texit` | `exit` або закрити вікно Ghostty |
 
@@ -46,6 +47,7 @@ fox() { pwsh -NoProfile -File "$FOX/cmd/$1.ps1" "${@:2}"; }
 | `settings` | ⚠️ частково; для стільця — Settings DE |
 | `foxsetup` | ⚠️; на Linux ручний install.sh + §4 LINUX_GUIDE |
 | `changelog` | ⚠️ `fox changelog` або `less CHANGELOG.md` |
+| `foxdocs` | ⚠️ `fox foxdocs` — список усіх гайдів; ← термінал, → Explorer (Win) |
 
 ---
 
@@ -54,6 +56,7 @@ fox() { pwsh -NoProfile -File "$FOX/cmd/$1.ps1" "${@:2}"; }
 | Windows | Linux |
 |---------|-------|
 | `sw` / `themes` | ⚠️ `fox sw` / `fox themes` у Ghostty |
+| `sw -slate` (тиха тема) | ⚠️ `fox sw -slate` (без лисиці) якщо є pwsh |
 | `shader on\|off` | ⚠️ або правки в `~/.config/ghostty/config` |
 | `noir` / `pride` / `arthas` / `dnote` | ⚠️ якщо pwsh тягне скрипти |
 | `foxos on` | ❌ → wallpaper: `feh` / `gsettings` / `swww` (LINUX_GUIDE §4) |

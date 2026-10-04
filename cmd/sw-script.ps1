@@ -1,7 +1,6 @@
-param(
-    [Parameter(ValueFromRemainingArguments = $true)]
-    [string[]]$SwArgs
-)
+# No param() block — so `sw -slate` stays in $args instead of being
+# rejected as an unknown named parameter by powershell -File.
+$SwArgs = @($args)
 
 # Ensure correct encoding so banner renders properly in all terminals
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
@@ -911,18 +910,29 @@ $themeArgAliases = @{
     "original" = "orange"
 }
 $requestedTheme = $null
+# `sw -slate` / `sw --orange` → apply theme, no fox UI
+# `sw` / `sw slate` → show fox + arrow theme picker
+$quietTheme = $false
 foreach ($arg in $SwArgs) {
     if ([string]::IsNullOrWhiteSpace($arg)) { continue }
     $argRaw = $arg.Trim()
     if (Test-Path -LiteralPath $argRaw) { continue }
+    $quiet = $false
+    if ($argRaw.StartsWith("-")) {
+        $quiet = $true
+        $argRaw = $argRaw.TrimStart('-')
+        if ([string]::IsNullOrWhiteSpace($argRaw)) { continue }
+    }
     $argNorm = $argRaw.ToLowerInvariant()
     if ($argNorm -eq "live" -or $argNorm -eq "color" -or $argNorm -eq "mono") { continue }
     if ($themeArgAliases.ContainsKey($argNorm)) {
         $requestedTheme = $themeArgAliases[$argNorm]
+        $quietTheme = $quiet
         break
     }
     if ($cycleThemes -contains $argNorm -or $argNorm -eq "pride" -or $argNorm -eq "noir" -or $argNorm -eq "dnote") {
         $requestedTheme = $argNorm
+        $quietTheme = $quiet
         break
     }
 }
@@ -964,6 +974,24 @@ if ($script:FoxAuthLoaded) {
     try { Invoke-SwThemeRefresh } catch { Set-SwPSReadLineColors $global:FOXTERM_THEME }
 } else {
     Set-SwPSReadLineColors $global:FOXTERM_THEME
+}
+
+# Quiet: `sw -slate` — theme applied above, no fox / no key loop.
+# Invoke-SwThemeRefresh already synced Ghostty/prompt colors.
+if ($quietTheme) {
+    $label = if (Get-Command Get-ThemeLabel -ErrorAction SilentlyContinue) {
+        Get-ThemeLabel $global:FOXTERM_THEME
+    } else {
+        $global:FOXTERM_THEME
+    }
+    try {
+        $p = Get-ThemeColors $global:FOXTERM_THEME
+        $c = $p.bright
+        Write-Host ("  theme  " + "$esc[38;2;$($c.R);$($c.G);$($c.B)" + "m" + $label + "$esc[0m")
+    } catch {
+        Write-Host ("  theme  " + $label)
+    }
+    exit 0
 }
 
 # ── FOX TERM pixel banner (7-wide glyphs, codepoint-safe) ────

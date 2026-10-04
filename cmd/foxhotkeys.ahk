@@ -33,6 +33,12 @@ if g_WinKeys
 !+Tab:: FoxAltTab(true)
 #HotIf
 
+; While the Fox Alt+Tab strip is open, Alt+E closes the highlighted window.
+#HotIf FoxLiveRunning() && FileExist(FoxOsDir() "\alttab.open")
+!e:: WriteFoxRequest("alttab-close.req", "1")
+!+e:: WriteFoxRequest("alttab-close.req", "1")
+#HotIf
+
 ; ── Built-in hotkeys ─────────────────────────────────────────────────────────
 
 ; Shift+Alt+Y  → open YouTube

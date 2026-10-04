@@ -112,7 +112,7 @@ FireFoxBot/
 │   ├── FOXTERMINAL_GUIDE_UA.md   ← цей файл
 │   └── FOXTERMINAL_GUIDE_EN.md
 ├── builds/                 ← знімки від команди build
-└── CHANGELOG.md            ← історія змін (читається через changelog)
+└── CHANGELOG.md            ← історія змін (`changelog` / `foxdocs`)
 ```
 
 Важливо:
@@ -316,6 +316,15 @@ settings -StopGui     # зупинити host
 changelog             # історія доданого/прибраного (той самий viewer, що й для notes)
 ```
 
+### `foxdocs` — усі гайди / історія
+
+```powershell
+foxdocs               # список CHANGELOG, AGENTS, UA/EN гайди, Windows+Linux pack
+foxdocs -List         # лише шляхи, без TUI
+```
+
+Керування: **↑/↓** вибір · **←** відкрити в терміналі (read-only) · **→** екран з кнопкою «Open file + show in Explorer» · **Back** в самому низу списку · Esc/Q вихід.
+
 ---
 
 ## 7) Каталог команд
@@ -342,6 +351,7 @@ changelog             # історія доданого/прибраного (т
 | `settings` | `settings [-Status\|-Gui\|-StopGui]` | налаштування |
 | `foxsetup` | `foxsetup` | first-boot wizard |
 | `changelog` | `changelog` | історія змін |
+| `foxdocs` | `foxdocs [-List]` | усі гайди/історія (← термінал, → Explorer) |
 | `off` / `shutdown` | `off` | вимкнути ПК (Yes/No, default No) |
 
 ### 7.3 AI
@@ -416,6 +426,9 @@ foxmirror -Video -Fps 30
 | Команда | Навіщо |
 |---------|--------|
 | `sw [theme]` | system info + стрілки міняють тему; Ctrl+E вихід |
+| `sw -<theme>` | тиха зміна теми **без** лисиці (`sw -slate`, `sw -orange`…) |
+| `pulse [-Once]` | оцінка ноута /100 + CPU/GPU/RAM; live або знімок |
+| `pulse apps` | стрілки вибрати апку → Enter закрити; Back → vitals (з live також **A**) |
 | `themes` | головний picker (Fox, Arthas, Pride, Noir, Death Note…) |
 | `noir` | Ч/Б режим (toggle) |
 | `dnote` | Death Note стиль + intro |
@@ -438,7 +451,8 @@ foxmirror -Video -Fps 30
 | `disk` | використання дисків |
 | `chek` / `sixel` | Ghostty? / inline images? |
 | `foxscan` | `foxscan -Deep` |
-| `foxbg` | інтерактивне чищення фону |
+| `foxbg` | інтерактивне чищення підозрілого фону |
+| `pulse` / `pulse apps` | vitals ноута + закриття важких ап (не Defender/Fox) |
 | `clear` / `texit` | очистити / вбити термінал |
 
 ### 7.10 Layout вікон
@@ -710,7 +724,7 @@ FOXTERM_FRIEND_MAX_TURNS=25
 `ask` · `friend` · `yt` · `ytm` · `ytm-ui` · `sp` · `sp-ui` · `dj` · `foxmirror`
 
 ### Нотатки
-`wai` · `go` · `up` · `nfile` · `edit` · `view` · `changelog`
+`wai` · `go` · `up` · `nfile` · `edit` · `view` · `changelog` · `foxdocs`
 
 ### Система
 `fday` · `wifi` · `ip` · `netping` · `chek` · `term` · `foxhelp` · `foxtest`

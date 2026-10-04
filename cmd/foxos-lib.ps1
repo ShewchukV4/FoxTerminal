@@ -985,6 +985,19 @@ function Start-FoxOsLive {
     if (Test-FoxOsLiveRunning) { return $true }
     Start-Process -FilePath $exe -ArgumentList @((Get-FoxOsLiveStatePath)) -WindowStyle Hidden | Out-Null
     Start-Sleep -Milliseconds 400
+    # Alt+Tab remap is in foxhotkeys.ahk (#HotIf foxos-live) — without the
+    # daemon, Windows Alt+Tab stays and the Fox slide never appears.
+    try {
+        $hk = Join-Path $PSScriptRoot "foxhotkeys.ps1"
+        if (Test-Path -LiteralPath $hk) {
+            $alive = $false
+            try {
+                $alive = [bool](Get-CimInstance Win32_Process -Filter "Name LIKE 'AutoHotkey%'" -ErrorAction SilentlyContinue |
+                    Where-Object { $_.CommandLine -like "*foxhotkeys.ahk*" } | Select-Object -First 1)
+            } catch {}
+            if (-not $alive) { & $hk | Out-Null }
+        }
+    } catch {}
     return (Test-FoxOsLiveRunning)
 }
 

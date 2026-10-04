@@ -112,7 +112,7 @@ FireFoxBot/
 │   ├── FOXTERMINAL_GUIDE_UA.md
 │   └── FOXTERMINAL_GUIDE_EN.md   ← this file
 ├── builds/                 ← snapshots from `build`
-└── CHANGELOG.md            ← history (read via `changelog`)
+└── CHANGELOG.md            ← history (`changelog` / `foxdocs`)
 ```
 
 Notes:
@@ -314,6 +314,15 @@ settings -StopGui     # stop host
 changelog             # history of additions/removals (same viewer as notes)
 ```
 
+### `foxdocs` — all guides / history
+
+```powershell
+foxdocs               # CHANGELOG, AGENTS, UA/EN guides, Windows+Linux pack
+foxdocs -List         # paths only, no TUI
+```
+
+Keys: **↑/↓** select · **←** open in terminal (read-only) · **→** action screen with “Open file + show in Explorer” · **Back** at the bottom of the list · Esc/Q exit.
+
 ---
 
 ## 7) Command catalog
@@ -340,6 +349,7 @@ User-facing commands below. Live inventory is always in `foxhelp`.
 | `settings` | `settings [-Status\|-Gui\|-StopGui]` | settings |
 | `foxsetup` | `foxsetup` | first-boot wizard |
 | `changelog` | `changelog` | change history |
+| `foxdocs` | `foxdocs [-List]` | all guides/history (← terminal, → Explorer) |
 | `off` / `shutdown` | `off` | shut down PC (Yes/No, default No) |
 
 ### 7.3 AI
@@ -414,6 +424,9 @@ foxmirror -Video -Fps 30
 | Command | Purpose |
 |---------|---------|
 | `sw [theme]` | system info + arrows change theme; Ctrl+E exits |
+| `sw -<theme>` | quiet theme change **without** fox UI (`sw -slate`, `sw -orange`…) |
+| `pulse [-Once]` | notebook score /100 + CPU/GPU/RAM; live or one shot |
+| `pulse apps` | arrows pick an app → Enter closes; Back → vitals (from live also **A**) |
 | `themes` | main picker (Fox, Arthas, Pride, Noir, Death Note…) |
 | `noir` | B/W mode (toggle) |
 | `dnote` | Death Note style + intro |
@@ -436,7 +449,8 @@ foxmirror -Video -Fps 30
 | `disk` | drive usage |
 | `chek` / `sixel` | Ghostty? / inline images? |
 | `foxscan` | `foxscan -Deep` |
-| `foxbg` | interactive background cleaner |
+| `foxbg` | interactive suspicious-background cleaner |
+| `pulse` / `pulse apps` | notebook vitals + close heavy apps (not Defender/Fox) |
 | `clear` / `texit` | clear / kill terminal |
 
 ### 7.10 Window layout
@@ -612,6 +626,10 @@ Already wired in `ghostty/config`:
 | `Shift+Ctrl+Alt+T` | Close |
 | `Shift+Alt+Space` / `Shift+Ctrl+Space` | Show / hide |
 | `Shift+Alt+L` | Fox `lock` |
+| Alt+Tab then **E** / Del | close selected window (Fox Alt+Tab; needs `foxhotkeys` + foxos-live) |
+
+Quiet theme (no fox UI): `sw -slate`, `sw -orange`, …  
+Notebook vitals / free RAM: `pulse`, `pulse apps`.
 
 Passive: Kitty graphics, long-command notifications, OSC 9;4 progress, opacity 0.92 + blur, Nerd Font ligatures, paste protection, `window-save-state always`.
 
@@ -708,7 +726,7 @@ Optional from the FoxTerminal folder (admin):
 `ask` · `friend` · `yt` · `ytm` · `ytm-ui` · `sp` · `sp-ui` · `dj` · `foxmirror`
 
 ### Notes
-`wai` · `go` · `up` · `nfile` · `edit` · `view` · `changelog`
+`wai` · `go` · `up` · `nfile` · `edit` · `view` · `changelog` · `foxdocs`
 
 ### System
 `fday` · `wifi` · `ip` · `netping` · `chek` · `term` · `foxhelp` · `foxtest`

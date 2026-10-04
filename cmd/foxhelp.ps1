@@ -122,6 +122,7 @@ function Show-Commands {
         $known["foximg"]   = @{ usage = "foximg [path]"; desc = "show a photo in the terminal" }
         $known["foxmirror"] = @{ usage = "foxmirror [-Video|-Photo] [-Wifi|-Usb] [-PairWifi] [-NoAudio] [-Check] [-Setup] [-Fps <n>] [-Width <px>]"; desc = "live iPhone screen over USB, or Wi-Fi after one run with the cable: ~30 fps HEVC video on iOS 27+, screenshot mode otherwise (auto-installs deps)" }
         $known["foxscan"]  = @{ usage = "foxscan [-Deep] [-IncludeLow] [-IncludeWorkspace] [-Top <n>] [-Path <dir1,dir2,...>]"; desc = "heuristic suspicious-script scanner (names + risk score + reasons)" }
+        $known["pulse"]    = @{ usage = "pulse [apps|-Once] [-Ms <n>]"; desc = "notebook score + CPU/GPU/RAM; A or 'pulse apps' = close heavy apps (arrows/Enter/Back)" }
         $known["foxbg"]    = @{ usage = "foxbg [-IncludeLow] [-Top <n>] [-MinMemoryMB <n>]"; desc = "interactive background cleaner: arrows select, Enter close app, Esc exit" }
         $known["interface"]= @{ usage = "interface [-Split] [-TwoWindows] [-Keys] [-Gui]"; desc = "Ghostty split layout: -Split splits from the CLI, -TwoWindows opens a second window, -Keys lists the keybinds, -Gui Windows GUI split" }
         $known["term"]     = @{ usage = "term [-Status] [-Apply] [-Edit] [-New] [-Doctor] [-Path]"; desc = "manage the Ghostty config: status, reinstall, edit, new window, diagnostics" }
@@ -143,6 +144,7 @@ function Show-Commands {
         $known["settings"]   = @{ usage = "settings [-Status] [-Gui] [-StopGui]"; desc = "system settings TUI, or Control UI in the browser (never blocks the pane)" }
         $known["foxsetup"]   = @{ usage = "foxsetup"; desc = "first-boot wizard: user, theme, FoxOS, logon, hotkeys, idle lock" }
         $known["changelog"]  = @{ usage = "changelog"; desc = "read-only history of what was added and removed (same viewer as notes)" }
+        $known["foxdocs"]    = @{ usage = "foxdocs [-List]"; desc = "browse all FoxTerminal guides/history; Left=terminal, Right=open+Explorer, Back at bottom" }
 
         # Auto-detect commands present in cmd\ (include .ps1 and .bat).
         # We de-duplicate by base name, prefer commands people can type (bat/ps1 wrappers).
@@ -203,11 +205,11 @@ function Show-Commands {
     Write-CommandSection "Apps / layout:" $inv @("appbind","apps","foxlife") 0xF108
     Write-CommandSection "Firefox / web aliases:" $inv @("bbind","bdel","blist","ff","ffbot","gask","ser","sites","youtube") 0xF0AC
     Write-CommandSection "Telegram:" $inv @("tg","tglist","tgub") 0xF1D8
-    Write-CommandSection "Notes / files:" $inv @("changelog","edit","fdel","go","hash","nano","nfile","nfould","unhash","up","view","wai") 0xF07B
+    Write-CommandSection "Notes / files:" $inv @("changelog","edit","fdel","foxdocs","go","hash","nano","nfile","nfould","unhash","up","view","wai") 0xF07B
     Write-CommandSection "Builds / packaging:" $inv @("build","foxpack") 0xF187
     Write-CommandSection "Themes / visual modes:" $inv @("apple","arthas","dnote","foxlook","foxos","frederik","noir","pride","shader","spider","sw","themes") 0xF1FC
-    Write-CommandSection "Network / diagnostics:" $inv @("chek","disk","fday","ftime","foximg","ip","netping","reconnect","sixel","weather","wifi") 0xF1EB
-    Write-CommandSection "System tools:" $inv @("changelog","clear","ffsync","foxbg","foxscan","home","interface","lock","settings","term","texit") 0xF013
+    Write-CommandSection "Network / diagnostics:" $inv @("chek","disk","fday","ftime","foximg","ip","netping","pulse","reconnect","sixel","weather","wifi") 0xF1EB
+    Write-CommandSection "System tools:" $inv @("changelog","clear","ffsync","foxbg","foxdocs","foxscan","home","interface","lock","settings","term","texit") 0xF013
     Write-CommandSection "Hotkeys / bindings:" $inv @("foxhotkeys","foxinfo") 0xF11C
     Write-CommandSection "Setup / reset / help:" $inv @("foxdeps","foxhelp","foxreset","foxsetup","foxtest") 0xF0AD
     Write-CommandSection "Wallpaper prompt (FoxOS desk):" $inv @("arthas","bright","bt","dnote","dj","ff","foxhelp","foxlife","foxlook","foxos","home","lock","mirror","noir","note","off","pride","rig","ser","settings","shader","shutdown","sites","sp","sw","term","wifi","yt","ytm","youtube") 0xF1FC

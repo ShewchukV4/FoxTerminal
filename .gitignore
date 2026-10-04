@@ -40,3 +40,13 @@ Desktop.ini
 FoxTerminalApp/**/bin/
 FoxTerminalApp/**/obj/
 
+############################
+# NEVER COMMIT — local secrets only (owner's machine)
+# GitHub 2FA recovery codes live under .foxlocal/GITHUB/ and
+# %LOCALAPPDATA%\FoxTerminal\GITHUB\ — never stage, never push, never publish.
+############################
+.foxlocal/
+*.recovery-codes.txt
+*github-recovery-codes*
+**/GITHUB/github-recovery-codes.txt
+
