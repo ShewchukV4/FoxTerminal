@@ -6,7 +6,8 @@
 > Короткий README: [`README.md`](README.md)  
 > **Windows інший ПК (Cursor + залізо + екрани):** [`windows/CURSOR_MEGAGUIDE_UA.md`](windows/CURSOR_MEGAGUIDE_UA.md)  
 > **Linux / Kali:** [`linux/CURSOR_MEGAGUIDE_UA.md`](linux/CURSOR_MEGAGUIDE_UA.md)  
-> Інтерактивна презентація: `sites/fox-terminal/` (відкрий через `sites`)
+> Інтерактивна презентація: `sites/fox-terminal/` (відкрий через `sites`)  
+> **Один файл для стороннього чату (ChatGPT тощо):** [`CHATGPT_PROJECT.md`](CHATGPT_PROJECT.md)
 
 ---
 
@@ -17,6 +18,7 @@
 3. [Де що лежить](#3-де-що-лежить)
 4. [Шари системи](#4-шари-системи)
 5. [FoxOS і foxlook](#5-foxos-і-foxlook)
+5.4. [FOXSTYLE · Node Launcher · STT](#54-foxstyle--node-launcher--stt)
 6. [home · lock · settings · foxsetup](#6-home--lock--settings--foxsetup)
 7. [Каталог команд](#7-каталог-команд)
 8. [Сценарії та гайди](#8-сценарії-та-гайди)
@@ -43,6 +45,7 @@
 | **FoxOS (`foxos`)** | Анімований ASCII-шпалери + акцент Windows + desk-prompt |
 | **Fox look (`foxlook`)** | Windows «одягає» FoxOS: dark, курсори, dock, Win-клавіші, shell |
 | **Системна оболонка** | `home`, `lock`, `settings`, `foxsetup` — як міні-ОС після логіну |
+| **Студія / меню** | `foxstyle` (вигляд FoxOS), `foxnodes` (Node Launcher), `foxstt` (український STT) |
 | **Додатки** | `foxlife` (нотатки/фінанси), `sites` (локальні веб-апки), Zen Companion |
 | **builds / foxpack** | Знімки конфіга і zip для передачі іншому ПК |
 
@@ -103,14 +106,19 @@ settings              # TUI налаштувань (або settings -Gui)
 ```
 FireFoxBot/
 ├── cmd/                    ← усі команди (.ps1 + .bat обгортки)
+│   ├── foxstyle/           ← C# студія FOXSTYLE (csc → foxstyle.exe)
+│   ├── foxnodes/           ← C# overlay Node Launcher
+│   └── foxlife/            ← C# Life app
 ├── sites/                  ← локальні міні-сайти + hub
-│   └── fox-terminal/       ← інтерактивна презентація / docs UI
+│   ├── fox-terminal/       ← інтерактивна презентація / docs UI
+│   └── foxstyle/           ← референс токенів (не основний UI)
 ├── FoxTerminal/
 │   ├── ghostty/config      ← єдиний файл візуалу терміналу
 │   ├── ghostty/shaders/    ← GLSL під теми
 │   ├── install.ps1 / .sh
 │   ├── FOXTERMINAL_GUIDE_UA.md   ← цей файл
-│   └── FOXTERMINAL_GUIDE_EN.md
+│   ├── FOXTERMINAL_GUIDE_EN.md
+│   └── CHATGPT_PROJECT.md  ← дамп для стороннього чату
 ├── builds/                 ← знімки від команди build
 └── CHANGELOG.md            ← історія змін (`changelog` / `foxdocs`)
 ```
@@ -150,6 +158,9 @@ FireFoxBot/
 | `lock` | Безпека сесії | Ховає термінал, потрібен пароль Fox |
 | `settings` | Керування | TUI або Control UI у браузері |
 | `foxlife` | Окремий застосунок | Нотатки, фінанси, таблиці, AI |
+| `foxstyle` | Студія вигляду | Нативне вікно: теми, chrome, Node Editor, Помічник |
+| `foxnodes` | Desktop overlay | Радіальне меню; Ctrl+Alt+Space |
+| `foxstt` | Голос | Локальний whisper.cpp для помічника |
 
 ---
 
@@ -271,6 +282,42 @@ foxlook off
 foxos off
 ```
 
+### 5.4 FOXSTYLE · Node Launcher · STT
+
+Три нативні Windows-апки (як `foxlife`): збираються `csc.exe` у `%LOCALAPPDATA%\FoxTerminal\foxos\`. Папка `sites/foxstyle/` — лише референс дизайн-системи, не робочий UI.
+
+```powershell
+foxstyle                      # студія вигляду FoxOS
+foxstyle -NodeEditor          # візуальний редактор Node Launcher
+foxstyle -Preset neon         # пресет → style.json → відкрити
+foxstyle -Status              # шлях до style.json
+foxstyle -Rebuild             # примусово перезібрати exe
+foxstyle -Apply theme.json    # імпорт JSON
+foxstyle -Export              # копія style.json на Desktop
+
+foxnodes                      # старт / активувати overlay
+foxnodes -Show                # показати граф на столі
+foxnodes -Hide                # сховати (демон живе)
+foxnodes -Stop
+foxnodes -Settings
+foxnodes -Status
+
+foxstt                        # статус whisper.cpp
+foxstt -Install               # engine + модель (не в git)
+foxstt -Test                  # проба без виконання команд
+foxstt -Stop
+```
+
+**Як застосовується вигляд.** У FOXSTYLE «Застосувати» пише `launcher.json` (структура меню) і `style.json` (вигляд), потім сигнал `foxnodes.signal`. Overlay перечитує обидва файли і відповідає `foxnodes.applied`. Статус «Застосовано» з’являється лише після цього ack. Якщо `foxnodes` не запущено — «Збережено. Буде застосовано після запуску меню».
+
+Профілі вигляду (компактний / м’яке скло / контрастний / за темою) не чіпають дерево меню. Анімації меню: Стриманий / Плавний / Пружний / Мінімальний рух.
+
+**Помічник** (FOXSTYLE → Помічник, або з Node Launcher): текст + push-to-talk, локальна Ollama. Відкриває пошук / програми / нотатки / таймер. Повне речення йде в модель, якщо це не коротка однозначна команда. Слово «YouTube» саме по собі не відкриває сайт — потрібен майданчик («на YouTube») або явна команда. Діагностика: `FOXASSIST_TRACE=1` або журнал у FOXSTYLE.
+
+**STT.** Файли лише в `%LOCALAPPDATA%\FoxTerminal\foxos\stt`. `foxstt -Install` ставить whisper.cpp b5454 (BLAS CPU) і `large-v3-turbo-q8_0`. У студії можна обрати швидшу `small-q8_0` (~2 с) або якіснішу turbo (~12 с на CPU). Fallback: `large-v3-turbo-q5_0`.
+
+Гаряча клавіша меню: **Ctrl+Alt+Space**.
+
 ---
 
 ## 6) home · lock · settings · foxsetup
@@ -319,11 +366,10 @@ changelog             # історія доданого/прибраного (т
 ### `foxdocs` — усі гайди / історія
 
 ```powershell
-foxdocs               # список CHANGELOG, AGENTS, UA/EN гайди, Windows+Linux pack
-foxdocs -List         # лише шляхи, без TUI
+foxdocs               # або foxdocs -List — інтерактивний список гайдів / історії
 ```
 
-Керування: **↑/↓** вибір · **←** відкрити в терміналі (read-only) · **→** екран з кнопкою «Open file + show in Explorer» · **Back** в самому низу списку · Esc/Q вихід.
+Один екран: **↑/↓** список · **←** кнопка Terminal · **→** кнопка Explorer (лише місце файлу) · **Enter** натиснути · **Back** внизу · Esc вихід.
 
 ---
 
@@ -351,7 +397,7 @@ foxdocs -List         # лише шляхи, без TUI
 | `settings` | `settings [-Status\|-Gui\|-StopGui]` | налаштування |
 | `foxsetup` | `foxsetup` | first-boot wizard |
 | `changelog` | `changelog` | історія змін |
-| `foxdocs` | `foxdocs [-List]` | усі гайди/історія (← термінал, → Explorer) |
+| `foxdocs` | `foxdocs` | усі гайди/історія (стрілки; ← термінал, → Explorer) |
 | `off` / `shutdown` | `off` | вимкнути ПК (Yes/No, default No) |
 
 ### 7.3 AI
@@ -429,7 +475,9 @@ foxmirror -Video -Fps 30
 | `sw -<theme>` | тиха зміна теми **без** лисиці (`sw -slate`, `sw -orange`…) |
 | `pulse [-Once]` | оцінка ноута /100 + CPU/GPU/RAM; live або знімок |
 | `pulse apps` | стрілки вибрати апку → Enter закрити; Back → vitals (з live також **A**) |
-| `themes` | головний picker (Fox, Arthas, Pride, Noir, Death Note…) |
+| `themes` | головний picker (Fox, Arthas, Pride, Noir, Death Note, Notebook) |
+| `default` | Fox Default (orange) — шпалери + кольори Ghostty |
+| `notebook` | пергаментний стіл, лінії паперу, червона маргіна, чорнильний rain |
 | `noir` | Ч/Б режим (toggle) |
 | `dnote` | Death Note стиль + intro |
 | `apple` | сцена Death Note великим ASCII |
@@ -464,11 +512,14 @@ foxmirror -Video -Fps 30
 | `apps` | `apps firefox / telegram / spotify` |
 | `appbind` | `appbind add code "C:\…\Code.exe"` |
 
-### 7.11 FoxOS Life і Companion
+### 7.11 FoxOS Life, FOXSTYLE, Companion
 
 | Команда | Навіщо |
 |---------|--------|
 | `foxlife` | нативне вікно: notes, finance, tables, AI (`-Status`, `-Rebuild`) |
+| `foxstyle` | студія вигляду + Node Editor + Помічник (`-NodeEditor`, `-Preset`, `-Rebuild`) |
+| `foxnodes` | desktop Node Launcher; Ctrl+Alt+Space (`-Show`, `-Hide`, `-Stop`) |
+| `foxstt` | локальний український STT (`-Install`, `-Test`, `-Stop`) |
 | `foxaddon` | `foxaddon -Install\|-Pack\|-OpenFolder` |
 | `foxzen` | `foxzen status\|default\|theme\|host\|addon` — Zen як основний браузер |
 
@@ -591,7 +642,8 @@ sites/my-dashboard/
 ## 10) Теми і візуал
 
 - Щоденна робота: спокійні теми через `themes` / `sw slate` (або інша з палітри).
-- Демо / стрім: `noir`, `pride`, `arthas`, `dnote`.
+- Демо / стрім: `noir`, `pride`, `arthas`, `dnote`, `notebook`.
+- Швидке повернення до лисиці: `default` (orange).
 - Скло поверх усього: `shader on` (GLSL з `FoxTerminal/ghostty/shaders/`).
 - Desktop під тему: `foxos on` — rain і accent підхоплюють `sw`.
 
@@ -674,6 +726,18 @@ FOXTERM_FRIEND_MAX_TURNS=25
 
 `foxlife` також має вбудованого AI-асистента у своєму вікні.
 
+### Desktop-помічник (FOXSTYLE / foxnodes)
+
+Окремий шар від `friend` у терміналі:
+
+```powershell
+foxnodes                  # overlay + помічник
+foxstyle                  # вкладка Помічник: модель, мікрофон, дозволи, журнал
+foxstt -Install           # один раз: whisper.cpp у %LOCALAPPDATA%
+```
+
+Текст або push-to-talk → локальна Ollama. Повні речення йдуть у модель. Слово «YouTube» / «Google» — об’єкт запиту, не команда відкрити сайт, якщо немає майданчика («на YouTube») або короткої однозначної команди. Трасування: `$env:FOXASSIST_TRACE = "1"`.
+
 ---
 
 ## 14) Безпека
@@ -709,6 +773,10 @@ FOXTERM_FRIEND_MAX_TURNS=25
 | Після `shell on` немає Explorer | Ctrl+Alt+Del → Task Manager → Run → `restore-windows.cmd` |
 | `foxpack` «не той» | За замовчуванням clean; персональне — `-Full` |
 | Firefox/Zen не відкриває | `foxzen status`, `ff open youtube`, `blist` |
+| FOXSTYLE «Збережено», не «Застосовано» | запусти `foxnodes`; Apply чекає ack overlay |
+| Node Launcher не з’являється | `foxnodes -Status`; хоткей Ctrl+Alt+Space; `foxnodes -Rebuild` |
+| Помічник не чує голос | `foxstt -Install`, `foxstt -Test`; модель у FOXSTYLE → Помічник |
+| Помічник відкрив YouTube сам | має бути майданчик («на YouTube») або явна команда; дивись `FOXASSIST_TRACE` |
 
 ---
 
@@ -718,10 +786,10 @@ FOXTERM_FRIEND_MAX_TURNS=25
 `nuser` · `l` · `who` · `uexit` · `home` · `lock` · `settings` · `foxsetup`
 
 ### FoxOS
-`foxos on/off` · `foxlook on/off` · `foxlook cursor …` · `foxlook dock …` · `foxlook shell off`
+`foxos on/off` · `foxlook on/off` · `foxlook cursor …` · `foxlook dock …` · `foxlook shell off` · `foxstyle` · `foxnodes` · `foxstt`
 
 ### AI / медіа
-`ask` · `friend` · `yt` · `ytm` · `ytm-ui` · `sp` · `sp-ui` · `dj` · `foxmirror`
+`ask` · `friend` · `yt` · `ytm` · `ytm-ui` · `sp` · `sp-ui` · `dj` · `foxmirror` · FOXSTYLE Помічник
 
 ### Нотатки
 `wai` · `go` · `up` · `nfile` · `edit` · `view` · `changelog` · `foxdocs`
@@ -798,14 +866,14 @@ build -restore before-look
 
 ## Підсумок
 
-FoxTerminal = **термінал + команди + FoxOS desktop + системна оболонка + сайти + AI + companion**.
+FoxTerminal = **термінал + команди + FoxOS desktop + FOXSTYLE / Node Launcher + системна оболонка + сайти + AI + companion**.
 
 Стабільний щоденний flow:
 
 1. `foxsetup` один раз → далі `l` → `home`
 2. Робота: `sites` + notes + `ytm` / `friend`
-3. Desktop: за бажанням `foxos` + `foxlook`
+3. Desktop: за бажанням `foxos` + `foxlook` + `foxnodes` / `foxstyle`
 4. Перед експериментами — `build`
 5. Для передачі — `foxpack`
 
-Жива довідка в будь-який момент: **`foxhelp`**.
+Жива довідка в будь-який момент: **`foxhelp`**. Усі гайди: **`foxdocs`**. Для стороннього чату: **`CHATGPT_PROJECT.md`**.

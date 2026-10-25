@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "name": "FoxPurple",
+  "preset": "foxpurple",
+  "colors": { "theme": "foxpurple", "accent": null, "accent2": null, "bg": null, "surface": null, "ink": null, "glass": 72 },
+  "chrome": { "opacity": 70, "blur": 20, "height": 38, "floating": false, "icons": "line", "iconSize": 16 },
+  "window": {
+    "radius": 18,
+    "shadowPreset": "custom",
+    "shadow": { "x": 0, "y": 30, "blur": 80, "spread": -14, "color": "#140532", "alpha": 70 },
+    "openAnim": "liquid"
+  },
+  "panel": { "enter": "book", "speed": "slow", "blur": 30, "radius": 26 },
+  "button": { "style": "liquid", "radius": 14, "pressScale": 97 },
+  "motion": { "scale": "full", "fast": 160, "med": 320, "slow": 640, "ease": "liquid", "stagger": 45 },
+  "typography": { "ui": "Inter", "display": "Space Grotesk", "mono": "JetBrains Mono", "size": 13.5, "density": "normal", "tracking": "tight", "displayWeight": "600" },
+  "texture": { "kind": "glass", "opacity": 100, "rain": 40, "dock": "pill" },
+  "labs": { "dynamicShadows": false, "foxGlow": true, "motionBlur": false, "liquidWindows": true },
+  "perElementAnims": { "dock": "fs-bounce-in", "nav": "fs-fade-up", "card": "fs-liquid-open", "tile": "fs-elastic-in", "toggle": "fs-elastic-pop" }
+}

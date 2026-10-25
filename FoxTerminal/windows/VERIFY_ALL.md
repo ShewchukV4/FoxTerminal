@@ -72,7 +72,10 @@ foxtest -Quiet
 | W1 | Клавіша Win / Super | Натиснути Win | Відкриває те, що задумано (Пуск або FoxTerminal, якщо winkeys on) |
 | W2 | Win+E | Провідник / edit binding | Очікувана дія, не краш |
 | W3 | Win+I | Параметри / settings Fox | Очікувана дія |
-| W4 | Win+R / Win+S | Run / Search | Якщо winkeys on — Fox prompt; інакше системне |
+| W4 | Win+R | Run / desk prompt | Якщо winkeys on — Fox desk prompt; інакше системне |
+| W4b | Win+S / Win+Alt+A | Apps launcher | winkeys on → FoxOS Home **APPS**; Win+Alt+A якщо Search з’їдає Win+S |
+| W4c | Dock Home → APPS | пошу + Enter | Запускає довільну програму без Windows taskbar; F5 оновлює список |
+| W4d | APPS pinned | Ctrl+P / ПКМ | Секція **Pinned** зверху; Discord+Copilot за замовчуванням; Ctrl+P закріпити/відкріпити |
 | W5 | Win+D | Показати стіл | Rain/wallpaper видно; desk prompt якщо overlay |
 | W6 | Win+L | Lock | Якщо `winlock on` → Fox `lock`; інакше Windows lock. **Не чіпай shell.** |
 
@@ -117,7 +120,7 @@ foxtest -Quiet
 
 ### 3.1 Автоматично через foxtest -Group info (обов’язково всі)
 
-`chek`, `term -Status`, `sixel`, `interface -Keys`, `foxdeps -Check`, `build -list`, `sites` (list), `foxaddon`/`foxzen`/`ffsync`/`foxhotkeys` -Status, `foxbg -Top 3`, `foxscan -Top 3`, `ftime`, `disk`, **`pulse -Once`**, `ip`, `wifi`, `who`, `users`, `blist`, `apps`, `appbind`, `hash`, `netping`, `weather`, `fday`, `shader status`, `foxos status`, `lock -Status`, `settings -Status`, `foxlife -Status`, … (усе що в `foxtest` info).
+`chek`, `term -Status`, `sixel`, `interface -Keys`, `foxdeps -Check`, `build -list`, `sites` (list), `foxaddon`/`foxzen`/`ffsync`/`foxhotkeys` -Status, `foxbg -Top 3`, `foxscan -Top 3`, `ftime`, `disk`, **`pulse -Once`**, `ip`, `wifi`, `who`, `users`, `blist`, `apps`, `appbind`, `hash`, `netping`, `weather`, `fday`, `shader status`, `foxos status`, `lock -Status`, `settings -Status`, `foxlife -Status`, `foxstyle -Status`, `foxnodes -Status`, `foxstt` (статус), … (усе що в `foxtest` info).
 
 ### 3.2 Ручний прогін / TUI (відкрив → закрив Esc/Ctrl+E)
 
@@ -129,7 +132,11 @@ foxtest -Quiet
 | `pulse` | картка оцінки + vitals; **A** → apps | не закривати Defender / Fox / Cursor |
 | `pulse apps` | список → Back без закриття | Enter лише на тестову апку з дозволу |
 | `themes` | picker | — |
-| `noir` / `pride` / `arthas` / `dnote` / `spider` | toggle → назад | — |
+| `noir` / `pride` / `arthas` / `dnote` / `spider` / `notebook` / `default` | toggle → назад | — |
+| `foxstyle` | вікно студії відкрилось; закрити | не Apply на чужий профіль без дозволу |
+| `foxstyle -NodeEditor` | три панелі дерево/полотно/властивості | не зберігати експеримент як Apply |
+| `foxnodes` | overlay / Ctrl+Alt+Space | `-Stop` після перевірки якщо юзер не хоче демон |
+| `foxstt` | статус; `-Test` якщо вже встановлено | не качати модель без дозволу (~ГБ) |
 | `apple` | сцена → Esc | — |
 | `frederik` | хвиля → Esc | — |
 | `dj` / `ytm-ui` / `sp-ui` | UI → вихід | — |
@@ -173,8 +180,7 @@ foxtest -Quiet
 ### 3.6 Пак / сервіс
 
 | `changelog` | viewer |
-| `foxdocs` | список гайдів; ← термінал, → Explorer, Back внизу |
-| `foxdocs -List` | шляхи без TUI (також у foxtest info) |
+| `foxdocs` | стрілки: список гайдів; ← термінал, → Explorer, Back внизу |
 | `build -list` | OK |
 | `foxpack` | SKIP або dry — не обов’язково писати zip |
 | `foxtest` | вже зверху |

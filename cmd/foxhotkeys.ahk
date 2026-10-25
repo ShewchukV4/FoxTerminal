@@ -219,7 +219,8 @@ CloseFoxTerm() {
 
 ; ── FoxOS Win keys ───────────────────────────────────────────────────────────
 ; Win alone       → show / hide FoxTerminal (instead of Start)
-; Win+R, Win+S    → desk prompt on the FoxOS wallpaper (FoxTerminal if no wallpaper)
+; Win+R           → desk prompt on the FoxOS wallpaper (FoxTerminal if no wallpaper)
+; Win+S / Win+Alt+A → FoxOS Home on Apps tab (Start Menu search without taskbar)
 ; Win+E           → `edit` in FoxTerminal        Win+I → `settings` in FoxTerminal
 ; Win+L           → Fox lock, only after `foxlook winlock on` (Windows grabs Win+L first otherwise)
 ; Other Win combos (Win+D, Win+Shift+S, Win+Tab, Win+number…) still reach Windows.
@@ -240,10 +241,18 @@ RegisterWinKeys() {
     ; `~` lets the Win press through so Windows still sees it as a modifier. vkE8 is an
     ; unassigned virtual key: sending it while Win is down makes Windows treat the press
     ; as a combo, so Start does not open on release. A_PriorKey ignores keys we send.
+    try InstallKeybdHook()
     Hotkey "~LWin", (*) => Send("{Blind}{vkE8}")
     Hotkey "~LWin Up", WinAlone
     Hotkey "#r", (*) => FoxDeskPrompt()
-    Hotkey "#s", (*) => FoxDeskPrompt()
+    ; $ = keyboard hook so Win+S is less likely to lose to Windows SearchHost
+    try {
+        Hotkey "$#s", (*) => FoxHomeApps()
+    } catch {
+        Hotkey "#s", (*) => FoxHomeApps()
+    }
+    ; backup if Win+S still goes to Search
+    Hotkey "#!a", (*) => FoxHomeApps()
     Hotkey "#e", (*) => FoxDeskLine("term edit")
     Hotkey "#i", (*) => FoxDeskLine("term settings")
     Hotkey "#l", (*) => LockFoxTerm()
@@ -296,6 +305,35 @@ FoxDeskPrompt() {
         try WinActivate "ahk_exe foxos-live.exe"
     } else {
         ShowFoxTerm()
+    }
+}
+
+FoxHomeApps() {
+    ; Dismiss Windows Search if it still popped (Win11 often races Win+S).
+    try {
+        if WinExist("ahk_exe SearchHost.exe")
+            WinClose "ahk_exe SearchHost.exe"
+        if WinExist("ahk_exe SearchApp.exe")
+            WinClose "ahk_exe SearchApp.exe"
+        if WinExist("ahk_exe SearchUI.exe")
+            WinClose "ahk_exe SearchUI.exe"
+    }
+    if FoxLiveRunning() {
+        WriteFoxRequest("home.req", "apps")
+        try WinActivate "ahk_exe foxos-live.exe"
+        ; second nudge after live opens Home
+        SetTimer(() => SoftActivateHome(), -200)
+    } else {
+        ShowFoxTerm()
+    }
+}
+
+SoftActivateHome() {
+    try {
+        if WinExist("FoxOS Home")
+            WinActivate "FoxOS Home"
+        else if WinExist("ahk_exe foxos-live.exe")
+            WinActivate "ahk_exe foxos-live.exe"
     }
 }
 

@@ -12,6 +12,84 @@ using System.Windows.Forms;
 
 namespace FoxOsLive {
 
+    // Open .exe / .lnk / Store AUMID / protocol — never explorer.exe+shell: (shows "Class not registered")
+    static class FoxLaunch {
+        [ComImport, Guid("2e941141-7f97-4756-ba1d-9decde894a3d"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+        interface IApplicationActivationManager {
+            void ActivateApplication(
+                [MarshalAs(UnmanagedType.LPWStr)] string appUserModelId,
+                [MarshalAs(UnmanagedType.LPWStr)] string arguments,
+                int options,
+                out uint processId);
+        }
+
+        [ComImport, Guid("45BA127D-10A8-46EA-8AB7-56EA9078943C")]
+        class ApplicationActivationManager { }
+
+        public static bool Open(string path) {
+            if (string.IsNullOrEmpty(path)) return false;
+            string p = path.Trim();
+            try {
+                // shell:AppsFolder\<AUMID> → COM activate (explorer shows Class not registered)
+                const string appsFolder = "shell:AppsFolder\\";
+                if (p.StartsWith(appsFolder, StringComparison.OrdinalIgnoreCase)
+                    || p.StartsWith("shell:AppsFolder/", StringComparison.OrdinalIgnoreCase)) {
+                    string aumid = p.Substring(appsFolder.Length).Trim();
+                    if (aumid.Length == 0) return false;
+                    // Copilot prefers its protocol when present
+                    if (aumid.IndexOf("Microsoft.Copilot_", StringComparison.OrdinalIgnoreCase) >= 0) {
+                        if (OpenProtocol("ms-copilot:")) return true;
+                    }
+                    return ActivateAumid(aumid);
+                }
+                if (p.StartsWith("shell:", StringComparison.OrdinalIgnoreCase)) {
+                    // other shell: locations (e.g. shell:Downloads) — still via explorer, no dialog if valid
+                    Process.Start(new ProcessStartInfo("explorer.exe", p) { UseShellExecute = true, ErrorDialog = false });
+                    return true;
+                }
+                // ms-copilot: / https:// / etc. (colon not a drive letter)
+                int colon = p.IndexOf(':');
+                if (p.IndexOf("://", StringComparison.Ordinal) >= 0 || (colon > 1 && !File.Exists(p) && !Directory.Exists(p))) {
+                    return OpenProtocol(p);
+                }
+                if (!File.Exists(p) && !Directory.Exists(p)) return false;
+                var psi = new ProcessStartInfo(p) { UseShellExecute = true, ErrorDialog = false };
+                if (p.EndsWith("Update.exe", StringComparison.OrdinalIgnoreCase)
+                    && p.IndexOf("Discord", StringComparison.OrdinalIgnoreCase) >= 0) {
+                    psi.Arguments = "--processStart Discord.exe";
+                }
+                Process.Start(psi);
+                return true;
+            } catch {
+                return false;
+            }
+        }
+
+        static bool OpenProtocol(string uri) {
+            try {
+                Process.Start(new ProcessStartInfo(uri) { UseShellExecute = true, ErrorDialog = false });
+                return true;
+            } catch { return false; }
+        }
+
+        static bool ActivateAumid(string aumid) {
+            try {
+                var mgr = (IApplicationActivationManager)new ApplicationActivationManager();
+                uint pid;
+                mgr.ActivateApplication(aumid, null, 0, out pid);
+                return pid != 0 || true;
+            } catch {
+                // last resort: start menu style via explorer /root (still can fail silently)
+                try {
+                    Process.Start(new ProcessStartInfo("explorer.exe", "shell:AppsFolder\\" + aumid) {
+                        UseShellExecute = true, ErrorDialog = false
+                    });
+                    return true;
+                } catch { return false; }
+            }
+        }
+    }
+
     // pins.json: [{id,title,path,act}, ...] — user-editable dock pins
     static class PinStore {
         public static string PathIn(string foxosDir) {
@@ -1532,7 +1610,8 @@ namespace FoxOsLive {
         Color night, accent;
         string themeName = "";
         string filter = "";
-        bool wallTab = true;
+        // 0 = wallpaper commands, 1 = terminal commands, 2 = Start Menu apps
+        int tabMode = 0;
         int sel;
         int scroll;
         int hover = -1;
@@ -1545,11 +1624,23 @@ namespace FoxOsLive {
         Rectangle resizeStart;
         Point resizeOrigin;
         readonly List<Line> lines = new List<Line>();
+        List<HelpItem> appCache;
+        bool appCacheReady;
+        List<AppPin> appPins;
+        bool appPinsReady;
+        DateTime appPinsStamp;
+        readonly HashSet<string> pinnedPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         struct Line {
             public bool Head;
             public string Text;
             public HelpItem Item;
+            public bool Pinned;
+        }
+
+        struct AppPin {
+            public string Title;
+            public string Path;
         }
 
         public HomeLaunch(Color nightColor, Color accentColor, Color accent2Color, string foxPath, string theme, Action<string> runDesk)
@@ -1583,13 +1674,77 @@ namespace FoxOsLive {
             blink.Tick += delegate { caretOn = !caretOn; Invalidate(FilterRect()); };
             blink.Start();
             RestoreBounds();
+            RestoreTab();
             Rebuild();
         }
 
-        string PosPath() {
+        string FoxOsDataDir() {
             return Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "FoxTerminal", "foxos", "home-pos.txt");
+                "FoxTerminal", "foxos");
+        }
+
+        string PosPath() {
+            return Path.Combine(FoxOsDataDir(), "home-pos.txt");
+        }
+
+        string TabPath() {
+            return Path.Combine(FoxOsDataDir(), "home-tab.txt");
+        }
+
+        string AppPinsPath() {
+            return Path.Combine(FoxOsDataDir(), "home-app-pins.json");
+        }
+
+        void RestoreTab() {
+            try {
+                string p = TabPath();
+                if (!File.Exists(p)) return;
+                string t = (File.ReadAllText(p) ?? "").Trim().ToLowerInvariant();
+                if (t == "term" || t == "terminal" || t == "1") tabMode = 1;
+                else if (t == "apps" || t == "app" || t == "2") tabMode = 2;
+                else tabMode = 0;
+            } catch { }
+        }
+
+        void SaveTab() {
+            try {
+                Directory.CreateDirectory(FoxOsDataDir());
+                string name = tabMode == 2 ? "apps" : (tabMode == 1 ? "term" : "wall");
+                File.WriteAllText(TabPath(), name);
+            } catch { }
+        }
+
+        public void FocusTab(string name) {
+            string t = (name ?? "").Trim().ToLowerInvariant();
+            // strip UTF-8 BOM / junk if home.req was written oddly
+            if (t.Length > 0 && t[0] == '\uFEFF') t = t.TrimStart('\uFEFF').Trim().ToLowerInvariant();
+            int m = tabMode;
+            if (t == "apps" || t == "app") m = 2;
+            else if (t == "term" || t == "terminal") m = 1;
+            else if (t == "wall" || t == "wallpaper" || t == "desk") m = 0;
+            else if (t.Length == 0 || t == "1") return;
+            else return;
+            bool same = (m == tabMode);
+            tabMode = m;
+            filter = "";
+            sel = 0;
+            scroll = 0;
+            hover = -1;
+            if (tabMode == 2) EnsureAppCache(!same && Visible);
+            else if (!same) { /* keep command tabs light */ }
+            Rebuild();
+            SaveTab();
+            Invalidate();
+            if (Visible) {
+                try {
+                    TopMost = true;
+                    Show();
+                    Activate();
+                    BringToFront();
+                    Native.SetForegroundWindow(Handle);
+                } catch { }
+            }
         }
 
         int MaxW() {
@@ -1669,10 +1824,12 @@ namespace FoxOsLive {
             return new Rectangle(isl.X + Pad, isl.Y + 72, isl.Width - Pad * 2, 36);
         }
 
-        Rectangle TabRect(bool wall) {
+        Rectangle TabRect(int idx) {
             var isl = Island();
-            int x = isl.X + Pad + (wall ? 0 : 168);
-            return new Rectangle(x, isl.Y + 118, 156, 30);
+            int tw = 108;
+            int gap = 8;
+            int x = isl.X + Pad + idx * (tw + gap);
+            return new Rectangle(x, isl.Y + 118, tw, 30);
         }
 
         Rectangle DetailRect() {
@@ -1685,20 +1842,293 @@ namespace FoxOsLive {
             return new Rectangle(isl.Right - 22, isl.Bottom - 22, 18, 18);
         }
 
+        void EnsureAppCache(bool force) {
+            if (appCacheReady && !force && appCache != null) return;
+            appCache = ScanStartApps();
+            appCacheReady = true;
+        }
+
+        void EnsureAppPins(bool force) {
+            string path = AppPinsPath();
+            DateTime stamp = DateTime.MinValue;
+            try { if (File.Exists(path)) stamp = File.GetLastWriteTimeUtc(path); } catch { }
+            if (!force && appPinsReady && appPins != null && stamp == appPinsStamp) return;
+            appPins = LoadAppPins();
+            appPinsStamp = stamp;
+            appPinsReady = true;
+            RebuildPinnedSet();
+        }
+
+        void RebuildPinnedSet() {
+            pinnedPaths.Clear();
+            if (appPins == null) return;
+            for (int i = 0; i < appPins.Count; i++) {
+                if (!string.IsNullOrEmpty(appPins[i].Path)) pinnedPaths.Add(appPins[i].Path);
+            }
+        }
+
+        List<AppPin> LoadAppPins() {
+            var list = new List<AppPin>();
+            string path = AppPinsPath();
+            if (!File.Exists(path)) {
+                SeedDefaultAppPins(list);
+                SaveAppPins(list);
+                return list;
+            }
+            try {
+                string json = File.ReadAllText(path);
+                foreach (Match block in Regex.Matches(json, "\\{[^}]+\\}")) {
+                    string o = block.Value;
+                    string title = GrabJson(o, "title");
+                    string pth = GrabJson(o, "path");
+                    if (string.IsNullOrEmpty(pth)) continue;
+                    if (string.IsNullOrEmpty(title)) title = Path.GetFileNameWithoutExtension(pth);
+                    if (string.IsNullOrEmpty(title)) title = pth;
+                    list.Add(new AppPin { Title = title, Path = pth });
+                }
+            } catch { }
+            if (list.Count == 0) {
+                SeedDefaultAppPins(list);
+                SaveAppPins(list);
+            }
+            return list;
+        }
+
+        static string GrabJson(string json, string key) {
+            var m = Regex.Match(json ?? "", "\"" + key + "\"\\s*:\\s*\"((?:\\\\.|[^\"\\\\])*)\"");
+            if (!m.Success) return "";
+            return UnescJson(m.Groups[1].Value);
+        }
+
+        static string UnescJson(string s) {
+            if (string.IsNullOrEmpty(s)) return "";
+            return s.Replace("\\\\", "\\").Replace("\\\"", "\"").Replace("\\n", "\n").Replace("\\t", "\t");
+        }
+
+        static string EscJson(string s) {
+            if (s == null) return "";
+            return s.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\n", "\\n").Replace("\r", "");
+        }
+
+        void SaveAppPins(List<AppPin> pins) {
+            try {
+                Directory.CreateDirectory(FoxOsDataDir());
+                var sb = new StringBuilder();
+                sb.Append("[\n");
+                for (int i = 0; i < pins.Count; i++) {
+                    if (i > 0) sb.Append(",\n");
+                    sb.Append("  {\"title\":\"").Append(EscJson(pins[i].Title))
+                      .Append("\",\"path\":\"").Append(EscJson(pins[i].Path)).Append("\"}");
+                }
+                sb.Append("\n]\n");
+                File.WriteAllText(AppPinsPath(), sb.ToString());
+            } catch { }
+        }
+
+        static void SeedDefaultAppPins(List<AppPin> list) {
+            if (list == null) return;
+            string discord = ResolveDiscordPin();
+            if (!string.IsNullOrEmpty(discord)) {
+                list.Add(new AppPin { Title = "Discord", Path = discord });
+            }
+            string copilot = ResolveCopilotPin();
+            if (!string.IsNullOrEmpty(copilot)) {
+                list.Add(new AppPin { Title = "Copilot", Path = copilot });
+            }
+            string life = ResolveFoxAppPin("foxlife");
+            if (!string.IsNullOrEmpty(life)) {
+                list.Add(new AppPin { Title = "FoxLife", Path = life });
+            }
+            string style = ResolveFoxAppPin("foxstyle");
+            if (!string.IsNullOrEmpty(style)) {
+                list.Add(new AppPin { Title = "FOXSTYLE", Path = style });
+            }
+        }
+
+        static string ResolveFoxAppPin(string name) {
+            if (string.IsNullOrEmpty(name)) return "";
+            string foxos = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "FoxTerminal", "foxos");
+            string exe = Path.Combine(foxos, name + ".exe");
+            if (File.Exists(exe)) return exe;
+            // fallback: cmd launcher (builds if needed)
+            try {
+                string live = Path.Combine(foxos, "live.json");
+                if (File.Exists(live)) {
+                    string json = File.ReadAllText(live);
+                    var m = Regex.Match(json, "\"cmd\"\\s*:\\s*\"((?:\\\\.|[^\"\\\\])*)\"");
+                    if (m.Success) {
+                        string cmd = UnescJson(m.Groups[1].Value);
+                        string bat = Path.Combine(cmd, name + ".bat");
+                        if (File.Exists(bat)) return bat;
+                        string ps1 = Path.Combine(cmd, name + ".ps1");
+                        if (File.Exists(ps1)) return ps1;
+                    }
+                }
+            } catch { }
+            return "";
+        }
+
+        static string ResolveDiscordPin() {
+            string[] candidates = new string[] {
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.StartMenu), "Programs", "Discord.lnk"),
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.StartMenu), "Programs", "Discord Inc", "Discord.lnk"),
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "Discord.lnk"),
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Discord", "Update.exe")
+            };
+            for (int i = 0; i < candidates.Length; i++) {
+                if (File.Exists(candidates[i])) return candidates[i];
+            }
+            return "";
+        }
+
+        static string ResolveCopilotPin() {
+            // Prefer a Start Menu .lnk if present; else Store AppsFolder AUMID.
+            try {
+                string sm = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.StartMenu), "Programs");
+                var found = new List<string>();
+                CollectLnkFiles(sm, found);
+                string csm = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonStartMenu), "Programs");
+                CollectLnkFiles(csm, found);
+                for (int i = 0; i < found.Count; i++) {
+                    string n = Path.GetFileNameWithoutExtension(found[i]) ?? "";
+                    if (n.Equals("Copilot", StringComparison.OrdinalIgnoreCase)) return found[i];
+                    if (n.IndexOf("Copilot", StringComparison.OrdinalIgnoreCase) >= 0
+                        && n.IndexOf("Microsoft 365", StringComparison.OrdinalIgnoreCase) < 0) {
+                        return found[i];
+                    }
+                }
+            } catch { }
+            // Protocol — reliable on this machine; shell:AppsFolder via explorer → "Class not registered"
+            return "ms-copilot:";
+        }
+
+        bool IsAppPinned(string path) {
+            if (string.IsNullOrEmpty(path)) return false;
+            return pinnedPaths.Contains(path);
+        }
+
+        void TogglePinCurrent() {
+            if (tabMode != 2) return;
+            HelpItem item = Current();
+            if (item == null || string.IsNullOrEmpty(item.Name)) return;
+            EnsureAppPins(false);
+            string path = item.Name;
+            string title = item.Usage;
+            int idx = -1;
+            for (int i = 0; i < appPins.Count; i++) {
+                if (string.Equals(appPins[i].Path, path, StringComparison.OrdinalIgnoreCase)) { idx = i; break; }
+            }
+            if (idx >= 0) appPins.RemoveAt(idx);
+            else appPins.Add(new AppPin { Title = title, Path = path });
+            SaveAppPins(appPins);
+            RebuildPinnedSet();
+            Rebuild();
+            // keep selection on same path if still visible
+            for (int i = 0; i < lines.Count; i++) {
+                if (!lines[i].Head && lines[i].Item != null
+                    && string.Equals(lines[i].Item.Name, path, StringComparison.OrdinalIgnoreCase)) {
+                    sel = i; ClampScroll(); break;
+                }
+            }
+            Invalidate();
+        }
+
+        static void CollectLnkFiles(string dir, List<string> into) {
+            // Walk folder-by-folder: one locked Start Menu subdir must not wipe the whole index
+            // (Directory.GetFiles AllDirectories throws and skips the entire root).
+            if (string.IsNullOrEmpty(dir) || !Directory.Exists(dir) || into == null) return;
+            try {
+                string[] files = Directory.GetFiles(dir, "*.lnk");
+                for (int i = 0; i < files.Length; i++) into.Add(files[i]);
+            } catch { }
+            string[] subs = null;
+            try { subs = Directory.GetDirectories(dir); } catch { return; }
+            if (subs == null) return;
+            for (int i = 0; i < subs.Length; i++) {
+                try { CollectLnkFiles(subs[i], into); } catch { }
+            }
+        }
+
+        static List<HelpItem> ScanStartApps() {
+            var list = new List<HelpItem>();
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            string[] roots = new string[] {
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.StartMenu), "Programs"),
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonStartMenu), "Programs"),
+                Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory)
+            };
+            var files = new List<string>();
+            for (int r = 0; r < roots.Length; r++) {
+                string root = roots[r];
+                if (string.IsNullOrEmpty(root) || !Directory.Exists(root)) continue;
+                int before = files.Count;
+                CollectLnkFiles(root, files);
+                bool isDesk = root.IndexOf("Desktop", StringComparison.OrdinalIgnoreCase) >= 0;
+                for (int i = before; i < files.Count; i++) {
+                    string f = files[i];
+                    string title = Path.GetFileNameWithoutExtension(f);
+                    if (string.IsNullOrEmpty(title)) continue;
+                    string low = title.ToLowerInvariant();
+                    if (low.StartsWith("uninstall") || low.IndexOf("uninstall ") >= 0) continue;
+                    if (!seen.Add(f)) continue;
+                    string group = isDesk ? "Desktop" : "Programs";
+                    try {
+                        string rel = f;
+                        if (f.StartsWith(root, StringComparison.OrdinalIgnoreCase)) {
+                            rel = f.Substring(root.Length).TrimStart('\\', '/');
+                        }
+                        string dir = Path.GetDirectoryName(rel);
+                        if (!string.IsNullOrEmpty(dir)) group = dir.Replace('\\', '/');
+                    } catch { }
+                    if (group.Length > 42) group = group.Substring(0, 42);
+                    list.Add(new HelpItem(f, title, group, group, true, false));
+                }
+            }
+            list.Sort(delegate(HelpItem a, HelpItem b) {
+                int g = string.Compare(a.Group, b.Group, StringComparison.OrdinalIgnoreCase);
+                if (g != 0) return g;
+                return string.Compare(a.Usage, b.Usage, StringComparison.OrdinalIgnoreCase);
+            });
+            return list;
+        }
+
         void Rebuild() {
             lines.Clear();
             string q = (filter ?? "").Trim().ToLowerInvariant();
             string last = "";
-            if (wallTab) {
-                var extra = new HelpItem("files", "files", "open user profile folder", "launch", true, false);
-                AppendItem(extra, q, ref last);
-            }
-            HelpItem[] cat = HelpBoard.Catalog;
-            for (int i = 0; i < cat.Length; i++) {
-                HelpItem it = cat[i];
-                if (it.Wall != wallTab) continue;
-                if (wallTab && it.Name == "home") continue;
-                AppendItem(it, q, ref last);
+            if (tabMode == 2) {
+                EnsureAppCache(false);
+                EnsureAppPins(false);
+                // Pinned section first
+                if (appPins != null) {
+                    for (int i = 0; i < appPins.Count; i++) {
+                        AppPin pin = appPins[i];
+                        if (string.IsNullOrEmpty(pin.Path)) continue;
+                        var it = new HelpItem(pin.Path, pin.Title, "Pinned", "Pinned", true, false);
+                        AppendItem(it, q, ref last, true, "Pinned");
+                    }
+                }
+                // All other Start Menu apps (skip ones already pinned)
+                List<HelpItem> apps = appCache ?? new List<HelpItem>();
+                for (int i = 0; i < apps.Count; i++) {
+                    if (IsAppPinned(apps[i].Name)) continue;
+                    AppendItem(apps[i], q, ref last, false, null);
+                }
+            } else {
+                bool wall = tabMode == 0;
+                if (wall) {
+                    var extra = new HelpItem("files", "files", "open user profile folder", "launch", true, false);
+                    AppendItem(extra, q, ref last, false, null);
+                }
+                HelpItem[] cat = HelpBoard.Catalog;
+                for (int i = 0; i < cat.Length; i++) {
+                    HelpItem it = cat[i];
+                    if (it.Wall != wall) continue;
+                    if (wall && it.Name == "home") continue;
+                    AppendItem(it, q, ref last, false, null);
+                }
             }
             if (sel >= lines.Count) sel = lines.Count - 1;
             if (sel < 0) sel = 0;
@@ -1706,16 +2136,17 @@ namespace FoxOsLive {
             ClampScroll();
         }
 
-        void AppendItem(HelpItem it, string q, ref string last) {
+        void AppendItem(HelpItem it, string q, ref string last, bool pinned, string forceGroup) {
             if (q.Length > 0) {
                 string hay = (it.Name + " " + it.Usage + " " + it.Desc + " " + it.Group).ToLowerInvariant();
                 if (hay.IndexOf(q) < 0) return;
             }
-            if (it.Group != last) {
-                lines.Add(new Line { Head = true, Text = it.Group, Item = null });
-                last = it.Group;
+            string group = string.IsNullOrEmpty(forceGroup) ? it.Group : forceGroup;
+            if (group != last) {
+                lines.Add(new Line { Head = true, Text = group, Item = null, Pinned = false });
+                last = group;
             }
-            lines.Add(new Line { Head = false, Text = it.Usage, Item = it });
+            lines.Add(new Line { Head = false, Text = it.Usage, Item = it, Pinned = pinned || IsAppPinned(it.Name) });
         }
 
         void EnsureItem() {
@@ -1757,6 +2188,14 @@ namespace FoxOsLive {
         void ActivateSel() {
             HelpItem item = Current();
             if (item == null) return;
+            if (tabMode == 2) {
+                string path = item.Name;
+                if (string.IsNullOrEmpty(path)) return;
+                SavePos();
+                Hide();
+                FoxLaunch.Open(path);
+                return;
+            }
             if (item.Wall) {
                 if (item.Name == "home") return;
                 if (item.Name == "foxhelp") {
@@ -1790,13 +2229,17 @@ namespace FoxOsLive {
             if (runDesk != null) runDesk("term " + item.Name);
         }
 
-        void SwitchTab(bool wall) {
-            if (wall == wallTab) return;
-            wallTab = wall;
+        void SwitchTab(int mode) {
+            if (mode < 0) mode = 0;
+            if (mode > 2) mode = 2;
+            if (mode == tabMode) return;
+            tabMode = mode;
             sel = 0;
             scroll = 0;
             hover = -1;
+            if (tabMode == 2) EnsureAppCache(false);
             Rebuild();
+            SaveTab();
             Invalidate();
         }
 
@@ -1833,8 +2276,24 @@ namespace FoxOsLive {
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData) {
             if (keyData == Keys.Escape) { SavePos(); Hide(); return true; }
             if (keyData == Keys.Enter) { ActivateSel(); return true; }
-            if (keyData == Keys.Tab || keyData == (Keys.Tab | Keys.Shift)) {
-                SwitchTab(!wallTab);
+            if (keyData == Keys.F5) {
+                if (tabMode == 2) {
+                    EnsureAppCache(true);
+                    EnsureAppPins(true);
+                    sel = 0; scroll = 0; Rebuild(); Invalidate();
+                }
+                return true;
+            }
+            if (tabMode == 2 && keyData == (Keys.P | Keys.Control)) {
+                TogglePinCurrent();
+                return true;
+            }
+            if (keyData == Keys.Tab) {
+                SwitchTab((tabMode + 1) % 3);
+                return true;
+            }
+            if (keyData == (Keys.Tab | Keys.Shift)) {
+                SwitchTab((tabMode + 2) % 3);
                 return true;
             }
             if (keyData == Keys.Up) { MoveSel(-1); return true; }
@@ -1880,11 +2339,11 @@ namespace FoxOsLive {
                 return;
             }
             if (CloseRect().Contains(e.Location)) { SavePos(); Hide(); return; }
-            Rectangle wallR = TabRect(true);
-            Rectangle termR = TabRect(false);
-            if (wallR.Contains(e.Location) || termR.Contains(e.Location)) {
-                SwitchTab(wallR.Contains(e.Location));
-                return;
+            for (int ti = 0; ti < 3; ti++) {
+                if (TabRect(ti).Contains(e.Location)) {
+                    SwitchTab(ti);
+                    return;
+                }
             }
             var isl = Island();
             if (e.Y < isl.Y + 68 && !FilterRect().Contains(e.Location) && !CloseRect().Contains(e.Location)) {
@@ -1898,7 +2357,16 @@ namespace FoxOsLive {
                 sel = idx;
                 EnsureItem();
                 Invalidate();
-                if (e.Clicks > 1) ActivateSel();
+                if (e.Button == MouseButtons.Right && tabMode == 2) {
+                    TogglePinCurrent();
+                    return;
+                }
+                // APPS: single click opens (Clicks==1 only — avoids double-launch on dblclick).
+                // Other tabs: double-click.
+                if (e.Button == MouseButtons.Left) {
+                    if (tabMode == 2 && e.Clicks == 1) ActivateSel();
+                    else if (tabMode != 2 && e.Clicks > 1) ActivateSel();
+                }
             }
             base.OnMouseDown(e);
         }
@@ -2047,7 +2515,8 @@ namespace FoxOsLive {
                 using (var title = new SolidBrush(Color.FromArgb(236, 238, 242))) {
                     g.DrawString("FOXOS", smallFont, kick, new RectangleF(isl.X + Pad + 8, isl.Y + 14, 180, 16), sf);
                     g.DrawString("home", titleFont, title, new RectangleF(isl.X + Pad + 8, isl.Y + 32, 320, 28), sf);
-                    string meta = (wallTab ? "WALL  " : "TERM  ") + CmdCount + "  " + themeName;
+                    string tabLabel = tabMode == 2 ? "APPS  " : (tabMode == 1 ? "TERM  " : "WALL  ");
+                    string meta = tabLabel + CmdCount + "  " + themeName;
                     SizeF ms = g.MeasureString(meta, smallFont, PointF.Empty, sf);
                     g.DrawString(meta, smallFont, kick, new RectangleF(isl.Right - 52 - ms.Width, isl.Y + 20, ms.Width + 2, 16), sf);
                 }
@@ -2067,12 +2536,14 @@ namespace FoxOsLive {
 
                 Rectangle fr = FilterRect();
                 bool typed = filter.Length > 0;
-                string q = typed ? ("> " + filter) : "> filter";
+                string hint = tabMode == 2 ? "> search apps" : "> filter";
+                string q = typed ? ("> " + filter) : hint;
                 if (caretOn) q += "_";
                 DrawPromptBar(g, fr, q, typed || caretOn);
 
-                DrawTab(g, sf, TabRect(true), "WALLPAPER", wallTab);
-                DrawTab(g, sf, TabRect(false), "TERMINAL", !wallTab);
+                DrawTab(g, sf, TabRect(0), "WALL", tabMode == 0);
+                DrawTab(g, sf, TabRect(1), "TERM", tabMode == 1);
+                DrawTab(g, sf, TabRect(2), "APPS", tabMode == 2);
 
                 int vis = VisibleRows;
                 int y = ListTop;
@@ -2095,19 +2566,24 @@ namespace FoxOsLive {
                             using (var wash = new SolidBrush(Color.FromArgb(48, accent))) {
                                 g.FillRectangle(wash, row);
                             }
-                            using (var mark = new SolidBrush(accent)) {
-                                g.FillRectangle(mark, row.X, row.Y + 4, 3, row.Height - 8);
+                            using (var railMark = new SolidBrush(accent)) {
+                                g.FillRectangle(railMark, row.X, row.Y + 4, 3, row.Height - 8);
                             }
                         } else if (over) {
                             using (var wash = new SolidBrush(Color.FromArgb(22, accent))) {
                                 g.FillRectangle(wash, row);
                             }
                         }
+                        string prefix = on ? "> " : "  ";
+                        if (tabMode == 2 && line.Pinned) prefix = on ? ">*" : " *";
                         using (var nameInk = new SolidBrush(on ? Color.FromArgb(236, 238, 242) : Color.FromArgb(188, 196, 210))) {
-                            g.DrawString((on ? "> " : "  ") + line.Item.Usage, rowFont, nameInk, new RectangleF(row.X + 12, row.Y, 280, row.Height), sf);
+                            g.DrawString(prefix + line.Item.Usage, rowFont, nameInk, new RectangleF(row.X + 12, row.Y, 280, row.Height), sf);
                         }
                         using (var descInk = new SolidBrush(on ? Color.FromArgb(220, accent) : Color.FromArgb(110, 128, 148))) {
-                            g.DrawString(line.Item.Desc, smallFont, descInk, new RectangleF(row.X + 300, row.Y, row.Width - 312, row.Height), sf);
+                            string side = tabMode == 2
+                                ? (line.Pinned ? "pinned" : line.Item.Desc)
+                                : line.Item.Desc;
+                            g.DrawString(side, smallFont, descInk, new RectangleF(row.X + 300, row.Y, row.Width - 312, row.Height), sf);
                         }
                     }
                     y += RowH;
@@ -2150,10 +2626,16 @@ namespace FoxOsLive {
                 using (var dim = new SolidBrush(Color.FromArgb(124, 140, 156)))
                 using (var acc = new SolidBrush(Color.FromArgb(220, accent))) {
                     if (cur != null) {
-                        string where = cur.Wall ? "WALLPAPER" : "TERMINAL";
-                        string act = cur.Wall
-                            ? (cur.NeedsArg ? "enter  type the rest on the desk" : "enter  run on wallpaper")
-                            : "enter  run in ghostty after login";
+                        string where = tabMode == 2 ? "APPS" : (cur.Wall ? "WALLPAPER" : "TERMINAL");
+                        string act;
+                        if (tabMode == 2) {
+                            bool pinned = IsAppPinned(cur.Name);
+                            act = pinned
+                                ? "enter  launch    ctrl+p  unpin    f5  refresh"
+                                : "enter  launch    ctrl+p  pin    f5  refresh";
+                            where = pinned ? "PINNED" : "APPS";
+                        } else if (cur.Wall) act = cur.NeedsArg ? "enter  type the rest on the desk" : "enter  run on wallpaper";
+                        else act = "enter  run in ghostty after login";
                         g.DrawString(cur.Usage, tabFont, val, new RectangleF(detail.X + 14, detail.Y + 6, detail.Width - 160, 22), sf);
                         SizeF chip = g.MeasureString(where, smallFont, PointF.Empty, sf);
                         Rectangle chipR = new Rectangle(detail.Right - 14 - (int)chip.Width - 16, detail.Y + 8, (int)chip.Width + 16, 20);
@@ -2164,10 +2646,12 @@ namespace FoxOsLive {
                             chipSf.Alignment = StringAlignment.Center;
                             g.DrawString(where, smallFont, acc, chipR, chipSf);
                         }
-                        g.DrawString(cur.Desc, smallFont, acc, new RectangleF(detail.X + 14, detail.Y + 38, detail.Width - 28, 18), sf);
+                        string detailDesc = tabMode == 2 ? (IsAppPinned(cur.Name) ? "Pinned app" : cur.Group) : cur.Desc;
+                        g.DrawString(detailDesc, smallFont, acc, new RectangleF(detail.X + 14, detail.Y + 38, detail.Width - 28, 18), sf);
                         g.DrawString(act + "    tab  section    esc  close", smallFont, dim, new RectangleF(detail.X + 14, detail.Y + 62, detail.Width - 28, 16), sf);
                     } else {
-                        g.DrawString("no command selected", tabFont, dim, new RectangleF(detail.X + 14, detail.Y + 24, detail.Width - 28, 24), sf);
+                        string empty = tabMode == 2 ? "no app selected" : "no command selected";
+                        g.DrawString(empty, tabFont, dim, new RectangleF(detail.X + 14, detail.Y + 24, detail.Width - 28, 24), sf);
                     }
                 }
             }

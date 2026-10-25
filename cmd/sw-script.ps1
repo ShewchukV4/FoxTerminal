@@ -261,6 +261,7 @@ function Get-ThemeLabel([string]$name) {
     if ($name -eq "orange") { return "Original" }
     if ($name -eq "noir") { return "Noir" }
     if ($name -eq "dnote") { return "Death Note" }
+    if ($name -eq "notebook") { return "Notebook" }
     if ($name -eq "pride") {
         if (Get-Command Load-PrideStyle -ErrorAction SilentlyContinue) {
             return ("Pride | " + (Get-PrideStyleLabel (Load-PrideStyle)))
@@ -368,6 +369,7 @@ function Get-SwThemeHex([string]$name) {
         "white" { return "#F2F2F2" }
         "noir"  { return "#888888" }
         "dnote" { return "#B11212" }
+        "notebook" { return "#9A4034" }
         default  { return "#DC7A14" }
     }
 }
@@ -594,6 +596,13 @@ function Get-ThemeColors([string]$name) {
                 bright = @{ R = 225; G = 95;  B = 95  }
             }
         }
+        "notebook" {
+            return @{
+                dark   = @{ R = 110; G = 80;  B = 55  }
+                mid    = @{ R = 154; G = 64;  B = 52  }
+                bright = @{ R = 196; G = 165; B = 116 }
+            }
+        }
         default {
             return @{
                 dark = @{ R = 140; G = 60;  B = 0 }
@@ -633,6 +642,7 @@ function Get-ThemeHue([string]$name) {
         "white" { return 0 }
         "noir"  { return 0 }
         "dnote" { return 355 }
+        "notebook" { return 18 }
         default { return 30 }
     }
 }
@@ -901,7 +911,7 @@ $cycleThemes = @(
     "crimson","rose","magenta","violet","indigo",
     "sky","teal","mint","emerald","lime",
     "gold","amber","peach","coral","ruby",
-    "slate","ice","neon","forest","mocha","dnote",
+    "slate","ice","neon","forest","mocha","dnote","notebook",
     "black","white"
 )
 $themeArgAliases = @{
@@ -930,7 +940,7 @@ foreach ($arg in $SwArgs) {
         $quietTheme = $quiet
         break
     }
-    if ($cycleThemes -contains $argNorm -or $argNorm -eq "pride" -or $argNorm -eq "noir" -or $argNorm -eq "dnote") {
+    if ($cycleThemes -contains $argNorm -or $argNorm -eq "pride" -or $argNorm -eq "noir" -or $argNorm -eq "dnote" -or $argNorm -eq "notebook") {
         $requestedTheme = $argNorm
         $quietTheme = $quiet
         break

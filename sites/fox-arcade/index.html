@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fox Arcade — багато жанрів в одному місці</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./assets/css/style.css">
+</head>
+<body>
+  <div class="bg" aria-hidden="true">
+    <div class="bg-grid"></div>
+    <div class="bg-wash"></div>
+  </div>
+
+  <a class="hub-link" href="../hub/index.html">← Hub</a>
+
+  <!-- LANDING -->
+  <section id="view-home" class="view view-home active">
+    <header class="hero">
+      <p class="hero-kicker">FoxTerminal Playground</p>
+      <h1 class="hero-brand">FOX<span>ARCADE</span></h1>
+      <p class="hero-lead">Вісім міні-ігор · різні жанри · один зал</p>
+      <div class="hero-cta">
+        <button type="button" class="btn btn-primary" id="btn-browse">Обрати гру</button>
+        <button type="button" class="btn btn-ghost" id="btn-random">Випадкова</button>
+      </div>
+    </header>
+
+    <div class="genre-bar" id="genre-bar" role="tablist" aria-label="Жанри"></div>
+    <div class="game-grid" id="game-grid"></div>
+  </section>
+
+  <!-- GAME SHELL -->
+  <section id="view-game" class="view view-game" hidden>
+    <div class="game-chrome">
+      <button type="button" class="btn btn-ghost" id="btn-back">← Зал</button>
+      <div class="game-meta">
+        <h2 id="game-title">Гра</h2>
+        <p id="game-genre" class="game-genre"></p>
+      </div>
+      <div class="hud">
+        <div class="hud-item"><span>Рахунок</span><strong id="hud-score">0</strong></div>
+        <div class="hud-item"><span>Рекорд</span><strong id="hud-best">0</strong></div>
+      </div>
+    </div>
+    <div class="game-stage" id="game-stage"></div>
+    <p class="game-hint" id="game-hint"></p>
+  </section>
+
+  <script src="./assets/js/games.js"></script>
+  <script src="./assets/js/main.js"></script>
+</body>
+</html>

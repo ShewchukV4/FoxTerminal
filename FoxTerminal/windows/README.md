@@ -21,6 +21,7 @@
 ```
 
 Linux/Kali → [`../linux/CURSOR_MEGAGUIDE_UA.md`](../linux/CURSOR_MEGAGUIDE_UA.md)  
-Системний гайд → [`../FOXTERMINAL_GUIDE_UA.md`](../FOXTERMINAL_GUIDE_UA.md)
+Системний гайд → [`../FOXTERMINAL_GUIDE_UA.md`](../FOXTERMINAL_GUIDE_UA.md)  
+Дамп для стороннього чату → [`../CHATGPT_PROJECT.md`](../CHATGPT_PROJECT.md)
 
 У терміналі всі гайди/історію: **`foxdocs`** (← термінал, → Explorer, Back внизу).

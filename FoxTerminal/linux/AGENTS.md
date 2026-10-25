@@ -35,12 +35,14 @@
 | home / lock / settings | `home`, `lock`, `settings` | оболонка | ⚠️ переважно PowerShell |
 | sites / AI | `sites`, `ask`, `friend` | сайти, Ollama | ✅ |
 | foxlife / foxmirror | native Win apps | Life, iPhone | ❌ / обмежено |
+| foxstyle / foxnodes / foxstt | `foxstyle`, `foxnodes`, `foxstt` | студія, меню, STT | ❌ Windows-only |
 
 Повна документація:
 
 - `FoxTerminal/linux/LINUX_GUIDE_UA.md` ← **почни тут на Linux**
 - `FoxTerminal/FOXTERMINAL_GUIDE_UA.md`
 - `FoxTerminal/FOXTERMINAL_GUIDE_EN.md`
+- `FoxTerminal/CHATGPT_PROJECT.md` — бриф для стороннього чату
 
 ---
 
@@ -68,7 +70,7 @@ ghostty   # або ярлик foxterminal
 
 ## Правила для агента
 
-1. На Linux не пропонуй `foxlook shell on` / `foxos on` як робочі — поясни Windows-only і дай Linux-альтернативи з `LINUX_GUIDE_UA.md`.
+1. На Linux не пропонуй `foxlook shell on` / `foxos on` / `foxstyle` / `foxnodes` як робочі — поясни Windows-only і дай Linux-альтернативи з `LINUX_GUIDE_UA.md`.
 2. Перед змінами desktop (wallpaper, scaling, compositor) — спитай DE (GNOME/KDE/XFCE/Hyprland) і роздільність.
 3. Не коміть секрети; не вигадуй паролі GitHub.
 4. Оптимізуй під реальний aspect ratio і DPI екрана (розділ «Робочий стіл» у Linux-гайді).

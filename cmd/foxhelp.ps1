@@ -107,11 +107,13 @@ function Show-Commands {
         $known["fday"]     = @{ usage = "fday [location]"; desc = "daily summary: time + weather + wifi + ip" }
         $known["sw"]       = @{ usage = "sw [themeName] [live] [color|mono] [imagePath]"; desc = "system info + theme switcher (arrows change theme, Ctrl+E exit); example: sw slate" }
         $known["shader"]   = @{ usage = "shader [on|off|status]"; desc = "toggle Ghostty glass shaders (per-theme GLSL); off disables them for every theme" }
-        $known["foxos"]    = @{ usage = "foxos [on|off|status|apply]"; desc = "animated ASCII rain wallpaper (same fox as sw) + Windows accent; off restores the previous desktop" }
+        $known["foxos"]    = @{ usage = "foxos [on|off|status|apply|toggle]"; desc = "ASCII rain wallpaper + accent; top media bar (cover/title/seek/skip) when YTM/Spotify/etc plays" }
         $known["foxlook"]  = @{ usage = "foxlook [on|off|status|<part> on|off|wall overlay|behind|cursor <style>|shell on|off|dock style|place|size|hide|apps|tray]"; desc = "Windows wears FoxOS: dark chrome, pixel cursors, lock screen, Win keys, styled dock; foxlook shell on = this user next login is FoxOS instead of Explorer; foxlook dock style pill|rail|glass|slim" }
-        $known["themes"]   = @{ usage = "themes"; desc = "main themes picker: arrows + Enter (Fox default, Arthas, Pride, Noir, Death Note)" }
+        $known["themes"]   = @{ usage = "themes"; desc = "main themes picker: arrows + Enter (Fox default, Arthas, Pride, Noir, Death Note, Notebook)" }
+        $known["default"]  = @{ usage = "default"; desc = "switch to Fox Default (orange) — wallpaper + Ghostty terminal colors" }
         $known["noir"]     = @{ usage = "noir"; desc = "toggle noir mode: full black & white, locks sw theme picker; run again to restore" }
         $known["dnote"]    = @{ usage = "dnote"; desc = "toggle Death Note mode: crimson noir-like style, login user selection with strike-through, apple intro + '<user> died'" }
+        $known["notebook"] = @{ usage = "notebook"; desc = "toggle Notebook mode: parchment desk, ink rain, red margin line" }
         $known["apple"]    = @{ usage = "apple [imagePath]"; desc = "show the Death Note scene as extra-large centered ASCII image; press Esc to exit" }
         $known["pride"]    = @{ usage = "pride"; desc = "toggle pride mode: rainbow flag styles; sw arrows pick gay/bi/lesbian/trans/femboy; run again to restore" }
         $known["arthas"]   = @{ usage = "arthas"; desc = "toggle Arthas mode: top-centered panel, Left/Right or A/D swaps dark/light Arthas, Ctrl+E closes panel, run again to restore theme" }
@@ -137,6 +139,9 @@ function Show-Commands {
         $known["foxtest"]    = @{ usage = "foxtest [-List] [-Quiet] [-Only <names>] [-Group all|info|tui|bat] [-Timeout <s>]"; desc = "smoke-test every command: runs the ones that finish, checks the menus still draw, reports what broke" }
         $known["foxpack"]    = @{ usage = "foxpack [-Full] [-Open] [-OutPath <path>]"; desc = "pack FoxTerminal into shareable zip (clean by default, -Full keeps your binds/notes/theme)" }
         $known["foxlife"]    = @{ usage = "foxlife [-Status|-Rebuild]"; desc = "FOXOS Life: notes, finance, tables, AI assistant (native window)" }
+        $known["foxstyle"]   = @{ usage = "foxstyle [-Status|-Rebuild|-Preset neon|-NodeEditor]"; desc = "FOXSTYLE look studio і візуальний редактор Node Launcher (меню без JSON)" }
+        $known["foxnodes"]   = @{ usage = "foxnodes [-Status|-Settings|-Show|-Hide|-Stop|-Rebuild]"; desc = "persistent desktop Node Launcher; Ctrl+Alt+Space activates, -Hide is explicit hide" }
+        $known["foxstt"]     = @{ usage = "foxstt [-Install|-Test|-Stop]"; desc = "локальний український STT (whisper.cpp) для FOXSTYLE / Node Launcher" }
         $known["home"]       = @{ usage = "home"; desc = "system home after login: day, notes, last site, Prompt / YTM / Sites / Help / Settings / Lock" }
         $known["lock"]       = @{ usage = "lock [-Status] [-Unlock]"; desc = "lock FoxTerminal (wallpaper + hide Ghostty); Shift+Alt+L; unlock with Fox password" }
         $known["off"]        = @{ usage = "off"; desc = "shut down the PC safely (asks Yes/No first; default is No)" }
@@ -144,7 +149,7 @@ function Show-Commands {
         $known["settings"]   = @{ usage = "settings [-Status] [-Gui] [-StopGui]"; desc = "system settings TUI, or Control UI in the browser (never blocks the pane)" }
         $known["foxsetup"]   = @{ usage = "foxsetup"; desc = "first-boot wizard: user, theme, FoxOS, logon, hotkeys, idle lock" }
         $known["changelog"]  = @{ usage = "changelog"; desc = "read-only history of what was added and removed (same viewer as notes)" }
-        $known["foxdocs"]    = @{ usage = "foxdocs [-List]"; desc = "browse all FoxTerminal guides/history; Left=terminal, Right=open+Explorer, Back at bottom" }
+        $known["foxdocs"]    = @{ usage = "foxdocs"; desc = "guides/history picker: Up/Down list, Left=Terminal, Right=Explorer, Enter open, Back at bottom" }
 
         # Auto-detect commands present in cmd\ (include .ps1 and .bat).
         # We de-duplicate by base name, prefer commands people can type (bat/ps1 wrappers).
@@ -202,17 +207,17 @@ function Show-Commands {
     Write-CommandSection "Login / Users:" $inv @("l","nuser","passwd","uexit","users","who") 0xF007
     Write-CommandSection "AI:" $inv @("ask","friend","sum") 0xF0EB
     Write-CommandSection "Media:" $inv @("dj","sp","sp-ui","yt","ytm","ytm-ui","ytsplit") 0xF001
-    Write-CommandSection "Apps / layout:" $inv @("appbind","apps","foxlife") 0xF108
+    Write-CommandSection "Apps / layout:" $inv @("appbind","apps","foxlife","foxstyle","foxnodes","foxstt") 0xF108
     Write-CommandSection "Firefox / web aliases:" $inv @("bbind","bdel","blist","ff","ffbot","gask","ser","sites","youtube") 0xF0AC
     Write-CommandSection "Telegram:" $inv @("tg","tglist","tgub") 0xF1D8
     Write-CommandSection "Notes / files:" $inv @("changelog","edit","fdel","foxdocs","go","hash","nano","nfile","nfould","unhash","up","view","wai") 0xF07B
     Write-CommandSection "Builds / packaging:" $inv @("build","foxpack") 0xF187
-    Write-CommandSection "Themes / visual modes:" $inv @("apple","arthas","dnote","foxlook","foxos","frederik","noir","pride","shader","spider","sw","themes") 0xF1FC
+    Write-CommandSection "Themes / visual modes:" $inv @("apple","arthas","default","dnote","foxlook","foxos","frederik","noir","notebook","pride","shader","spider","sw","themes") 0xF1FC
     Write-CommandSection "Network / diagnostics:" $inv @("chek","disk","fday","ftime","foximg","ip","netping","pulse","reconnect","sixel","weather","wifi") 0xF1EB
     Write-CommandSection "System tools:" $inv @("changelog","clear","ffsync","foxbg","foxdocs","foxscan","home","interface","lock","settings","term","texit") 0xF013
     Write-CommandSection "Hotkeys / bindings:" $inv @("foxhotkeys","foxinfo") 0xF11C
     Write-CommandSection "Setup / reset / help:" $inv @("foxdeps","foxhelp","foxreset","foxsetup","foxtest") 0xF0AD
-    Write-CommandSection "Wallpaper prompt (FoxOS desk):" $inv @("arthas","bright","bt","dnote","dj","ff","foxhelp","foxlife","foxlook","foxos","home","lock","mirror","noir","note","off","pride","rig","ser","settings","shader","shutdown","sites","sp","sw","term","wifi","yt","ytm","youtube") 0xF1FC
+    Write-CommandSection "Wallpaper prompt (FoxOS desk):" $inv @("arthas","bright","bt","default","dnote","dj","ff","foxhelp","foxlife","foxlook","foxos","home","lock","mirror","noir","notebook","note","off","pride","rig","ser","settings","shader","shutdown","sites","sp","sw","term","wifi","yt","ytm","youtube") 0xF1FC
 
     # Commands that live outside cmd\ (in FoxTerminal folder).
     Write-Host (Color-Text $p.accent2 ((Get-FoxIcon 0xF17A) + "  Windows (run from FoxTerminal folder):"))

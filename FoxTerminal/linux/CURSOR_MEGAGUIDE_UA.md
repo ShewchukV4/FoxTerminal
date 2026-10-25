@@ -17,6 +17,7 @@
 - `LINUX_GUIDE_UA.md` — стіл / DPI / оптимізація  
 - `COMMANDS_LINUX.md` — таблиця Windows→Linux  
 - `../FOXTERMINAL_GUIDE_UA.md` — повний системний гайд  
+- `../CHATGPT_PROJECT.md` — бриф для стороннього чату  
 - `../../CHANGELOG.md` — історія змін  
 
 ---
@@ -56,7 +57,7 @@
 
 1. Мова відповідей — **українська**, якщо юзер не попросив інше.  
 2. Спочатку спирайся на **цей файл**, потім на код.  
-3. Не вигадуй, що `foxos` / `foxlook` / `foxlife` / AHK `foxhotkeys` працюють на Linux — вони **Windows-only**. Давай Linux-еквіваленти з розділів 9–11.  
+3. Не вигадуй, що `foxos` / `foxlook` / `foxlife` / `foxstyle` / `foxnodes` / `foxstt` / AHK `foxhotkeys` працюють на Linux — вони **Windows-only**. Давай Linux-еквіваленти з розділів 9–11.  
 4. Не коміть і не пуш без явного «закоміть / запуш».  
 5. Не проси і не вигадуй паролі GitHub; для clone — PAT або SSH.  
 6. Не вмикай і не радь `foxlook shell on` без явного «так» і rescue-шляху (і лише про Windows).  
@@ -232,6 +233,7 @@ fox() { pwsh -NoProfile -File "$FOX/cmd/$1.ps1" "${@:2}"; }
 | E. Windows look | `foxlook` | ✅ | ❌ → DE |
 | F. Shell UX | `home`, `lock`, `settings`, `foxsetup` | ✅ | ⚠️ обмежено |
 | G. Apps | `foxlife`, companion | ✅ | ❌ / Firefox |
+| G2. Студія / меню | `foxstyle`, `foxnodes`, `foxstt` | ✅ | ❌ Windows-only |
 | H. Pack | `build`, `foxpack`, `changelog` | ✅ | ⚠️ |
 
 ---
@@ -260,6 +262,7 @@ fox() { pwsh -NoProfile -File "$FOX/cmd/$1.ps1" "${@:2}"; }
 | `settings` | `settings [-Status\|-Gui\|-StopGui]` | TUI / Control UI :17321 | ⚠️ |
 | `foxsetup` | `foxsetup` | first-boot wizard | ⚠️; на Linux — install.sh + ручні кроки |
 | `changelog` | `changelog` | історія | ⚠️ або `less CHANGELOG.md` |
+| `foxdocs` | `foxdocs` | усі гайди | ⚠️ `fox foxdocs` |
 | `off` / `shutdown` | `off` | вимкнути ПК | `systemctl poweroff` (з підтвердженням!) |
 
 ### 7.3 AI
@@ -333,9 +336,10 @@ fox() { pwsh -NoProfile -File "$FOX/cmd/$1.ps1" "${@:2}"; }
 | `term` | config mgr | ⚠️ + `ghostty +show-config` |
 | `apps` `appbind` | window layout | wmctrl / hyprctl / Super+arrows |
 
-### 7.11 Life / Companion
+### 7.11 Life / FOXSTYLE / Companion
 
 | `foxlife` | notes/finance app | ❌ Windows |
+| `foxstyle` `foxnodes` `foxstt` | look studio, Node Launcher, STT | ❌ Windows |
 | `foxaddon` `foxzen` | Zen/Firefox addon | ⚠️ частково |
 
 ### 7.12 Hotkeys / pack / deps
@@ -543,6 +547,7 @@ Addon: `FoxTerminal/firefox-addon/`.
 - `foxhotkeys` (AHK)  
 - `DisableBloat` / `DisableAds`  
 - `foxlife` як GUI  
+- `foxstyle` / `foxnodes` / `foxstt` (WinForms + локальний whisper)  
 - обіцянки що Win+L / OEM About стануть FoxOS  
 
 **Роби замість цього:** розділи 9–11 + `COMMANDS_LINUX.md`.
@@ -626,7 +631,8 @@ Ghostty + split 70/30; quick terminal; browser на іншому workspace.
 4. Collaborator invite прийнято (shew4uk → ShewchukV4/FoxTerminal).  
 5. Пояснено: чати Cursor локальні; пам’ять = git-файли.  
 6. Створено `FoxTerminal/linux/` з LINUX_GUIDE (стіл, DPI, оптимізація) + COMMANDS_LINUX.  
-7. Цей **CURSOR_MEGAGUIDE_UA.md** — головний контекст для Cursor на Kali.
+7. Цей **CURSOR_MEGAGUIDE_UA.md** — головний контекст для Cursor на Kali.  
+8. 2026-10-21…10-25: FOXSTYLE / foxnodes / foxstt — **Windows-only**; на Linux лишаються `ask` / `friend`. Гайди оновлені; дамп для стороннього чату: `FoxTerminal/CHATGPT_PROJECT.md`.
 
 ---
 

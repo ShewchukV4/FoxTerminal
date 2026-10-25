@@ -17,6 +17,12 @@
           "name": "FoxTerminal Showcase",
           "url": "./fox-terminal/index.html",
           "description": "Анімована презентація: теми, noir, Zen Companion, команди, AI, hotkeys"
+        },
+        {
+          "id": "foxstyle",
+          "name": "FOXSTYLE",
+          "url": "./foxstyle/index.html",
+          "description": "Студія вигляду FoxOS: модульні теми, live preview, анімації, Labs"
         }
       ]
     },

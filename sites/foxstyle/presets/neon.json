@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "name": "FoxOS Neon",
+  "preset": "neon",
+  "colors": { "theme": "neon", "accent": null, "accent2": null, "bg": null, "surface": null, "ink": null, "glass": 72 },
+  "chrome": { "opacity": 55, "blur": 24, "height": 36, "floating": false, "icons": "duotone", "iconSize": 16 },
+  "window": {
+    "radius": 12,
+    "shadowPreset": "neon",
+    "shadow": { "x": 0, "y": 28, "blur": 70, "spread": -12, "color": "#000000", "alpha": 60 },
+    "openAnim": "flip"
+  },
+  "panel": { "enter": "fold", "speed": "normal", "blur": 32, "radius": 24 },
+  "button": { "style": "sharp", "radius": null, "pressScale": 97 },
+  "motion": { "scale": "full", "fast": 160, "med": 320, "slow": 640, "ease": "elastic", "stagger": 60 },
+  "typography": { "ui": "Inter", "display": "Space Grotesk", "mono": "JetBrains Mono", "size": 13.5, "density": "normal", "tracking": "tight", "displayWeight": "600" },
+  "texture": { "kind": "neon-grid", "opacity": 100, "rain": 55, "dock": "bar" },
+  "labs": { "dynamicShadows": false, "foxGlow": true, "motionBlur": false, "liquidWindows": false },
+  "perElementAnims": { "dock": "fs-elastic-in", "nav": "fs-fade-up", "card": "fs-flip-open", "tile": "fs-flip-open", "toggle": "fs-elastic-pop" }
+}

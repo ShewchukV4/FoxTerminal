@@ -1,0 +1,656 @@
+/* ==========================================================================
+   FOXSTYLE — design tokens
+   FoxOS appearance control panel · FoxTerminal / FireFoxBot
+   --------------------------------------------------------------------------
+   Prefix: --fs-*
+   Layers:
+     1. Primitive palette (never used directly in components)
+     2. Semantic color modules  (bg · surface · ink · accent · accent2 · danger · success · muted)
+     3. Chrome-bar · Window · Panel · Buttons · Motion · Typography · Textures · Labs
+     4. Presets   [data-theme="dark|light|neon|foxpurple|custom"]
+     5. Attribute switches  [data-buttons] [data-win-open] [data-panel-enter] [data-texture] [data-lab-*]
+   Every token has a safe default in :root so partial overrides never break.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   0. Animatable custom properties (progressive enhancement)
+   -------------------------------------------------------------------------- */
+@property --fs-angle          { syntax: "<angle>";      inherits: true;  initial-value: 135deg; }
+@property --fs-glow-alpha     { syntax: "<number>";     inherits: true;  initial-value: 0.35; }
+@property --fs-ripple-r       { syntax: "<length>";     inherits: false; initial-value: 0px; }
+@property --fs-liquid-x       { syntax: "<percentage>"; inherits: false; initial-value: 50%; }
+@property --fs-liquid-y       { syntax: "<percentage>"; inherits: false; initial-value: 50%; }
+@property --fs-shadow-shift-x { syntax: "<length>";     inherits: true;  initial-value: 0px; }
+@property --fs-shadow-shift-y { syntax: "<length>";     inherits: true;  initial-value: 0px; }
+
+:root {
+  color-scheme: dark;
+
+  /* ------------------------------------------------------------------------
+     1. PRIMITIVES — raw palette
+     ------------------------------------------------------------------------ */
+  --fs-p-night-0:   #0B0A12;   /* deepest canvas               */
+  --fs-p-night-1:   #110F1B;
+  --fs-p-night-2:   #161322;   /* glass base                   */
+  --fs-p-night-3:   #1E1A2E;
+  --fs-p-night-4:   #2A2440;
+  --fs-p-night-5:   #3A3256;
+
+  --fs-p-violet-0:  #4B33C9;
+  --fs-p-violet-1:  #5B3FE0;
+  --fs-p-violet-2:  #7B5CFF;   /* brand accent                 */
+  --fs-p-violet-3:  #9A7DFF;
+  --fs-p-violet-4:  #B794FF;   /* brand accent (bright)        */
+  --fs-p-violet-5:  #D5C4FF;
+
+  --fs-p-fox-0:     #B85F10;
+  --fs-p-fox-1:     #DC7A14;   /* FoxOS default "orange"       */
+  --fs-p-fox-2:     #FFA23A;
+  --fs-p-fox-3:     #FFBE5A;
+
+  --fs-p-neon-green:#7EF06B;   /* FoxOS `sw neon`              */
+  --fs-p-neon-cyan: #5CF2FF;
+  --fs-p-neon-pink: #FF5CC8;
+
+  --fs-p-ink-0:     #F4F1FF;
+  --fs-p-ink-1:     #D9D3F2;
+  --fs-p-ink-2:     #A69FC4;
+  --fs-p-ink-3:     #776F99;
+  --fs-p-ink-4:     #4A4466;
+
+  --fs-p-danger:    #FF5C7A;
+  --fs-p-success:   #4EDB9C;
+  --fs-p-warn:      #FFC857;
+
+  /* ------------------------------------------------------------------------
+     2. SEMANTIC COLOR MODULES
+     ------------------------------------------------------------------------ */
+  /* bg */
+  --fs-bg:            var(--fs-p-night-0);
+  --fs-bg-2:          var(--fs-p-night-1);
+  --fs-bg-gradient:   radial-gradient(120% 90% at 85% -10%, color-mix(in oklab, var(--fs-accent) 22%, transparent), transparent 60%),
+                      radial-gradient(90% 70% at -10% 100%, color-mix(in oklab, var(--fs-accent2) 14%, transparent), transparent 60%),
+                      linear-gradient(160deg, var(--fs-bg), var(--fs-bg-2));
+  --fs-bg-vignette:   radial-gradient(140% 100% at 50% 50%, transparent 55%, rgb(0 0 0 / 0.45));
+
+  /* surface (glass stack) */
+  --fs-surface:        color-mix(in srgb, var(--fs-p-night-2) 72%, transparent);
+  --fs-surface-solid:  var(--fs-p-night-2);
+  --fs-surface-2:      color-mix(in srgb, var(--fs-p-night-3) 70%, transparent);
+  --fs-surface-3:      color-mix(in srgb, var(--fs-p-night-4) 68%, transparent);
+  --fs-surface-raised: color-mix(in srgb, var(--fs-p-night-3) 92%, var(--fs-accent) 8%);
+  --fs-surface-sunken: color-mix(in srgb, var(--fs-p-night-0) 80%, transparent);
+  --fs-surface-hover:  color-mix(in srgb, var(--fs-accent) 9%, transparent);
+  --fs-surface-active: color-mix(in srgb, var(--fs-accent) 16%, transparent);
+
+  --fs-line:           rgb(255 255 255 / 0.08);
+  --fs-line-strong:    rgb(255 255 255 / 0.14);
+  --fs-line-accent:    color-mix(in srgb, var(--fs-accent) 45%, transparent);
+  --fs-line-inner:     inset 0 1px 0 rgb(255 255 255 / 0.06);
+
+  /* ink */
+  --fs-ink:            var(--fs-p-ink-0);
+  --fs-ink-2:          var(--fs-p-ink-1);
+  --fs-ink-3:          var(--fs-p-ink-2);
+  --fs-ink-on-accent:  #FFFFFF;
+  --fs-ink-code:       var(--fs-p-violet-5);
+
+  /* accent (primary violet) */
+  --fs-accent:         var(--fs-p-violet-2);
+  --fs-accent-bright:  var(--fs-p-violet-4);
+  --fs-accent-deep:    var(--fs-p-violet-0);
+  --fs-accent-soft:    color-mix(in srgb, var(--fs-accent) 18%, transparent);
+  --fs-accent-ring:    0 0 0 3px color-mix(in srgb, var(--fs-accent) 35%, transparent);
+  --fs-accent-gradient:linear-gradient(var(--fs-angle), var(--fs-accent) 0%, var(--fs-accent-bright) 100%);
+
+  /* accent2 (secondary — fox ember by default, keeps the FoxOS motif) */
+  --fs-accent2:        var(--fs-p-fox-2);
+  --fs-accent2-deep:   var(--fs-p-fox-1);
+  --fs-accent2-soft:   color-mix(in srgb, var(--fs-accent2) 16%, transparent);
+
+  /* status */
+  --fs-danger:         var(--fs-p-danger);
+  --fs-danger-soft:    color-mix(in srgb, var(--fs-danger) 16%, transparent);
+  --fs-success:        var(--fs-p-success);
+  --fs-success-soft:   color-mix(in srgb, var(--fs-success) 16%, transparent);
+  --fs-warn:           var(--fs-p-warn);
+
+  /* muted */
+  --fs-muted:          var(--fs-p-ink-3);
+  --fs-muted-2:        var(--fs-p-ink-4);
+  --fs-muted-bg:       rgb(255 255 255 / 0.04);
+
+  /* glow (consumed by labs) */
+  --fs-glow-color:     color-mix(in srgb, var(--fs-accent) 55%, transparent);
+  --fs-glow-alpha:     0.35;
+
+  /* ------------------------------------------------------------------------
+     3a. CHROME BAR  (FoxOS top bar / desk prompt)
+     ------------------------------------------------------------------------ */
+  --fs-chrome-opacity:    0.72;             /* 0..1                       */
+  --fs-chrome-blur:       18px;
+  --fs-chrome-height:     36px;
+  --fs-chrome-radius:     0px;              /* 0 = flush, >0 = floating   */
+  --fs-chrome-bg:         color-mix(in srgb, var(--fs-surface-solid) calc(var(--fs-chrome-opacity) * 100%), transparent);
+  --fs-chrome-line:       var(--fs-line);
+  --fs-chrome-icon-size:  16px;
+  --fs-chrome-icon-stroke:1.5px;            /* line icons                 */
+  --fs-chrome-icon-fill:  0;                /* 0 = outline, 1 = filled    */
+  --fs-chrome-icon-style: "line";           /* line | filled | duotone (informational, mirrored by [data-icons]) */
+  --fs-chrome-icon-color: var(--fs-ink-2);
+  --fs-chrome-icon-accent:var(--fs-accent-bright);
+
+  /* ------------------------------------------------------------------------
+     3b. WINDOW  (FoxOS app windows + preview mini window)
+     ------------------------------------------------------------------------ */
+  --fs-win-radius:         16px;
+  --fs-win-radius-inner:   calc(var(--fs-win-radius) - 6px);
+  --fs-win-border:         1px solid var(--fs-line-strong);
+  --fs-win-bg:             color-mix(in srgb, var(--fs-surface-solid) 86%, transparent);
+  --fs-win-titlebar-h:     34px;
+
+  --fs-win-shadow-x:       0px;
+  --fs-win-shadow-y:       28px;
+  --fs-win-shadow-blur:    70px;
+  --fs-win-shadow-spread:  -12px;
+  --fs-win-shadow-color:   rgb(0 0 0 / 0.60);
+  --fs-win-shadow:         calc(var(--fs-win-shadow-x) + var(--fs-shadow-shift-x))
+                           calc(var(--fs-win-shadow-y) + var(--fs-shadow-shift-y))
+                           var(--fs-win-shadow-blur)
+                           var(--fs-win-shadow-spread)
+                           var(--fs-win-shadow-color),
+                           0 0 0 1px rgb(255 255 255 / 0.04) inset;
+
+  --fs-win-open-anim:      fs-zoom-open;    /* keyframe name, see motion.css */
+  --fs-win-open-dur:       var(--fs-dur-med);
+  --fs-win-open-ease:      var(--fs-ease-elastic);
+  --fs-win-close-anim:     fs-zoom-close;
+
+  /* ------------------------------------------------------------------------
+     3c. PANEL  (the FOXSTYLE panel itself)
+     ------------------------------------------------------------------------ */
+  --fs-panel-enter:        fs-book-open;    /* book | slide | fade | fold | zoom */
+  --fs-panel-exit:         fs-book-close;
+  --fs-panel-speed:        var(--fs-dur-slow);
+  --fs-panel-ease:         var(--fs-ease-liquid);
+  --fs-panel-bg:           color-mix(in srgb, var(--fs-bg-2) 84%, transparent);
+  --fs-panel-blur:         28px;
+  --fs-panel-radius:       24px;
+  --fs-panel-width:        min(1280px, 92vw);
+  --fs-panel-height:       min(860px, 92vh);
+  --fs-panel-perspective:  2200px;
+  --fs-panel-spine:        linear-gradient(90deg,
+                             rgb(0 0 0 / 0.55),
+                             rgb(0 0 0 / 0.18) 40%,
+                             transparent 70%);
+
+  /* ------------------------------------------------------------------------
+     3d. BUTTONS — defaults (overridden by [data-buttons] / [data-btn])
+     ------------------------------------------------------------------------ */
+  --fs-btn-h:              40px;
+  --fs-btn-h-sm:           32px;
+  --fs-btn-h-lg:           48px;
+  --fs-btn-px:             18px;
+  --fs-btn-radius:         12px;
+  --fs-btn-bg:             var(--fs-surface-2);
+  --fs-btn-bg-hover:       var(--fs-surface-hover);
+  --fs-btn-border:         1px solid var(--fs-line-strong);
+  --fs-btn-shadow:         0 1px 0 rgb(255 255 255 / 0.05) inset, 0 8px 20px -10px rgb(0 0 0 / 0.6);
+  --fs-btn-blur:           0px;
+  --fs-btn-ink:            var(--fs-ink);
+  --fs-btn-primary-bg:     var(--fs-accent-gradient);
+  --fs-btn-primary-ink:    var(--fs-ink-on-accent);
+  --fs-btn-primary-shadow: 0 10px 30px -10px color-mix(in srgb, var(--fs-accent) 70%, transparent);
+  --fs-btn-morph:          fs-morph-button;   /* hover keyframe (liquid style) */
+  --fs-btn-press-scale:    0.97;
+
+  /* ------------------------------------------------------------------------
+     3e. MOTION
+     ------------------------------------------------------------------------ */
+  --fs-dur-instant:  80ms;
+  --fs-dur-fast:     160ms;
+  --fs-dur-med:      320ms;
+  --fs-dur-slow:     640ms;
+  --fs-dur-epic:     1100ms;
+
+  --fs-ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --fs-ease-decel:    cubic-bezier(0, 0, 0.2, 1);
+  --fs-ease-accel:    cubic-bezier(0.4, 0, 1, 1);
+  --fs-ease-elastic:  cubic-bezier(0.34, 1.56, 0.64, 1);
+  --fs-ease-bounce:   cubic-bezier(0.68, -0.6, 0.32, 1.6);
+  --fs-ease-liquid:   cubic-bezier(0.65, 0, 0.1, 1);
+  --fs-ease-book:     cubic-bezier(0.7, 0, 0.2, 1);
+
+  --fs-motion-scale:  1;        /* multiplied into every duration; reduced-motion → 0 */
+  --fs-stagger:       45ms;
+
+  /* ------------------------------------------------------------------------
+     3f. TYPOGRAPHY
+     ------------------------------------------------------------------------ */
+  --fs-font-ui:       "Inter", "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --fs-font-display:  "Space Grotesk", "Inter", "Segoe UI Variable Display", system-ui, sans-serif;
+  --fs-font-mono:     "JetBrains Mono", "Cascadia Mono", "Cascadia Code", Consolas, monospace;
+
+  --fs-fs-2xs:  10.5px;
+  --fs-fs-xs:   11.5px;
+  --fs-fs-sm:   12.5px;
+  --fs-fs-md:   13.5px;   /* base UI                       */
+  --fs-fs-lg:   15px;
+  --fs-fs-xl:   18px;
+  --fs-fs-2xl:  22px;
+  --fs-fs-3xl:  28px;
+  --fs-fs-hero: 36px;
+
+  --fs-fw-regular:  400;
+  --fs-fw-medium:   500;
+  --fs-fw-semibold: 600;
+  --fs-fw-bold:     700;
+
+  --fs-lh-tight:  1.15;
+  --fs-lh-snug:   1.3;
+  --fs-lh-normal: 1.5;
+
+  --fs-track-tight:  -0.02em;
+  --fs-track-normal: 0;
+  --fs-track-wide:   0.04em;
+  --fs-track-caps:   0.12em;   /* section eyebrows              */
+
+  --fs-fx-features: "cv02", "cv03", "cv04", "ss01", "tnum";
+
+  /* ------------------------------------------------------------------------
+     3g. SPACING · RADII · Z
+     ------------------------------------------------------------------------ */
+  --fs-sp-1: 4px;  --fs-sp-2: 8px;  --fs-sp-3: 12px; --fs-sp-4: 16px;
+  --fs-sp-5: 20px; --fs-sp-6: 24px; --fs-sp-7: 32px; --fs-sp-8: 40px; --fs-sp-9: 56px;
+
+  --fs-r-xs: 6px;  --fs-r-sm: 10px; --fs-r-md: 14px; --fs-r-lg: 18px; --fs-r-xl: 24px; --fs-r-pill: 999px;
+
+  --fs-z-bg: -1; --fs-z-base: 0; --fs-z-sticky: 10; --fs-z-overlay: 100; --fs-z-panel: 200; --fs-z-toast: 300;
+
+  /* ------------------------------------------------------------------------
+     3h. TEXTURES — background layers (composed over surface color)
+     ------------------------------------------------------------------------ */
+  --fs-tex-none:  none;
+
+  --fs-tex-glass:
+    linear-gradient(165deg, rgb(255 255 255 / 0.10), rgb(255 255 255 / 0.03) 45%, rgb(255 255 255 / 0.015) 100%),
+    radial-gradient(120% 60% at 50% -20%, rgb(255 255 255 / 0.08), transparent 60%);
+
+  --fs-tex-metal:
+    repeating-linear-gradient(90deg,
+      rgb(255 255 255 / 0.035) 0 1px, transparent 1px 3px),
+    linear-gradient(180deg,
+      rgb(255 255 255 / 0.12), rgb(255 255 255 / 0.02) 30%,
+      rgb(0 0 0 / 0.10) 70%,  rgb(255 255 255 / 0.06) 100%);
+
+  --fs-tex-fabric:
+    repeating-linear-gradient(45deg,  rgb(255 255 255 / 0.028) 0 2px, transparent 2px 4px),
+    repeating-linear-gradient(-45deg, rgb(255 255 255 / 0.028) 0 2px, transparent 2px 4px),
+    linear-gradient(180deg, rgb(255 255 255 / 0.03), transparent);
+
+  --fs-tex-neon-grid:
+    linear-gradient(90deg, color-mix(in srgb, var(--fs-accent) 22%, transparent) 1px, transparent 1px),
+    linear-gradient(0deg,  color-mix(in srgb, var(--fs-accent) 22%, transparent) 1px, transparent 1px),
+    radial-gradient(80% 60% at 50% 110%, color-mix(in srgb, var(--fs-accent) 28%, transparent), transparent 70%);
+  --fs-tex-neon-grid-size: 28px 28px, 28px 28px, 100% 100%;
+
+  --fs-texture:        var(--fs-tex-glass);     /* active texture         */
+  --fs-texture-size:   auto;
+  --fs-texture-blend:  normal;
+  --fs-texture-opacity:1;
+
+  /* fox motif (subtle, used as watermark mask) */
+  --fs-fox-mark: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><path fill='white' fill-rule='evenodd' d='M6 6c9 2 16 7 20 12h12c4-5 11-10 20-12-1 8-2 14-4 20 2 4 3 8 3 12 0 12-11 20-25 20S7 50 7 38c0-4 1-8 3-12C8 20 7 14 6 6zm18 26c-2 0-4 2-4 4s2 4 4 4 4-2 4-4-2-4-4-4zm16 0c-2 0-4 2-4 4s2 4 4 4 4-2 4-4-2-4-4-4zm-8 10l-5 5c1 2 3 3 5 3s4-1 5-3l-5-5z'/></svg>");
+
+  /* ------------------------------------------------------------------------
+     3i. LABS FLAGS — numeric 0|1 so they can be multiplied in calc()
+     ------------------------------------------------------------------------ */
+  --fs-lab-dynamic-shadows: 0;   /* shadow follows pointer (JS writes --fs-shadow-shift-*) */
+  --fs-lab-fox-glow:        0;   /* accent bloom on focused window / apply btn */
+  --fs-lab-motion-blur:     0;   /* blur on fast transitions                     */
+  --fs-lab-liquid-windows:  0;   /* liquid open/close + wobble                    */
+
+  /* derived from labs */
+  --fs-glow-size:      calc(var(--fs-lab-fox-glow) * 28px);
+  --fs-glow-shadow:    0 0 var(--fs-glow-size) calc(var(--fs-lab-fox-glow) * 2px) var(--fs-glow-color);
+  --fs-blur-motion:    calc(var(--fs-lab-motion-blur) * 6px);
+  --fs-liquid-amount:  calc(var(--fs-lab-liquid-windows) * 1);
+}
+
+/* ==========================================================================
+   4. PRESET THEMES
+   Mapping to FoxOS `sw` palette:
+     dark      → FoxOS night base, violet brand accent, ember fox accent2
+     light     → FoxOS `white` (#F2F2F2) wall + deep violet ink accents
+     neon      → FoxOS `neon` (#7EF06B) as accent2, electric violet accent, grid texture
+     foxpurple → FoxOS `purple` (#A05AFF) / `violet` (#8356E6)
+     custom    → JS writes --fs-custom-* ; everything below derives from them
+   ========================================================================== */
+
+/* ---- dark (default, same as :root but explicit for toggling) ------------ */
+[data-theme="dark"] {
+  color-scheme: dark;
+  --fs-bg:              var(--fs-p-night-0);
+  --fs-bg-2:            var(--fs-p-night-1);
+  --fs-accent:          var(--fs-p-violet-2);
+  --fs-accent-bright:   var(--fs-p-violet-4);
+  --fs-accent-deep:     var(--fs-p-violet-0);
+  --fs-accent2:         var(--fs-p-fox-2);
+  --fs-accent2-deep:    var(--fs-p-fox-1);
+  --fs-texture:         var(--fs-tex-glass);
+}
+
+/* ---- light — premium paper, NOT washed purple-on-white ------------------ */
+[data-theme="light"] {
+  color-scheme: light;
+
+  --fs-bg:              #F3F1F8;
+  --fs-bg-2:            #E9E6F2;
+  --fs-bg-gradient:     radial-gradient(110% 80% at 90% -10%, color-mix(in oklab, var(--fs-accent) 12%, transparent), transparent 60%),
+                        radial-gradient(80% 60% at -10% 100%, color-mix(in oklab, var(--fs-accent2) 10%, transparent), transparent 60%),
+                        linear-gradient(160deg, var(--fs-bg), var(--fs-bg-2));
+  --fs-bg-vignette:     radial-gradient(140% 100% at 50% 50%, transparent 65%, rgb(40 30 80 / 0.08));
+
+  --fs-surface:         rgb(255 255 255 / 0.72);
+  --fs-surface-solid:   #FFFFFF;
+  --fs-surface-2:       rgb(255 255 255 / 0.86);
+  --fs-surface-3:       #F7F5FC;
+  --fs-surface-raised:  #FFFFFF;
+  --fs-surface-sunken:  #ECE9F4;
+  --fs-surface-hover:   color-mix(in srgb, var(--fs-accent) 7%, transparent);
+  --fs-surface-active:  color-mix(in srgb, var(--fs-accent) 13%, transparent);
+
+  --fs-line:            rgb(28 20 60 / 0.09);
+  --fs-line-strong:     rgb(28 20 60 / 0.15);
+  --fs-line-inner:      inset 0 1px 0 rgb(255 255 255 / 0.9);
+
+  --fs-ink:             #17142A;
+  --fs-ink-2:           #3C3659;
+  --fs-ink-3:           #6B6489;
+  --fs-ink-on-accent:   #FFFFFF;
+  --fs-ink-code:        #4B33C9;
+
+  /* deeper violet so it holds contrast on white (AA on #fff ≈ 6.1:1) */
+  --fs-accent:          #5B3FE0;
+  --fs-accent-bright:   #7B5CFF;
+  --fs-accent-deep:     #4B33C9;
+  --fs-accent-soft:     color-mix(in srgb, var(--fs-accent) 12%, transparent);
+  --fs-accent-ring:     0 0 0 3px color-mix(in srgb, var(--fs-accent) 28%, transparent);
+
+  --fs-accent2:         #D9731A;
+  --fs-accent2-deep:    #B85F10;
+
+  --fs-danger:          #D93A5A;
+  --fs-success:         #1E9E6A;
+  --fs-warn:            #C98A12;
+
+  --fs-muted:           #7A7399;
+  --fs-muted-2:         #A49EBF;
+  --fs-muted-bg:        rgb(28 20 60 / 0.04);
+
+  --fs-glow-color:      color-mix(in srgb, var(--fs-accent) 30%, transparent);
+
+  --fs-chrome-opacity:  0.82;
+  --fs-chrome-icon-color: var(--fs-ink-2);
+
+  --fs-win-bg:          rgb(255 255 255 / 0.92);
+  --fs-win-border:      1px solid rgb(28 20 60 / 0.10);
+  --fs-win-shadow-y:    22px;
+  --fs-win-shadow-blur: 60px;
+  --fs-win-shadow-color:rgb(40 30 90 / 0.22);
+
+  --fs-panel-bg:        rgb(250 249 253 / 0.86);
+  --fs-panel-spine:     linear-gradient(90deg, rgb(40 30 90 / 0.18), rgb(40 30 90 / 0.06) 40%, transparent 70%);
+
+  --fs-btn-bg:          #FFFFFF;
+  --fs-btn-border:      1px solid rgb(28 20 60 / 0.12);
+  --fs-btn-shadow:      0 1px 0 rgb(255 255 255 / 0.9) inset, 0 6px 16px -10px rgb(40 30 90 / 0.35);
+  --fs-btn-primary-shadow: 0 10px 26px -10px color-mix(in srgb, var(--fs-accent) 55%, transparent);
+
+  --fs-tex-glass:
+    linear-gradient(165deg, rgb(255 255 255 / 0.9), rgb(255 255 255 / 0.5) 45%, rgb(255 255 255 / 0.3));
+  --fs-tex-metal:
+    repeating-linear-gradient(90deg, rgb(28 20 60 / 0.03) 0 1px, transparent 1px 3px),
+    linear-gradient(180deg, #FFFFFF, #F1EEF8 30%, #E6E2F0 70%, #FBFAFE);
+  --fs-tex-fabric:
+    repeating-linear-gradient(45deg,  rgb(28 20 60 / 0.03) 0 2px, transparent 2px 4px),
+    repeating-linear-gradient(-45deg, rgb(28 20 60 / 0.03) 0 2px, transparent 2px 4px);
+  --fs-tex-neon-grid:
+    linear-gradient(90deg, color-mix(in srgb, var(--fs-accent) 14%, transparent) 1px, transparent 1px),
+    linear-gradient(0deg,  color-mix(in srgb, var(--fs-accent) 14%, transparent) 1px, transparent 1px);
+  --fs-texture:         var(--fs-tex-glass);
+}
+
+/* ---- neon — electric, grid, bloom on ----------------------------------- */
+[data-theme="neon"] {
+  color-scheme: dark;
+  --fs-bg:              #06060D;
+  --fs-bg-2:            #0B0918;
+  --fs-bg-gradient:     radial-gradient(100% 70% at 50% 110%, color-mix(in oklab, var(--fs-accent) 30%, transparent), transparent 65%),
+                        radial-gradient(60% 50% at 100% 0%, color-mix(in oklab, var(--fs-accent2) 18%, transparent), transparent 60%),
+                        linear-gradient(180deg, var(--fs-bg), var(--fs-bg-2));
+
+  --fs-surface:         rgb(14 12 28 / 0.66);
+  --fs-surface-solid:   #0E0C1C;
+  --fs-surface-2:       rgb(22 18 42 / 0.7);
+  --fs-surface-3:       rgb(30 24 56 / 0.7);
+
+  --fs-line:            color-mix(in srgb, var(--fs-accent) 22%, transparent);
+  --fs-line-strong:     color-mix(in srgb, var(--fs-accent) 40%, transparent);
+
+  --fs-ink:             #F2EEFF;
+  --fs-ink-2:           #CFC5FF;
+  --fs-ink-3:           #9D8FD6;
+
+  --fs-accent:          #9D7BFF;
+  --fs-accent-bright:   #C9B3FF;
+  --fs-accent-deep:     #6A48F0;
+  --fs-accent2:         var(--fs-p-neon-green);   /* ← FoxOS `sw neon` */
+  --fs-accent2-deep:    #4FC940;
+
+  --fs-glow-color:      color-mix(in srgb, var(--fs-accent) 75%, transparent);
+  --fs-glow-alpha:      0.6;
+
+  --fs-chrome-opacity:  0.55;
+  --fs-chrome-blur:     24px;
+  --fs-chrome-icon-accent: var(--fs-accent2);
+
+  --fs-win-radius:      12px;
+  --fs-win-border:      1px solid color-mix(in srgb, var(--fs-accent) 45%, transparent);
+  --fs-win-shadow-color: color-mix(in srgb, var(--fs-accent) 40%, rgb(0 0 0 / 0.7));
+  --fs-win-open-anim:   fs-flip-open;
+
+  --fs-btn-border:      1px solid color-mix(in srgb, var(--fs-accent) 40%, transparent);
+  --fs-btn-primary-bg:  linear-gradient(var(--fs-angle), var(--fs-accent-deep), var(--fs-accent) 55%, var(--fs-accent2) 130%);
+
+  --fs-texture:         var(--fs-tex-neon-grid);
+  --fs-texture-size:    var(--fs-tex-neon-grid-size);
+
+  --fs-lab-fox-glow:    1;      /* neon ships with glow on by default */
+}
+
+/* ---- foxpurple — warm violet + fox ember, maps to FoxOS `purple` -------- */
+[data-theme="foxpurple"] {
+  color-scheme: dark;
+  --fs-bg:              #0F0A1A;
+  --fs-bg-2:            #180F2B;
+  --fs-bg-gradient:     radial-gradient(110% 80% at 80% -10%, color-mix(in oklab, #A05AFF 28%, transparent), transparent 60%),
+                        radial-gradient(90% 60% at 0% 110%, color-mix(in oklab, var(--fs-p-fox-1) 20%, transparent), transparent 60%),
+                        linear-gradient(160deg, var(--fs-bg), var(--fs-bg-2));
+
+  --fs-surface:         rgb(30 20 52 / 0.72);
+  --fs-surface-solid:   #1E1434;
+  --fs-surface-2:       rgb(40 26 68 / 0.72);
+  --fs-surface-3:       rgb(52 34 86 / 0.7);
+  --fs-surface-raised:  #2A1C48;
+
+  --fs-line:            rgb(220 190 255 / 0.10);
+  --fs-line-strong:     rgb(220 190 255 / 0.18);
+
+  --fs-ink:             #F6EEFF;
+  --fs-ink-2:           #DCCBF5;
+  --fs-ink-3:           #A892CC;
+
+  --fs-accent:          #A05AFF;                 /* ← FoxOS `sw purple` */
+  --fs-accent-bright:   #C390FF;
+  --fs-accent-deep:     #8356E6;                 /* ← FoxOS `sw violet` */
+  --fs-accent2:         var(--fs-p-fox-2);
+  --fs-accent2-deep:    var(--fs-p-fox-1);
+
+  --fs-glow-color:      color-mix(in srgb, var(--fs-accent) 60%, transparent);
+
+  --fs-win-radius:      18px;
+  --fs-win-shadow-color: rgb(20 5 50 / 0.7);
+  --fs-win-open-anim:   fs-liquid-open;
+
+  --fs-btn-radius:      14px;
+  --fs-btn-primary-bg:  linear-gradient(var(--fs-angle), #8356E6, #A05AFF 60%, #C390FF);
+
+  --fs-texture:         var(--fs-tex-glass);
+  --fs-lab-liquid-windows: 1;
+}
+
+/* ---- custom — driven by --fs-custom-* (JS/HTML inline style) ------------ */
+[data-theme="custom"] {
+  --fs-custom-accent:   #7B5CFF;
+  --fs-custom-accent2:  #FFA23A;
+  --fs-custom-bg:       #0B0A12;
+  --fs-custom-surface:  #161322;
+  --fs-custom-ink:      #F4F1FF;
+  --fs-custom-glass:    0.72;      /* 0..1 surface opacity */
+
+  --fs-bg:              var(--fs-custom-bg);
+  --fs-bg-2:            color-mix(in srgb, var(--fs-custom-bg) 85%, var(--fs-custom-accent) 15%);
+  --fs-surface:         color-mix(in srgb, var(--fs-custom-surface) calc(var(--fs-custom-glass) * 100%), transparent);
+  --fs-surface-solid:   var(--fs-custom-surface);
+  --fs-surface-2:       color-mix(in srgb, var(--fs-custom-surface) 80%, var(--fs-custom-ink) 6%);
+  --fs-surface-3:       color-mix(in srgb, var(--fs-custom-surface) 70%, var(--fs-custom-ink) 10%);
+  --fs-surface-raised:  color-mix(in srgb, var(--fs-custom-surface) 88%, var(--fs-custom-accent) 12%);
+
+  --fs-ink:             var(--fs-custom-ink);
+  --fs-ink-2:           color-mix(in srgb, var(--fs-custom-ink) 82%, var(--fs-custom-surface));
+  --fs-ink-3:           color-mix(in srgb, var(--fs-custom-ink) 58%, var(--fs-custom-surface));
+  --fs-muted:           color-mix(in srgb, var(--fs-custom-ink) 45%, var(--fs-custom-surface));
+  --fs-line:            color-mix(in srgb, var(--fs-custom-ink) 9%, transparent);
+  --fs-line-strong:     color-mix(in srgb, var(--fs-custom-ink) 15%, transparent);
+
+  --fs-accent:          var(--fs-custom-accent);
+  --fs-accent-bright:   color-mix(in oklab, var(--fs-custom-accent) 70%, white);
+  --fs-accent-deep:     color-mix(in oklab, var(--fs-custom-accent) 75%, black);
+  --fs-accent2:         var(--fs-custom-accent2);
+  --fs-accent2-deep:    color-mix(in oklab, var(--fs-custom-accent2) 78%, black);
+  --fs-glow-color:      color-mix(in srgb, var(--fs-custom-accent) 55%, transparent);
+}
+
+/* ==========================================================================
+   5. ATTRIBUTE SWITCHES
+   ========================================================================== */
+
+/* ---- button style family (root-level default) --------------------------- */
+[data-buttons="rounded"] {
+  --fs-btn-radius:  var(--fs-r-pill);
+  --fs-btn-px:      22px;
+  --fs-btn-bg:      var(--fs-surface-2);
+  --fs-btn-blur:    0px;
+}
+[data-buttons="sharp"] {
+  --fs-btn-radius:  4px;
+  --fs-btn-px:      16px;
+  --fs-btn-border:  1px solid var(--fs-line-strong);
+  --fs-btn-shadow:  0 0 0 1px rgb(0 0 0 / 0.3), 0 1px 0 rgb(255 255 255 / 0.06) inset;
+  --fs-btn-press-scale: 1;
+}
+[data-buttons="glass"] {
+  --fs-btn-radius:  12px;
+  --fs-btn-bg:      var(--fs-tex-glass), color-mix(in srgb, var(--fs-surface-solid) 40%, transparent);
+  --fs-btn-blur:    16px;
+  --fs-btn-border:  1px solid rgb(255 255 255 / 0.16);
+  --fs-btn-shadow:  inset 0 1px 0 rgb(255 255 255 / 0.18), 0 12px 30px -14px rgb(0 0 0 / 0.7);
+}
+[data-buttons="liquid"] {
+  --fs-btn-radius:  16px;
+  --fs-btn-bg:      radial-gradient(120% 120% at var(--fs-liquid-x) var(--fs-liquid-y),
+                      color-mix(in srgb, var(--fs-accent) 30%, transparent), transparent 60%),
+                    var(--fs-surface-2);
+  --fs-btn-blur:    10px;
+  --fs-btn-border:  1px solid color-mix(in srgb, var(--fs-accent) 30%, transparent);
+  --fs-btn-press-scale: 0.95;
+  --fs-btn-morph:   fs-morph-button;
+}
+
+/* element-level override — same tokens, scoped */
+[data-btn="rounded"] { --fs-btn-radius: var(--fs-r-pill); --fs-btn-px: 22px; }
+[data-btn="sharp"]   { --fs-btn-radius: 4px; --fs-btn-press-scale: 1; }
+[data-btn="glass"]   { --fs-btn-radius: 12px; --fs-btn-blur: 16px;
+                       --fs-btn-bg: var(--fs-tex-glass), color-mix(in srgb, var(--fs-surface-solid) 40%, transparent);
+                       --fs-btn-border: 1px solid rgb(255 255 255 / 0.16); }
+[data-btn="liquid"]  { --fs-btn-radius: 16px; --fs-btn-blur: 10px; --fs-btn-press-scale: 0.95;
+                       --fs-btn-bg: radial-gradient(120% 120% at var(--fs-liquid-x) var(--fs-liquid-y),
+                         color-mix(in srgb, var(--fs-accent) 30%, transparent), transparent 60%), var(--fs-surface-2);
+                       --fs-btn-border: 1px solid color-mix(in srgb, var(--fs-accent) 30%, transparent); }
+
+/* ---- window open animation --------------------------------------------- */
+[data-win-open="zoom"]   { --fs-win-open-anim: fs-zoom-open;   --fs-win-open-ease: var(--fs-ease-elastic); }
+[data-win-open="flip"]   { --fs-win-open-anim: fs-flip-open;   --fs-win-open-ease: var(--fs-ease-book);    --fs-win-open-dur: var(--fs-dur-slow); }
+[data-win-open="fold"]   { --fs-win-open-anim: fs-fold-open;   --fs-win-open-ease: var(--fs-ease-liquid);  --fs-win-open-dur: var(--fs-dur-slow); }
+[data-win-open="liquid"] { --fs-win-open-anim: fs-liquid-open; --fs-win-open-ease: var(--fs-ease-bounce);  --fs-win-open-dur: var(--fs-dur-slow); }
+[data-win-open="fade"]   { --fs-win-open-anim: fs-fade-in;     --fs-win-open-ease: var(--fs-ease-decel);   --fs-win-open-dur: var(--fs-dur-med); }
+[data-win-open="slide"]  { --fs-win-open-anim: fs-slide-up;    --fs-win-open-ease: var(--fs-ease-standard); }
+
+/* ---- panel enter style -------------------------------------------------- */
+[data-panel-enter="book"]  { --fs-panel-enter: fs-book-open;  --fs-panel-exit: fs-book-close;  --fs-panel-ease: var(--fs-ease-book); }
+[data-panel-enter="slide"] { --fs-panel-enter: fs-slide-in-right; --fs-panel-exit: fs-slide-out-right; --fs-panel-ease: var(--fs-ease-standard); }
+[data-panel-enter="fade"]  { --fs-panel-enter: fs-fade-in;    --fs-panel-exit: fs-fade-out;    --fs-panel-ease: var(--fs-ease-decel); }
+[data-panel-enter="fold"]  { --fs-panel-enter: fs-fold-open;  --fs-panel-exit: fs-fold-close;  --fs-panel-ease: var(--fs-ease-liquid); }
+[data-panel-enter="zoom"]  { --fs-panel-enter: fs-zoom-open;  --fs-panel-exit: fs-zoom-close;  --fs-panel-ease: var(--fs-ease-elastic); }
+
+/* ---- panel speed -------------------------------------------------------- */
+[data-panel-speed="fast"]   { --fs-panel-speed: var(--fs-dur-med); }
+[data-panel-speed="normal"] { --fs-panel-speed: var(--fs-dur-slow); }
+[data-panel-speed="slow"]   { --fs-panel-speed: var(--fs-dur-epic); }
+
+/* ---- texture ------------------------------------------------------------ */
+[data-texture="none"]      { --fs-texture: var(--fs-tex-none);  --fs-texture-size: auto; }
+[data-texture="glass"]     { --fs-texture: var(--fs-tex-glass); --fs-texture-size: auto; }
+[data-texture="metal"]     { --fs-texture: var(--fs-tex-metal); --fs-texture-size: auto; --fs-texture-blend: soft-light; }
+[data-texture="fabric"]    { --fs-texture: var(--fs-tex-fabric);--fs-texture-size: auto; }
+[data-texture="neon-grid"] { --fs-texture: var(--fs-tex-neon-grid); --fs-texture-size: var(--fs-tex-neon-grid-size); }
+
+/* ---- chrome icon style -------------------------------------------------- */
+[data-icons="line"]    { --fs-chrome-icon-fill: 0; --fs-chrome-icon-stroke: 1.5px; --fs-chrome-icon-style: "line"; }
+[data-icons="filled"]  { --fs-chrome-icon-fill: 1; --fs-chrome-icon-stroke: 0px;   --fs-chrome-icon-style: "filled"; }
+[data-icons="duotone"] { --fs-chrome-icon-fill: 0.35; --fs-chrome-icon-stroke: 1.25px; --fs-chrome-icon-style: "duotone"; }
+
+/* ---- window radius / shadow presets ------------------------------------ */
+[data-win-radius="none"]  { --fs-win-radius: 0px; }
+[data-win-radius="sm"]    { --fs-win-radius: 8px; }
+[data-win-radius="md"]    { --fs-win-radius: 16px; }
+[data-win-radius="lg"]    { --fs-win-radius: 24px; }
+[data-win-shadow="flat"]  { --fs-win-shadow-y: 0px;  --fs-win-shadow-blur: 0px;   --fs-win-shadow-color: transparent; }
+[data-win-shadow="soft"]  { --fs-win-shadow-y: 16px; --fs-win-shadow-blur: 40px;  --fs-win-shadow-color: rgb(0 0 0 / 0.4); }
+[data-win-shadow="deep"]  { --fs-win-shadow-y: 36px; --fs-win-shadow-blur: 90px;  --fs-win-shadow-color: rgb(0 0 0 / 0.7); }
+[data-win-shadow="neon"]  { --fs-win-shadow-y: 0px;  --fs-win-shadow-blur: 48px;  --fs-win-shadow-spread: -4px;
+                            --fs-win-shadow-color: color-mix(in srgb, var(--fs-accent) 55%, transparent); }
+
+/* ---- labs --------------------------------------------------------------- */
+[data-lab-dynamic-shadows="on"] { --fs-lab-dynamic-shadows: 1; }
+[data-lab-fox-glow="on"]        { --fs-lab-fox-glow: 1; }
+[data-lab-motion-blur="on"]     { --fs-lab-motion-blur: 1; }
+[data-lab-liquid-windows="on"]  { --fs-lab-liquid-windows: 1; --fs-win-open-anim: fs-liquid-open; --fs-win-open-ease: var(--fs-ease-bounce); }
+[data-lab-dynamic-shadows="off"]{ --fs-lab-dynamic-shadows: 0; }
+[data-lab-fox-glow="off"]       { --fs-lab-fox-glow: 0; }
+[data-lab-motion-blur="off"]    { --fs-lab-motion-blur: 0; }
+[data-lab-liquid-windows="off"] { --fs-lab-liquid-windows: 0; }
+
+/* ---- density ------------------------------------------------------------ */
+[data-density="compact"]     { --fs-fs-md: 12.5px; --fs-btn-h: 34px; --fs-sp-4: 12px; --fs-sp-6: 18px; }
+[data-density="comfortable"] { --fs-fs-md: 14px;   --fs-btn-h: 44px; --fs-sp-4: 18px; --fs-sp-6: 28px; }
+
+/* ---- motion scale ------------------------------------------------------- */
+[data-motion="off"]     { --fs-motion-scale: 0; }
+[data-motion="reduced"] { --fs-motion-scale: 0.5; }
+[data-motion="full"]    { --fs-motion-scale: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-motion="full"]) { --fs-motion-scale: 0; }
+}

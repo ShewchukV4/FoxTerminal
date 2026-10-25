@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "name": "FoxOS Light",
+  "preset": "light",
+  "colors": { "theme": "light", "accent": null, "accent2": null, "bg": null, "surface": null, "ink": null, "glass": 72 },
+  "chrome": { "opacity": 82, "blur": 20, "height": 36, "floating": false, "icons": "line", "iconSize": 16 },
+  "window": {
+    "radius": 14,
+    "shadowPreset": "custom",
+    "shadow": { "x": 0, "y": 22, "blur": 60, "spread": -14, "color": "#281E5A", "alpha": 22 },
+    "openAnim": "auto"
+  },
+  "panel": { "enter": "slide", "speed": "fast", "blur": 24, "radius": 24 },
+  "button": { "style": "rounded", "radius": null, "pressScale": 97 },
+  "motion": { "scale": "full", "fast": 160, "med": 320, "slow": 640, "ease": "standard", "stagger": 45 },
+  "typography": { "ui": "Inter", "display": "Space Grotesk", "mono": "JetBrains Mono", "size": 13.5, "density": "normal", "tracking": "tight", "displayWeight": "600" },
+  "texture": { "kind": "glass", "opacity": 60, "rain": 18, "dock": "pill" },
+  "labs": { "dynamicShadows": false, "foxGlow": false, "motionBlur": false, "liquidWindows": false },
+  "perElementAnims": { "dock": "fs-bounce-in", "nav": "fs-fade-up", "card": "fs-fade-up", "tile": "fs-zoom-open", "toggle": "fs-elastic-pop" }
+}

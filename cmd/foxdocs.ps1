@@ -1,14 +1,15 @@
-param(
-    [switch]$List
+﻿param(
+    [switch]$List,
+    [switch]$Paths
 )
 
-# Interactive FoxTerminal docs browser:
-#   Up/Down  - select
-#   Left     - open in terminal (read-only edit)
-#   Right    - action screen: Open + show in Explorer
-#   Enter    - open in terminal (same as Left) / Back exits
+# One-screen docs picker:
+#   Up/Down  - move in list (Back is last)
+#   Left     - focus Terminal button
+#   Right    - focus Explorer button
+#   Enter    - run focused action (or exit on Back)
 #   Esc / Q  - exit
-# Back row is always at the bottom of the list.
+# -Paths     - print paths only (foxtest)
 
 . "$PSScriptRoot\foxauth.ps1"
 
@@ -28,22 +29,26 @@ function Get-FoxDocsRoot {
 
 function Get-FoxDocsCatalog([string]$root) {
     $items = @(
-        @{ Id = "changelog"; Title = "CHANGELOG - history"; Rel = "CHANGELOG.md"; Group = "History" }
-        @{ Id = "agents"; Title = "AGENTS - project memory"; Rel = "AGENTS.md"; Group = "History" }
-        @{ Id = "readme"; Title = "FoxTerminal README"; Rel = "FoxTerminal/README.md"; Group = "Guides" }
-        @{ Id = "guide-ua"; Title = "Full guide (UA)"; Rel = "FoxTerminal/FOXTERMINAL_GUIDE_UA.md"; Group = "Guides" }
-        @{ Id = "guide-en"; Title = "Full guide (EN)"; Rel = "FoxTerminal/FOXTERMINAL_GUIDE_EN.md"; Group = "Guides" }
-        @{ Id = "win-mega"; Title = "Windows MEGAGUIDE (Cursor)"; Rel = "FoxTerminal/windows/CURSOR_MEGAGUIDE_UA.md"; Group = "Windows" }
-        @{ Id = "win-verify"; Title = "VERIFY_ALL - command checklist"; Rel = "FoxTerminal/windows/VERIFY_ALL.md"; Group = "Windows" }
-        @{ Id = "win-hw"; Title = "HARDWARE_SCREEN - DPI/GPU"; Rel = "FoxTerminal/windows/HARDWARE_SCREEN.md"; Group = "Windows" }
-        @{ Id = "win-agents"; Title = "Windows AGENTS"; Rel = "FoxTerminal/windows/AGENTS.md"; Group = "Windows" }
-        @{ Id = "win-readme"; Title = "Windows pack README"; Rel = "FoxTerminal/windows/README.md"; Group = "Windows" }
-        @{ Id = "linux-mega"; Title = "Linux MEGAGUIDE (Cursor)"; Rel = "FoxTerminal/linux/CURSOR_MEGAGUIDE_UA.md"; Group = "Linux" }
-        @{ Id = "linux-guide"; Title = "LINUX_GUIDE - desktop / DE"; Rel = "FoxTerminal/linux/LINUX_GUIDE_UA.md"; Group = "Linux" }
-        @{ Id = "linux-cmds"; Title = "COMMANDS_LINUX - Win to Linux"; Rel = "FoxTerminal/linux/COMMANDS_LINUX.md"; Group = "Linux" }
-        @{ Id = "linux-agents"; Title = "Linux AGENTS"; Rel = "FoxTerminal/linux/AGENTS.md"; Group = "Linux" }
-        @{ Id = "linux-readme"; Title = "Linux pack README"; Rel = "FoxTerminal/linux/README.md"; Group = "Linux" }
-        @{ Id = "addon"; Title = "Firefox / Zen Companion README"; Rel = "FoxTerminal/firefox-addon/README.md"; Group = "Addons" }
+        @{ Title = "CHANGELOG"; Rel = "CHANGELOG.md"; Group = "History"; Desc = "Історія змін: що додали, виправили, прибрали" }
+        @{ Title = "AGENTS"; Rel = "AGENTS.md"; Group = "History"; Desc = "Пам'ять для Cursor: шпаргалка і правила агента" }
+        @{ Title = "README"; Rel = "FoxTerminal/README.md"; Group = "Guides"; Desc = "Встановлення Ghostty/winghostty, Ollama, старт" }
+        @{ Title = "Guide UA"; Rel = "FoxTerminal/FOXTERMINAL_GUIDE_UA.md"; Group = "Guides"; Desc = "Повний гайд українською: FoxOS, команди, сценарії" }
+        @{ Title = "Guide EN"; Rel = "FoxTerminal/FOXTERMINAL_GUIDE_EN.md"; Group = "Guides"; Desc = "Той самий повний гайд англійською" }
+        @{ Title = "Windows MEGAGUIDE"; Rel = "FoxTerminal/windows/CURSOR_MEGAGUIDE_UA.md"; Group = "Windows"; Desc = "Перенос на інший Windows: залізо, DPI, Cursor" }
+        @{ Title = "VERIFY_ALL"; Rel = "FoxTerminal/windows/VERIFY_ALL.md"; Group = "Windows"; Desc = "Прогін кожної команди + Alt+Tab / таскбар" }
+        @{ Title = "HARDWARE_SCREEN"; Rel = "FoxTerminal/windows/HARDWARE_SCREEN.md"; Group = "Windows"; Desc = "Таблиці DPI / GPU / моніторів для foxlook" }
+        @{ Title = "Windows AGENTS"; Rel = "FoxTerminal/windows/AGENTS.md"; Group = "Windows"; Desc = "Коротка пам'ять агента для Windows-паку" }
+        @{ Title = "Windows README"; Rel = "FoxTerminal/windows/README.md"; Group = "Windows"; Desc = "Індекс Windows-паку + стартовий промпт" }
+        @{ Title = "Linux MEGAGUIDE"; Rel = "FoxTerminal/linux/CURSOR_MEGAGUIDE_UA.md"; Group = "Linux"; Desc = "Kali/Linux: що працює, DE замість foxos" }
+        @{ Title = "LINUX_GUIDE"; Rel = "FoxTerminal/linux/LINUX_GUIDE_UA.md"; Group = "Linux"; Desc = "Стіл, пропорції екрана, Ghostty на Linux" }
+        @{ Title = "COMMANDS_LINUX"; Rel = "FoxTerminal/linux/COMMANDS_LINUX.md"; Group = "Linux"; Desc = "Шпаргалка: Windows-команда Fox -> Linux" }
+        @{ Title = "Linux AGENTS"; Rel = "FoxTerminal/linux/AGENTS.md"; Group = "Linux"; Desc = "Коротка пам'ять агента для Linux-паку" }
+        @{ Title = "Linux README"; Rel = "FoxTerminal/linux/README.md"; Group = "Linux"; Desc = "Індекс Linux-паку + стартовий промпт" }
+        @{ Title = "Zen / Firefox addon"; Rel = "FoxTerminal/firefox-addon/README.md"; Group = "Addons"; Desc = "Companion: встановлення, pack, міст до терміналу" }
+        @{ Title = "FOXSTYLE"; Rel = "sites/foxstyle/README.md"; Group = "FOXSTYLE"; Desc = "Студія вигляду: нативне вікно, пресети" }
+        @{ Title = "FOXSTYLE architecture"; Rel = "sites/foxstyle/ARCHITECTURE.md"; Group = "FOXSTYLE"; Desc = "Модулі теми, Apply-цикл, збірка exe" }
+        @{ Title = "FOXSTYLE CLI"; Rel = "sites/foxstyle/CLI.md"; Group = "FOXSTYLE"; Desc = "foxstyle / foxnodes / foxstt команди" }
+        @{ Title = "ChatGPT dump"; Rel = "FoxTerminal/CHATGPT_PROJECT.md"; Group = "Guides"; Desc = "Один файл, щоб сторонній чат зрозумів увесь проєкт" }
     )
 
     $out = @()
@@ -51,11 +56,12 @@ function Get-FoxDocsCatalog([string]$root) {
         $path = Join-Path $root ($it.Rel -replace '/', [IO.Path]::DirectorySeparatorChar)
         if (-not (Test-Path -LiteralPath $path)) { continue }
         $out += [pscustomobject]@{
-            Id    = $it.Id
             Title = $it.Title
             Rel   = $it.Rel
             Group = $it.Group
+            Desc  = $it.Desc
             Path  = $path
+            File  = [IO.Path]::GetFileName($path)
         }
     }
     return $out
@@ -69,11 +75,19 @@ function Get-WinWidth {
     return 80
 }
 
+function Get-WinHeight {
+    try {
+        $h = [int]$Host.UI.RawUI.WindowSize.Height
+        if ($h -gt 10) { return $h }
+    } catch {}
+    return 30
+}
+
 function Clip-Text([string]$s, [int]$max) {
     if ([string]::IsNullOrEmpty($s)) { return "" }
     if ($s.Length -le $max) { return $s }
-    if ($max -le 1) { return $s.Substring(0, $max) }
-    return $s.Substring(0, $max - 1) + "..."
+    if ($max -le 3) { return $s.Substring(0, $max) }
+    return $s.Substring(0, $max - 3) + "..."
 }
 
 function Open-FoxDocInTerminal([string]$path) {
@@ -85,175 +99,130 @@ function Open-FoxDocInTerminal([string]$path) {
     Get-Content -LiteralPath $path | Out-Host -Paging
 }
 
-function Open-FoxDocInExplorer([string]$path) {
+function Show-FoxDocInExplorer([string]$path) {
     $full = [System.IO.Path]::GetFullPath($path)
-    if (-not (Test-Path -LiteralPath $full)) {
-        return "file missing"
-    }
-    try {
-        Invoke-Item -LiteralPath $full -ErrorAction Stop
-    } catch {}
+    if (-not (Test-Path -LiteralPath $full)) { return $false }
     try {
         Start-Process -FilePath "explorer.exe" -ArgumentList @("/select,`"$full`"") -ErrorAction Stop | Out-Null
-        return "opened + Explorer"
+        return $true
     } catch {
-        return "Explorer failed"
+        return $false
     }
 }
 
-function Render-FoxDocsList([object[]]$docs, [int]$index, $p, [string]$status) {
-    Clear-Host
-    $tl = [string][char]0x256D; $tr = [string][char]0x256E
-    $bl = [string][char]0x2570; $br = [string][char]0x256F
-    $hz = [string][char]0x2500
+function Write-FoxDocsPill([string]$label, [bool]$active, $p, [bool]$enabled) {
+    $pad = " " + $label + " "
+    if (-not $enabled) {
+        Write-Host (Color-Text $p.dim (" [" + $label + "] ")) -NoNewline
+        return
+    }
+    if ($active) {
+        $fg = Get-ContrastText $p.accent
+        Write-Host (Color-TextBg $fg $p.accent $pad) -NoNewline
+    } else {
+        Write-Host (Color-Text $p.dim ("[")) -NoNewline
+        Write-Host (Color-Text $p.text (" " + $label + " ")) -NoNewline
+        Write-Host (Color-Text $p.dim ("]")) -NoNewline
+    }
+}
+
+function Render-FoxDocs([object[]]$docs, [int]$index, [int]$action, [string]$flash, $p) {
+    if (Get-Command Clear-FoxHost -ErrorAction SilentlyContinue) {
+        Clear-FoxHost
+    } else {
+        Clear-Host
+    }
+
     $winW = Get-WinWidth
-    $inner = [Math]::Min(68, [Math]::Max(48, $winW - 8))
+    $winH = Get-WinHeight
+    $inner = [Math]::Min(72, [Math]::Max(44, $winW - 6))
+    $hz = [string][char]0x2500
+    $book = ""
+    try { $book = (Get-FoxIcon 0xF02D) + "  " } catch { $book = "" }
+
+    $total = $docs.Count
+    $onBack = ($index -ge $total)
+    $pos = if ($onBack) { "back" } else { ("{0}/{1}" -f ($index + 1), $total) }
 
     Write-Host ""
-    Write-Host (Color-Text $p.dim ("  " + $tl + $hz + " ")) -NoNewline
-    Write-Host (Color-Text $p.accent "foxdocs") -NoNewline
-    Write-Host (Color-Text $p.dim (" " + ($hz * [Math]::Max(2, $inner - 12)) + " " + $tr))
-    Write-Host (Color-Text $p.dim "  Left = terminal   Right = Explorer action   Enter = terminal")
-    Write-Host (Color-Text $p.dim "  Up/Down select   Esc/Q exit")
+    Write-Host (Color-Text $p.accent ("  " + $book + "foxdocs")) -NoNewline
+    Write-Host (Color-Text $p.dim ("  " + $pos))
+    Write-Host (Color-Text $p.dim ("  " + ($hz * [Math]::Min($inner, 40))))
     Write-Host ""
 
-    $rows = @()
-    foreach ($d in @($docs)) { $rows += $d }
-    $rows += [pscustomobject]@{ Id = "__back"; Title = "Back"; Rel = ""; Group = ""; Path = "" }
-
-    if ($index -lt 0) { $index = 0 }
-    if ($index -ge $rows.Count) { $index = $rows.Count - 1 }
-
-    $viewH = 18
-    try { $viewH = [Math]::Max(10, $Host.UI.RawUI.WindowSize.Height - 12) } catch {}
+    # visible window of list rows (docs + Back)
+    $rowCount = $total + 1
+    $viewH = [Math]::Max(8, $winH - 16)
+    if ($viewH -gt $rowCount) { $viewH = $rowCount }
     $top = 0
     if ($index -ge $viewH) { $top = $index - $viewH + 1 }
 
     $lastGroup = ""
-    for ($i = $top; $i -lt [Math]::Min($rows.Count, $top + $viewH); $i++) {
-        $r = $rows[$i]
-        $sel = ($i -eq $index)
-
-        if ($r.Id -eq "__back") {
+    for ($i = $top; $i -lt [Math]::Min($rowCount, $top + $viewH); $i++) {
+        if ($i -ge $total) {
             Write-Host ""
-            $label = "<  Back"
-            if ($sel) {
-                Write-Host (Color-TextBg $p.accent "#0B0F1A" ("  > " + $label + " "))
+            if ($onBack) {
+                $label = "  < Back  "
+                Write-Host (Color-TextBg (Get-ContrastText $p.accent) $p.accent $label)
             } else {
-                Write-Host (Color-Text $p.accent2 ("    " + $label))
+                Write-Host (Color-Text $p.dim "  < Back")
             }
             continue
         }
 
-        if ($r.Group -ne $lastGroup) {
-            $lastGroup = $r.Group
-            Write-Host (Color-Text $p.dim ("  -- " + $r.Group + " --"))
+        $d = $docs[$i]
+        if ($d.Group -ne $lastGroup) {
+            $lastGroup = $d.Group
+            Write-Host (Color-Text $p.accent2 ("  " + $d.Group))
         }
 
-        $mark = if ($sel) { ">" } else { " " }
-        $line = ("{0} {1}" -f $mark, (Clip-Text $r.Title ($inner - 4)))
+        $sel = ($i -eq $index)
+        $title = Clip-Text $d.Title 28
+        $file = Clip-Text $d.File 22
         if ($sel) {
-            Write-Host (Color-TextBg $p.accent2 "#0B0F1A" (" " + $line + " "))
-            Write-Host (Color-Text $p.dim ("    " + (Clip-Text $r.Rel ($inner - 4))))
+            $label = ("  > {0,-28} {1}  " -f $title, $file)
+            Write-Host (Color-TextBg (Get-ContrastText $p.accent2) $p.accent2 $label)
         } else {
-            Write-Host (Color-Text $p.text (" " + $line))
+            Write-Host (Color-Text $p.text ("    {0,-28} " -f $title)) -NoNewline
+            Write-Host (Color-Text $p.dim $file)
         }
     }
 
     Write-Host ""
-    if (-not [string]::IsNullOrWhiteSpace($status)) {
-        Write-Host (Color-Text $p.accent2 ("  " + $status))
-    }
-    Write-Host (Color-Text $p.dim ("  " + $bl + ($hz * ($inner - 2)) + $br))
-    Write-Host ""
-    return $index
-}
+    Write-Host (Color-Text $p.dim ("  " + ($hz * [Math]::Min($inner, 40))))
 
-function Render-FoxDocsAction([object]$doc, [int]$btn, $p, [string]$status) {
-    Clear-Host
-    $tl = [string][char]0x256D; $tr = [string][char]0x256E
-    $bl = [string][char]0x2570; $br = [string][char]0x256F
-    $hz = [string][char]0x2500
-    $winW = Get-WinWidth
-    $inner = [Math]::Min(68, [Math]::Max(48, $winW - 8))
-
-    Write-Host ""
-    Write-Host (Color-Text $p.dim ("  " + $tl + $hz + " ")) -NoNewline
-    Write-Host (Color-Text $p.accent "foxdocs") -NoNewline
-    Write-Host (Color-Text $p.dim (" - open " + ($hz * [Math]::Max(2, $inner - 18)) + " " + $tr))
-    Write-Host ""
-    Write-Host (Color-Text $p.text ("  " + $doc.Title))
-    Write-Host (Color-Text $p.dim ("  " + $doc.Rel))
-    Write-Host (Color-Text $p.dim ("  " + (Clip-Text $doc.Path ($inner - 2))))
-    Write-Host ""
-    Write-Host (Color-Text $p.dim "  Up/Down  Enter activate  Left/Esc Back")
-    Write-Host ""
-
-    $buttons = @(
-        @{ Kind = "explorer"; Label = "Open file + show in Explorer" }
-        @{ Kind = "back"; Label = "<  Back" }
-    )
-    if ($btn -lt 0) { $btn = 0 }
-    if ($btn -ge $buttons.Count) { $btn = $buttons.Count - 1 }
-
-    for ($i = 0; $i -lt $buttons.Count; $i++) {
-        $b = $buttons[$i]
-        $sel = ($i -eq $btn)
-        if ($b.Kind -eq "back") { Write-Host "" }
-        $prefix = if ($sel) { "> " } else { "  " }
-        $line = $prefix + $b.Label
-        if ($sel) {
-            Write-Host (Color-TextBg $p.accent "#0B0F1A" ("  " + $line + " "))
-        } elseif ($b.Kind -eq "back") {
-            Write-Host (Color-Text $p.accent2 ("    " + $b.Label))
-        } else {
-            Write-Host (Color-Text $p.text ("    " + $b.Label))
-        }
+    if ($onBack) {
+        Write-Host (Color-Text $p.dim "  leave foxdocs")
+        Write-Host ""
+        Write-FoxDocsPill "Terminal" $false $p $false
+        Write-Host "  " -NoNewline
+        Write-FoxDocsPill "Explorer" $false $p $false
+        Write-Host ""
+    } else {
+        $doc = $docs[$index]
+        Write-Host (Color-Text $p.text ("  " + (Clip-Text $doc.Desc ($inner - 2))))
+        Write-Host (Color-Text $p.dim ("  " + (Clip-Text $doc.Path ($inner - 2))))
+        Write-Host ""
+        # action bar: Left = Terminal, Right = Explorer
+        Write-Host "  " -NoNewline
+        Write-FoxDocsPill "Terminal" ($action -eq 0) $p $true
+        Write-Host "   " -NoNewline
+        Write-FoxDocsPill "Explorer" ($action -eq 1) $p $true
+        Write-Host ""
     }
 
     Write-Host ""
-    if (-not [string]::IsNullOrWhiteSpace($status)) {
-        Write-Host (Color-Text $p.accent2 ("  " + $status))
+    if (-not [string]::IsNullOrWhiteSpace($flash)) {
+        Write-Host (Color-Text $p.accent2 ("  " + $flash))
     }
-    Write-Host (Color-Text $p.dim ("  " + $bl + ($hz * ($inner - 2)) + $br))
+    Write-Host (Color-Text $p.dim "  Up/Down list   Left Terminal   Right Explorer   Enter   Esc")
     Write-Host ""
-    return $btn
-}
-
-function Invoke-FoxDocsActionLoop([object]$doc, $p) {
-    $btn = 0
-    $status = ""
-    while ($true) {
-        $p = Get-ThemePalette
-        $btn = Render-FoxDocsAction $doc $btn $p $status
-        $k = [Console]::ReadKey($true)
-
-        if ($k.Key -eq "UpArrow" -or $k.Key -eq "K") {
-            if ($btn -gt 0) { $btn-- }
-            continue
-        }
-        if ($k.Key -eq "DownArrow" -or $k.Key -eq "J") {
-            if ($btn -lt 1) { $btn++ }
-            continue
-        }
-        if ($k.Key -eq "Escape" -or $k.Key -eq "Backspace" -or $k.Key -eq "LeftArrow" -or $k.Key -eq "BrowserBack") {
-            return "back"
-        }
-        if ($k.Key -eq "Q" -or (($k.Modifiers -band [ConsoleModifiers]::Control) -and $k.Key -eq "E")) {
-            return "quit"
-        }
-        if ($k.Key -eq "Enter" -or $k.Key -eq "Spacebar") {
-            if ($btn -eq 1) { return "back" }
-            $status = Open-FoxDocInExplorer $doc.Path
-            continue
-        }
-    }
 }
 
 $root = Get-FoxDocsRoot
 $docs = @(Get-FoxDocsCatalog $root)
 
-if ($List) {
+if ($Paths) {
     foreach ($d in $docs) {
         Write-Host ("{0,-12}  {1}" -f $d.Group, $d.Rel)
     }
@@ -269,14 +238,18 @@ if ($docs.Count -eq 0) {
 }
 
 $index = 0
-$status = ""
+$action = 0   # 0 = Terminal, 1 = Explorer
+$flash = ""
+
 while ($true) {
     $p = Get-ThemePalette
-    $index = Render-FoxDocsList $docs $index $p $status
-    $status = ""
+    Render-FoxDocs $docs $index $action $flash $p
+    $flash = ""
     $k = [Console]::ReadKey($true)
 
     $backIdx = $docs.Count
+    $onBack = ($index -ge $backIdx)
+
     if ($k.Key -eq "UpArrow" -or $k.Key -eq "K") {
         if ($index -gt 0) { $index-- }
         continue
@@ -285,41 +258,44 @@ while ($true) {
         if ($index -lt $backIdx) { $index++ }
         continue
     }
-    if ($k.Key -eq "Escape" -or $k.Key -eq "Q" -or (($k.Modifiers -band [ConsoleModifiers]::Control) -and $k.Key -eq "E")) {
-        Clear-Host
-        return
-    }
-    if ($k.Key -eq "Backspace" -or $k.Key -eq "BrowserBack") {
-        Clear-Host
-        return
-    }
-
-    $onBack = ($index -ge $backIdx)
+    if ($k.Key -eq "Home") { $index = 0; continue }
+    if ($k.Key -eq "End") { $index = $backIdx; continue }
 
     if ($k.Key -eq "LeftArrow") {
-        if ($onBack) { Clear-Host; return }
-        $doc = $docs[$index]
-        Clear-Host
-        Open-FoxDocInTerminal $doc.Path
-        $status = "closed terminal view"
+        if (-not $onBack) { $action = 0 }
+        continue
+    }
+    if ($k.Key -eq "RightArrow") {
+        if (-not $onBack) { $action = 1 }
         continue
     }
 
-    if ($k.Key -eq "RightArrow") {
-        if ($onBack) { continue }
-        $doc = $docs[$index]
-        $r = Invoke-FoxDocsActionLoop $doc $p
-        if ($r -eq "quit") { Clear-Host; return }
-        $status = ""
-        continue
+    if ($k.Key -eq "Escape" -or $k.Key -eq "Q" -or $k.Key -eq "Backspace" -or $k.Key -eq "BrowserBack" -or (($k.Modifiers -band [ConsoleModifiers]::Control) -and $k.Key -eq "E")) {
+        if (Get-Command Clear-FoxHost -ErrorAction SilentlyContinue) { Clear-FoxHost } else { Clear-Host }
+        return
     }
 
     if ($k.Key -eq "Enter" -or $k.Key -eq "Spacebar") {
-        if ($onBack) { Clear-Host; return }
+        if ($onBack) {
+            if (Get-Command Clear-FoxHost -ErrorAction SilentlyContinue) { Clear-FoxHost } else { Clear-Host }
+            return
+        }
         $doc = $docs[$index]
-        Clear-Host
-        Open-FoxDocInTerminal $doc.Path
-        $status = "closed terminal view"
+        if ($action -eq 0) {
+            if (Get-Command Clear-FoxHost -ErrorAction SilentlyContinue) { Clear-FoxHost } else { Clear-Host }
+            Open-FoxDocInTerminal $doc.Path
+            $flash = "closed viewer"
+        } else {
+            if (Show-FoxDocInExplorer $doc.Path) {
+                $flash = "Explorer: file selected"
+            } else {
+                $flash = "Explorer failed"
+            }
+        }
         continue
     }
+
+    # digit / letter T E shortcuts
+    if ($k.Key -eq "T") { if (-not $onBack) { $action = 0 }; continue }
+    if ($k.Key -eq "E") { if (-not $onBack) { $action = 1 }; continue }
 }

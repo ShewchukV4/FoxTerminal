@@ -19,8 +19,10 @@
 | FoxOS skin | `foxos` | ASCII rain wallpaper + Windows accent + desk prompt |
 | Windows look | `foxlook` | dark, cursors, dock, Win keys, optional shell=FoxOS |
 | Системна оболонка | `home`, `lock`, `settings`, `foxsetup` | дім після логіну, lock, TUI/GUI settings |
+| Студія / меню | `foxstyle`, `foxnodes`, `foxstt` | FOXSTYLE, Node Launcher (Ctrl+Alt+Space), локальний STT |
 | Додатки | `foxlife`, `sites/`, Zen Companion | Life app, локальні сайти, Firefox/Zen addon |
 | Знімки | `build`, `foxpack`, `CHANGELOG.md` | снапшоти й історія |
+| Контекст для GPT | `FoxTerminal/CHATGPT_PROJECT.md` | один файл, щоб сторонній чат зрозумів проєкт |
 
 Повна документація:
 
@@ -34,8 +36,9 @@
   - `COMMANDS_LINUX.md` — Windows → Linux
 - `FoxTerminal/FOXTERMINAL_GUIDE_UA.md` (UA, уся система)
 - `FoxTerminal/FOXTERMINAL_GUIDE_EN.md` (EN)
+- `FoxTerminal/CHATGPT_PROJECT.md` — один бриф для стороннього чату
 - `FoxTerminal/README.md`
-- Інтерактивно: `sites/fox-terminal/` через `sites`
+- Інтерактивно: `sites/fox-terminal/` через `sites` · у терміналі: `foxdocs`
 
 ---
 
@@ -66,13 +69,16 @@ bash ./FoxTerminal/install.sh
 - Дім / lock / settings: `home`, `lock`, `settings` / `settings -Gui`
 - Desktop: `foxos on|off`, `foxlook on|off`, `foxlook cursor fox 2`, `foxlook dock style pill`
 - ⚠ `foxlook shell on` — наступний логін цього Windows-юзера = FoxOS замість Explorer. Rescue: `%LOCALAPPDATA%\FoxTerminal\foxos\restore-windows.cmd` або `cmd/fox-restore-windows.bat`
-- AI: `ask`, `friend` (Ollama / qwen3-vl); вихід з friend: `exitt`
+- AI: `ask`, `friend` (Ollama / qwen3-vl); вихід з friend: `exitt`. Desktop-помічник у `foxnodes` / FOXSTYLE → Помічник (локальна Ollama, push-to-talk). Український STT: `foxstt` / FOXSTYLE → Помічник; `foxstt -Install` ставить whisper.cpp + `large-v3-turbo-q8_0`; у студії можна обрати швидшу `small-q8_0` (~2 с на CPU) або якіснішу turbo (~12 с). Файли в `%LOCALAPPDATA%\FoxTerminal\foxos\stt`, не в git. Назва сервісу (YouTube/Google) — об’єкт запиту, не команда відкрити його; повні речення йдуть у локальну модель, якщо це не коротка однозначна команда. Діагностика маршруту: `FOXASSIST_TRACE=1` або FOXSTYLE → Помічник.
+- Студія вигляду: `foxstyle` (нативне вікно, як `foxlife`); візуальний редактор меню — `foxstyle -NodeEditor` або FOXSTYLE → Node Launcher. «Застосувати» пише `launcher.json` + `style.json`, потім `foxnodes.signal`; статус «Застосовано» лише після ack overlay (`foxnodes.applied`).
+- Node Launcher: `foxnodes` (Ctrl+Alt+Space); `-Show` / `-Hide` / `-Stop` / `-Settings`. `sites/foxstyle/` — лише референс токенів, не основний UI.
 - Life app: `foxlife`
 - iPhone screen: `foxmirror`
 - Vitals / RAM: `pulse`, `pulse -Once`, `pulse apps` (стрілки закрити апку, Back назад); у live — **A**
 - Теми: `sw` / `sw slate` = лисиця; `sw -slate` = тільки колір без UI
+- Node Launcher меню: `foxnodes`; візуальний редактор — `foxstyle` → Node Launcher або `foxstyle -NodeEditor`. «Застосувати» пише `launcher.json` + `style.json`, потім сигнал; статус «Застосовано» лише після ack overlay.
 - Alt+Tab (foxos-live + foxhotkeys): **E** / Del закриває вікно
-- Гайди / історія: `foxdocs` (← термінал, → Explorer, Back внизу), `changelog`
+- Гайди / історія: `foxdocs` (↑↓ список, ← Terminal, → Explorer, Enter; Back внизу), `changelog`
 - Знімки: `build <name>`, `foxpack`
 
 ---
@@ -101,6 +107,9 @@ bash ./FoxTerminal/install.sh
 4. Запит collaborator прийнято від імені shew4uk; код залито в ShewchukV4.
 5. Пояснено: звичайні Cursor-чати локальні; Cloud Agent не наслідує цей тред автоматично.
 6. 2026-10-04: `pulse` (+ apps), `sw -<тема>`, Alt+Tab **E**, фікс taskbar/Alt+Tab slide; гайди Windows оновлено; **`foxdocs`** — браузер усіх гайдів/історії.
+7. 2026-10-04 (пізніше): **`notebook`** — пергаментний стіл / чорнильний rain; пункт у `themes`.
+8. 2026-10-21: **FOXSTYLE** (нативна студія вигляду + Node Launcher editor), **`foxnodes`** (desktop overlay, Ctrl+Alt+Space), **Помічник** (Ollama + push-to-talk), **`foxstt`** (whisper.cpp). Apply-цикл: `launcher.json` + `style.json` → сигнал → ack overlay.
+9. 2026-10-25: усі системні гайди підтягнуті під FOXSTYLE / foxnodes / foxstt / notebook; додано `FoxTerminal/CHATGPT_PROJECT.md` — один файл для стороннього чату (ChatGPT тощо).
 
 ---
 
@@ -134,6 +143,9 @@ Linux/Kali: FoxTerminal/linux/CURSOR_MEGAGUIDE_UA.md.
 
 - Auth / themes / home / lock / settings: `cmd/foxauth.ps1`, `cmd/home.ps1`, `cmd/lock.ps1`, `cmd/settings.ps1`, `cmd/foxsetup.ps1`
 - FoxOS / look: `cmd/foxos.ps1`, `cmd/foxos-lib.ps1`, `cmd/foxlook.ps1`, `cmd/foxlook-lib.ps1`
+- FOXSTYLE / Node Launcher / STT: `cmd/foxstyle.ps1` + `cmd/foxstyle/*.cs`, `cmd/foxnodes.ps1` + `cmd/foxnodes/*.cs`, `cmd/foxstt.ps1`, `cmd/fox-assistant.cs`, `cmd/fox-stt.cs`, `cmd/fox-understand.cs`
 - Help inventory: `cmd/foxhelp.ps1`
+- Docs browser: `cmd/foxdocs.ps1`
 - Install: `FoxTerminal/install.ps1`, `FoxTerminal/install.sh`
 - History: `CHANGELOG.md`, команда `changelog`
+- Dump для стороннього чату: `FoxTerminal/CHATGPT_PROJECT.md`

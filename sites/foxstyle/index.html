@@ -1,0 +1,1050 @@
+<!doctype html>
+<html lang="uk" data-theme="dark" data-buttons="glass" data-texture="glass" data-panel-enter="book" data-panel-speed="normal" data-icons="line" data-density="normal" data-motion="full">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>FOXSTYLE — панель вигляду FoxOS</title>
+  <meta name="description" content="FOXSTYLE — modular appearance control panel for FoxOS / FoxTerminal.">
+
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%237B5CFF'/%3E%3Cpath fill='white' fill-rule='evenodd' d='M14 14c6 1.5 11 5 14 8h8c3-3 8-6.5 14-8-.7 5.5-1.4 9.5-2.8 13.5 1.4 2.8 2 5.5 2 8.5 0 8.5-7.7 14-17.2 14S14.8 44.5 14.8 36c0-3 .6-5.7 2-8.5C15.4 23.5 14.7 19.5 14 14zm12.5 18a2.8 2.8 0 1 0 0 5.6 2.8 2.8 0 0 0 0-5.6zm11 0a2.8 2.8 0 1 0 0 5.6 2.8 2.8 0 0 0 0-5.6zM32 39l-3.5 3.5c.7 1.4 2 2.1 3.5 2.1s2.8-.7 3.5-2.1L32 39z'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+
+  <link rel="stylesheet" href="assets/css/tokens.css">
+  <link rel="stylesheet" href="assets/css/motion.css">
+  <link rel="stylesheet" href="assets/css/foxstyle.css">
+</head>
+<body>
+
+<!-- ============================================================ icons -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <symbol id="i-theme" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M12 3a9 9 0 0 1 0 18"/></symbol>
+    <symbol id="i-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21a9 9 0 1 1 9-9c0 2-1.5 3-3 3h-2a2 2 0 0 0-1.5 3.3c.5.6.1 1.7-.7 1.7z"/><circle cx="7.5" cy="11.5" r="1"/><circle cx="11" cy="7.5" r="1"/><circle cx="16" cy="9" r="1"/></symbol>
+    <symbol id="i-buttons" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="10" rx="5"/><circle cx="15" cy="12" r="2.5"/></symbol>
+    <symbol id="i-chrome" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 9h18"/><circle cx="6.5" cy="6.5" r=".6"/><circle cx="9" cy="6.5" r=".6"/></symbol>
+    <symbol id="i-windows" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="13" height="11" rx="2"/><path d="M8 14v4a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2h-3"/></symbol>
+    <symbol id="i-panels" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h8v14H4zM12 5h8v14h-8z"/><path d="M12 5l-3 2v14"/></symbol>
+    <symbol id="i-motion" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17c4 0 4-10 8-10s4 10 8 10 2-6 2-6"/></symbol>
+    <symbol id="i-appopen" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M9 12l3-3 3 3M12 9v7"/></symbol>
+    <symbol id="i-type" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 6h14M12 6v13M8 19h8"/></symbol>
+    <symbol id="i-bg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 15l5-5 4 4 3-3 6 6"/><circle cx="16" cy="9" r="1.5"/></symbol>
+    <symbol id="i-labs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.7 3h10.6a2 2 0 0 0 1.7-3l-5-9V3"/><path d="M7.5 15h9"/></symbol>
+    <symbol id="i-custom" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h10M18 7h2M4 12h3M11 12h9M4 17h12M20 17h0"/><circle cx="16" cy="7" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="18" cy="17" r="2"/></symbol>
+    <symbol id="i-cli" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9l3 3-3 3M12 15h5"/></symbol>
+    <symbol id="i-replay" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 1 0 2.3-5.7"/><path d="M4 4v5h5"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></symbol>
+  </defs>
+</svg>
+
+<!-- ============================================================ reopen -->
+<button class="fs-reopen" id="fs-reopen" type="button" hidden>
+  <span class="fs-brand-logo" aria-hidden="true"></span> Відкрити FOXSTYLE
+</button>
+
+<!-- ============================================================ overlay -->
+<div class="fs-overlay" id="fs-overlay" data-state="open">
+  <div class="fs-book">
+    <section class="fs-shell" id="fs-shell" data-state="open" role="dialog" aria-modal="true" aria-labelledby="fs-title">
+
+      <!-- ---------------------------------------------------- head -->
+      <header class="fs-head">
+        <div class="fs-brand">
+          <span class="fs-brand-logo" aria-hidden="true"></span>
+          <span id="fs-title">FOXSTYLE</span>
+          <span class="fs-brand-sub">FoxOS · appearance</span>
+        </div>
+        <div class="fs-head-tools">
+          <div class="fs-row-gap" role="group" aria-label="Швидка тема" id="fs-quick-themes">
+            <button class="fs-chip" type="button" data-quick-theme="dark">Dark</button>
+            <button class="fs-chip" type="button" data-quick-theme="light">Light</button>
+            <button class="fs-chip" type="button" data-quick-theme="neon">Neon</button>
+            <button class="fs-chip" type="button" data-quick-theme="foxpurple">FoxPurple</button>
+          </div>
+          <button class="fs-close" id="fs-close" type="button" aria-label="Закрити панель (Esc)">
+            <svg width="14" height="14" aria-hidden="true"><use href="#i-close"/></svg>
+          </button>
+        </div>
+      </header>
+
+      <!-- ---------------------------------------------------- nav -->
+      <nav class="fs-nav" aria-label="Розділи налаштувань">
+        <div class="fs-nav-group">Вигляд</div>
+        <button class="fs-nav-item" type="button" data-section="themes" aria-current="true" style="--i:0">
+          <svg class="fs-nav-icon" aria-hidden="true"><use href="#i-theme"/></svg><span>Теми</span>
+        </button>
+        <button class="fs-nav-item" type="button" data-section="colors" style="--i:1">
+          <svg class="fs-nav-icon" aria-hidden="true"><use href="#i-colors"/></svg><span>Кольори</span>
+        </button>
+        <button class="fs-nav-item" type="button" data-section="buttons" style="--i:2">
+          <svg class="fs-nav-icon" aria-hidden="true"><use href="#i-buttons"/></svg><span>Кнопки</span>
+        </button>
+        <button class="fs-nav-item" type="button" data-section="chrome" style="--i:3">
+          <svg class="fs-nav-icon" aria-hidden="true"><use href="#i-chrome"/></svg><span>Chrome-бар</span>
+        </button>
+        <button class="fs-nav-item" type="button" data-section="windows" style="--i:4">
+          <svg class="fs-nav-icon" aria-hidden="true"><use href="#i-windows"/></svg><span>Вікна</span>
+        </button>
+        <button class="fs-nav-item" type="button" data-section="panels" style="--i:5">
+          <svg class="fs-nav-icon" aria-hidden="true"><use href="#i-panels"/></svg><span>Панелі</span>
+        </button>
+
+        <div class="fs-nav-group">Рух</div>
+        <button class="fs-nav-item" type="button" data-section="motion" style="--i:6">
+          <svg class="fs-nav-icon" aria-hidden="true"><use href="#i-motion"/></svg><span>Анімація</span>
+        </button>
+        <button class="fs-nav-item" type="button" data-section="appopen" style="--i:7">
+          <svg class="fs-nav-icon" aria-hidden="true"><use href="#i-appopen"/></svg><span>Відкриття</span>
+        </button>
+
+        <div class="fs-nav-group">Деталі</div>
+        <button class="fs-nav-item" type="button" data-section="typography" style="--i:8">
+          <svg class="fs-nav-icon" aria-hidden="true"><use href="#i-type"/></svg><span>Типографіка</span>
+        </button>
+        <button class="fs-nav-item" type="button" data-section="backgrounds" style="--i:9">
+          <svg class="fs-nav-icon" aria-hidden="true"><use href="#i-bg"/></svg><span>Фони</span>
+        </button>
+        <button class="fs-nav-item" type="button" data-section="labs" style="--i:10">
+          <svg class="fs-nav-icon" aria-hidden="true"><use href="#i-labs"/></svg><span>Labs</span>
+          <span class="fs-nav-badge" data-kind="labs">β</span>
+        </button>
+
+        <div class="fs-nav-group">Система</div>
+        <button class="fs-nav-item" type="button" data-section="custom" style="--i:11">
+          <svg class="fs-nav-icon" aria-hidden="true"><use href="#i-custom"/></svg><span>Custom</span>
+        </button>
+        <button class="fs-nav-item" type="button" data-section="cli" style="--i:12">
+          <svg class="fs-nav-icon" aria-hidden="true"><use href="#i-cli"/></svg><span>CLI</span>
+        </button>
+
+        <div class="fs-fox-mark" aria-hidden="true"></div>
+      </nav>
+
+      <!-- ---------------------------------------------------- preview -->
+      <div class="fs-preview">
+        <div class="fs-preview-head">
+          <span class="fs-preview-title">Live preview</span>
+          <span class="fs-preview-live">live</span>
+          <div class="fs-preview-tools">
+            <button class="fs-btn" type="button" data-size="sm" data-variant="ghost" data-action="replay-window" title="Переграти відкриття вікна">
+              <svg width="14" height="14" aria-hidden="true"><use href="#i-replay"/></svg> Вікно
+            </button>
+            <button class="fs-btn" type="button" data-size="sm" data-variant="ghost" data-action="replay-panel" title="Переграти відкриття панелі">
+              <svg width="14" height="14" aria-hidden="true"><use href="#i-replay"/></svg> Панель
+            </button>
+          </div>
+        </div>
+
+        <div class="fs-mini" id="fs-mini" aria-label="Мініатюра робочого столу FoxOS">
+          <div class="fs-mini-chrome" id="fs-mini-chrome">
+            <i class="fs-mini-icon" aria-hidden="true"></i>
+            <span class="fs-mini-prompt">fox ❯</span>
+            <span>home</span>
+            <span class="fs-dim">·</span>
+            <span>ghostty</span>
+            <span class="fs-mini-clock" id="fs-mini-clock">00:00</span>
+          </div>
+
+          <div class="fs-mini-window" id="fs-mini-window">
+            <div class="fs-win-title">
+              <span class="fs-win-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+              <span>ghostty — home</span>
+            </div>
+            <div class="fs-win-body">
+              <span class="fs-prompt">❯</span> <span class="fs-cmd">foxos on</span> <span class="fs-dim">·</span> <span class="fs-ok">✓</span> <span class="fs-dim">rain</span> · <span class="fs-fox">fox</span><br>
+              <span class="fs-prompt">❯</span> <span class="fs-cmd" id="fs-mini-cmd">sw purple</span><br>
+              <span class="fs-dim">theme → </span><span id="fs-mini-theme-name">dark</span>
+            </div>
+          </div>
+
+          <div class="fs-mini-dock" id="fs-mini-dock" data-style="pill">
+            <i class="fs-mini-dock-item is-accent is-running" style="--i:0" aria-hidden="true"></i>
+            <i class="fs-mini-dock-item" style="--i:1" aria-hidden="true"></i>
+            <i class="fs-mini-dock-item is-fox" style="--i:2" aria-hidden="true"></i>
+            <i class="fs-mini-dock-item" style="--i:3" aria-hidden="true"></i>
+          </div>
+          <div class="fs-preview-wave" aria-hidden="true"></div>
+        </div>
+      </div>
+
+      <!-- ---------------------------------------------------- main -->
+      <main class="fs-main" id="fs-main">
+
+        <!-- ================= THEMES ================= -->
+        <section class="fs-section" id="section-themes" data-section="themes" style="--i:0">
+          <div class="fs-section-head">
+            <span class="fs-eyebrow">Themes</span>
+            <h2 class="fs-section-title">Теми</h2>
+            <p class="fs-section-desc">Пресет задає базові кольори, текстуру й анімації. Усе нижче можна переналаштувати поверх пресету.</p>
+          </div>
+
+          <div class="fs-card is-accent">
+            <div class="fs-card-head">Пресет <span class="fs-badge" id="fs-preset-badge">dark</span></div>
+            <div class="fs-card-body">
+              <div class="fs-tiles" id="fs-preset-tiles" role="radiogroup" aria-label="Пресети">
+                <button class="fs-tile" type="button" role="radio" data-preset="dark" aria-pressed="true" style="--i:0">
+                  <span class="fs-tile-swatch" aria-hidden="true"></span>
+                  <span class="fs-tile-name">Dark</span>
+                  <span class="fs-tile-meta">night · violet</span>
+                </button>
+                <button class="fs-tile" type="button" role="radio" data-preset="light" aria-pressed="false" style="--i:1">
+                  <span class="fs-tile-swatch" aria-hidden="true"></span>
+                  <span class="fs-tile-name">Light</span>
+                  <span class="fs-tile-meta">paper · sw white</span>
+                </button>
+                <button class="fs-tile" type="button" role="radio" data-preset="neon" aria-pressed="false" style="--i:2">
+                  <span class="fs-tile-swatch" aria-hidden="true"></span>
+                  <span class="fs-tile-name">Neon</span>
+                  <span class="fs-tile-meta">grid · sw neon</span>
+                </button>
+                <button class="fs-tile" type="button" role="radio" data-preset="foxpurple" aria-pressed="false" style="--i:3">
+                  <span class="fs-tile-swatch" aria-hidden="true"></span>
+                  <span class="fs-tile-name">FoxPurple</span>
+                  <span class="fs-tile-meta">sw purple · ember</span>
+                </button>
+                <button class="fs-tile" type="button" role="radio" data-preset="custom" aria-pressed="false" style="--i:4">
+                  <span class="fs-tile-swatch" aria-hidden="true"></span>
+                  <span class="fs-tile-name">Custom</span>
+                  <span class="fs-tile-meta">мій · JSON</span>
+                </button>
+              </div>
+
+              <div class="fs-row">
+                <div class="fs-row-label">
+                  <span class="fs-row-title">Щільність</span>
+                  <span class="fs-row-hint">Розмір шрифту, висота кнопок і відступи</span>
+                </div>
+                <div class="fs-row-control">
+                  <div class="fs-segment" role="group" aria-label="Щільність" data-bind="typography.density">
+                    <button type="button" data-value="compact">Compact</button>
+                    <button type="button" data-value="normal">Normal</button>
+                    <button type="button" data-value="comfortable">Comfort</button>
+                  </div>
+                </div>
+              </div>
+              <div class="fs-row">
+                <div class="fs-row-label">
+                  <span class="fs-row-title">Назва теми</span>
+                  <span class="fs-row-hint">Записується в JSON експорту</span>
+                </div>
+                <div class="fs-row-control">
+                  <input class="fs-input" type="text" data-bind="name" aria-label="Назва теми" maxlength="40" style="width:220px">
+                </div>
+              </div>
+            </div>
+            <div class="fs-card-foot">
+              <button class="fs-btn" type="button" data-variant="ghost" data-action="reset-preset">Скинути до пресету</button>
+              <button class="fs-btn" type="button" data-action="replay-panel">
+                <svg width="14" height="14" aria-hidden="true"><use href="#i-replay"/></svg> Переграти відкриття
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================= COLORS ================= -->
+        <section class="fs-section" id="section-colors" data-section="colors" hidden>
+          <div class="fs-section-head">
+            <span class="fs-eyebrow">Colors</span>
+            <h2 class="fs-section-title">Кольори</h2>
+            <p class="fs-section-desc">Акцент і вторинний акцент мапляться на палітру <code class="fs-mono">sw</code> у FoxOS. Порожнє значення = колір пресету.</p>
+          </div>
+
+          <div class="fs-card">
+            <div class="fs-card-head">Акцент <span class="fs-badge" id="fs-accent-sw">sw purple</span></div>
+            <div class="fs-card-body">
+              <div class="fs-row">
+                <div class="fs-row-label"><span class="fs-row-title">Палітра FoxOS</span><span class="fs-row-hint">Клік = обрати акцент</span></div>
+                <div class="fs-row-control fs-swatches" role="radiogroup" aria-label="Акцент із палітри sw" data-swatches="colors.accent">
+                  <button class="fs-swatch" type="button" data-sw="orange"  aria-label="orange"  aria-pressed="false"></button>
+                  <button class="fs-swatch" type="button" data-sw="purple"  aria-label="purple"  aria-pressed="false"></button>
+                  <button class="fs-swatch" type="button" data-sw="violet"  aria-label="violet"  aria-pressed="false"></button>
+                  <button class="fs-swatch" type="button" data-sw="blue"    aria-label="blue"    aria-pressed="false"></button>
+                  <button class="fs-swatch" type="button" data-sw="cyan"    aria-label="cyan"    aria-pressed="false"></button>
+                  <button class="fs-swatch" type="button" data-sw="neon"    aria-label="neon"    aria-pressed="false"></button>
+                  <button class="fs-swatch" type="button" data-sw="slate"   aria-label="slate"   aria-pressed="false"></button>
+                  <button class="fs-swatch" type="button" data-sw="ice"     aria-label="ice"     aria-pressed="false"></button>
+                  <button class="fs-swatch" type="button" data-sw="rose"    aria-label="rose"    aria-pressed="false"></button>
+                  <button class="fs-swatch" type="button" data-sw="gold"    aria-label="gold"    aria-pressed="false"></button>
+                </div>
+              </div>
+              <div class="fs-row">
+                <div class="fs-row-label"><span class="fs-row-title">Акцент</span><span class="fs-row-hint">Кнопки, фокус, індикатори</span></div>
+                <div class="fs-row-control fs-color-pair">
+                  <input class="fs-input" type="color" data-bind="colors.accent" data-kind="color" aria-label="Акцент (колір)">
+                  <input class="fs-input" type="text" data-bind="colors.accent" data-kind="hex" aria-label="Акцент (hex)" placeholder="auto">
+                  <button class="fs-btn" type="button" data-size="sm" data-variant="ghost" data-clear="colors.accent">auto</button>
+                </div>
+              </div>
+              <div class="fs-row">
+                <div class="fs-row-label"><span class="fs-row-title">Вторинний акцент</span><span class="fs-row-hint">Fox ember · Labs</span></div>
+                <div class="fs-row-control fs-color-pair">
+                  <input class="fs-input" type="color" data-bind="colors.accent2" data-kind="color" aria-label="Вторинний акцент (колір)">
+                  <input class="fs-input" type="text" data-bind="colors.accent2" data-kind="hex" aria-label="Вторинний акцент (hex)" placeholder="auto">
+                  <button class="fs-btn" type="button" data-size="sm" data-variant="ghost" data-clear="colors.accent2">auto</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="fs-card">
+            <div class="fs-card-head">Поверхні</div>
+            <div class="fs-card-body">
+              <div class="fs-row">
+                <div class="fs-row-label"><span class="fs-row-title">Фон</span><span class="fs-row-hint">Полотно робочого столу</span></div>
+                <div class="fs-row-control fs-color-pair">
+                  <input class="fs-input" type="color" data-bind="colors.bg" data-kind="color" aria-label="Фон">
+                  <input class="fs-input" type="text" data-bind="colors.bg" data-kind="hex" aria-label="Фон (hex)" placeholder="auto">
+                  <button class="fs-btn" type="button" data-size="sm" data-variant="ghost" data-clear="colors.bg">auto</button>
+                </div>
+              </div>
+              <div class="fs-row">
+                <div class="fs-row-label"><span class="fs-row-title">Скло</span><span class="fs-row-hint">Базовий колір панелей і вікон</span></div>
+                <div class="fs-row-control fs-color-pair">
+                  <input class="fs-input" type="color" data-bind="colors.surface" data-kind="color" aria-label="Скло">
+                  <input class="fs-input" type="text" data-bind="colors.surface" data-kind="hex" aria-label="Скло (hex)" placeholder="auto">
+                  <button class="fs-btn" type="button" data-size="sm" data-variant="ghost" data-clear="colors.surface">auto</button>
+                </div>
+              </div>
+              <div class="fs-row">
+                <div class="fs-row-label"><span class="fs-row-title">Текст</span><span class="fs-row-hint">Основне чорнило</span></div>
+                <div class="fs-row-control fs-color-pair">
+                  <input class="fs-input" type="color" data-bind="colors.ink" data-kind="color" aria-label="Текст">
+                  <input class="fs-input" type="text" data-bind="colors.ink" data-kind="hex" aria-label="Текст (hex)" placeholder="auto">
+                  <button class="fs-btn" type="button" data-size="sm" data-variant="ghost" data-clear="colors.ink">auto</button>
+                </div>
+              </div>
+              <div class="fs-row">
+                <div class="fs-row-label"><span class="fs-row-title">Прозорість скла</span><span class="fs-row-hint">Тільки для Custom-теми</span></div>
+                <div class="fs-row-control">
+                  <div class="fs-slider">
+                    <input type="range" min="20" max="100" step="1" data-bind="colors.glass" data-kind="range" data-unit="%" aria-label="Прозорість скла">
+                    <span class="fs-slider-value">72%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="fs-card-foot">
+              <button class="fs-btn" type="button" data-variant="ghost" data-action="reset-colors">Скинути кольори</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================= BUTTONS ================= -->
+        <section class="fs-section" id="section-buttons" data-section="buttons" hidden>
+          <div class="fs-section-head">
+            <span class="fs-eyebrow">Buttons</span>
+            <h2 class="fs-section-title">Кнопки</h2>
+            <p class="fs-section-desc">Стиль кнопок застосовується через <code class="fs-mono">data-buttons</code> на корені: rounded · sharp · glass · liquid.</p>
+          </div>
+
+          <div class="fs-card">
+            <div class="fs-card-head">Стиль</div>
+            <div class="fs-card-body">
+              <div class="fs-row">
+                <div class="fs-row-label"><span class="fs-row-title">Сімейство</span><span class="fs-row-hint">Liquid морфиться при наведенні</span></div>
+                <div class="fs-row-control">
+                  <div class="fs-segment" role="group" aria-label="Стиль кнопок" data-bind="button.style">
+                    <button type="button" data-value="rounded">Rounded</button>
+                    <button type="button" data-value="sharp">Sharp</button>
+                    <button type="button" data-value="glass">Glass</button>
+                    <button type="button" data-value="liquid">Liquid</button>
+                  </div>
+                </div>
+              </div>
+              <div class="fs-row">
+                <div class="fs-row-label"><span class="fs-row-title">Радіус</span><span class="fs-row-hint">Перекриває радіус сімейства</span></div>
+                <div class="fs-row-control">
+                  <div class="fs-slider">
+                    <input type="range" min="0" max="28" step="1" data-bind="button.radius" data-kind="range" data-unit="px" data-nullable aria-label="Радіус кнопок">
+                    <span class="fs-slider-value">auto</span>
+                  </div>
+                  <button class="fs-btn" type="button" data-size="sm" data-variant="ghost" data-clear="button.radius">auto</button>
+                </div>
+              </div>
+              <div class="fs-row">
+                <div class="fs-row-label"><span class="fs-row-title">Ефект натискання</span><span class="fs-row-hint">Масштаб при :active</span></div>
+                <div class="fs-row-control">
+                  <div class="fs-slider">
+                    <input type="range" min="90" max="100" step="1" data-bind="button.pressScale" data-kind="range" data-unit="%" aria-label="Масштаб натискання">
+                    <span class="fs-slider-value">97%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="fs-card">
+            <div class="fs-card-head">Демо</div>
+            <div class="fs-card-body">
+              <div class="fs-demo">
+                <button class="fs-btn" type="button" data-variant="primary">Primary</button>
+                <button class="fs-btn" type="button">Default</button>
+                <button class="fs-btn" type="button" data-variant="ghost">Ghost</button>
+                <button class="fs-btn" type="button" data-variant="success">Success</button>
+                <button class="fs-btn" type="button" data-variant="danger">Danger</button>
+                <button class="fs-btn" type="button" disabled>Disabled</button>
+                <button class="fs-btn" type="button" data-size="sm">Small</button>
+                <button class="fs-btn" type="button" data-size="lg" data-variant="primary">Large</button>
+              </div>
+              <div class="fs-demo">
+                <span class="fs-row-hint">Поелементно:</span>
+                <button class="fs-btn" type="button" data-btn="rounded">rounded</button>
+                <button class="fs-btn" type="button" data-btn="sharp">sharp</button>
+                <button class="fs-btn" type="button" data-btn="glass">glass</button>
+                <button class="fs-btn" type="button" data-btn="liquid">liquid</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================= CHROME BAR ================= -->
+        <section class="fs-section" id="section-chrome" data-section="chrome" hidden>
+          <div class="fs-section-head">
+            <span class="fs-eyebrow">Chrome-bar</span>
+            <h2 class="fs-section-title">Chrome-бар</h2>
+            <p class="fs-section-desc">Верхня панель FoxOS: desk prompt, годинник, системні іконки.</p>
+          </div>
+
+          <div class="fs-card">
+            <div class="fs-card-head">Скло</div>
+            <div class="fs-card-body">
+              <div class="fs-row">
+                <div class="fs-row-label"><span class="fs-row-title">Непрозорість</span></div>
+                <div class="fs-row-control">
+                  <div class="fs-slider">
+                    <input type="range" min="0" max="100" step="1" data-bind="chrome.opacity" data-kind="range" data-unit="%" aria-label="Непрозорість chrome-бару">
+                    <span class="fs-slider-value">72%</span>
+                  </div>
+                </div>
+              </div>
+              <div class="fs-row">
+                <div class="fs-row-label"><span class="fs-row-title">Розмиття</span><span class="fs-row-hint">backdrop-filter</span></div>
+                <div class="fs-row-control">
+                  <div class="fs-slider">
+                    <input type="range" min="0" max="40" step="1" data-bind="chrome.blur" data-kind="range" data-unit="px" aria-label="Розмиття chrome-бару">
+                    <span class="fs-slider-value">18px</span>
+                  </div>
+                </div>
+              </div>
+              <div class="fs-row">
+                <div class="fs-row-label"><span class="fs-row-title">Висота</span></div>
+                <div class="fs-row-control">
+                  <div class="fs-slider">
+                    <input type="range" min="24" max="56" step="1" data-bind="chrome.height" data-kind="range" data-unit="px" aria-label="Висота chrome-бару">
+                    <span class="fs-slider-value">36px</span>
+                  </div>
+                </div>
+              </div>
+              <div class="fs-row">
+                <div class="fs-row-label"><span class="fs-row-title">Плаваючий</span><span class="fs-row-hint">Відступ від країв і радіус</span></div>
+                <div class="fs-row-control">
+                  <label class="fs-toggle">
+                    <input type="checkbox" data-bind="chrome.floating" data-kind="toggle" aria-label="Плаваючий chrome-бар">
+                    <span class="fs-toggle-track"></span><span class="fs-toggle-knob"></span>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="fs-card">
+            <div class="fs-card-head">Іконки</div>
+            <div class="fs-card-body">
+              <div class="fs-row">
+                <div class="fs-row-label"><span class="fs-row-title">Стиль іконок</span></div>
+                <div class="fs-row-control">
+                  <div class="fs-segment" role="group" aria-label="Стиль іконок" data-bind="chrome.icons">
+                    <button type="button" data-value="line">Line</button>
+                    <button type="button" data-value="filled">Filled</button>
+                    <button type="button" data-value="duotone">Duotone</button>
+                  </div>
+                </div>
+              </div>
+              <div class="fs-row">
+                <div class="fs-row-label"><span class="fs-row-title">Розмір іконок</span></div>
+                <div class="fs-row-control">
+                  <div class="fs-slider">
+                    <input type="range" min="12" max="22" step="1" data-bind="chrome.iconSize" data-kind="range" data-unit="px" aria-label="Розмір іконок">
+                    <span class="fs-slider-value">16px</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================= WINDOWS ================= -->
+        <section class="fs-section" id="section-windows" data-section="windows" hidden>
+          <div class="fs-section-head">
+            <span class="fs-eyebrow">Windows</span>
+            <h2 class="fs-section-title">Вікна</h2>
+            <p class="fs-section-desc">Радіус, тінь і анімація відкриття застосунків FoxOS.</p>
+          </div>
+
+          <div class="fs-card">
+            <div class="fs-card-head">Форма</div>
+            <div class="fs-card-body">
+              <div class="fs-row">
+                <div class="fs-row-label"><span class="fs-row-title">Радіус кутів</span></div>
+                <div class="fs-row-control">
+                  <div class="fs-slider">
+                    <input type="range" min="0" max="32" step="1" data-bind="window.radius" data-kind="range" data-unit="px" aria-label="Радіус вікон">
+                    <span class="fs-slider-value">16px</span>
+                  </div>
+                </div>
+              </div>
+              <div class="fs-row">
+                <div class="fs-row-label"><span class="fs-row-title">Пресет тіні</span></div>
+                <div class="fs-row-control">
+                  <div class="fs-segment" role="group" aria-label="Пресет тіні" data-bind="window.shadowPreset">
+                    <button type="button" data-value="flat">Flat</button>
+                    <button type="button" data-value="soft">Soft</button>
+                    <button type="button" data-value="deep">Deep</button>
+                    <button type="button" data-value="neon">Neon</button>
+                    <button type="button" data-value="custom">Custom</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="fs-card" id="fs-shadow-card">
+            <div class="fs-card-head">Тінь (custom) <span class="fs-badge" data-kind="muted">box-shadow</span></div>
+            <div class="fs-card-body">
+              <div class="fs-row">
+                <div class="fs-row-label"><span class="fs-row-title">Зсув X</span></div>
+                <div class="fs-row-control"><div class="fs-slider">
+                  <input type="range" min="-40" max="40" step="1" data-bind="window.shadow.x" data-kind="range" data-unit="px" aria-label="Тінь: зсув X">
+                  <span class="fs-slider-value">0px</span>
+                </div></div>
+              </div>
+              <div class="fs-row">
+                <div class="fs-row-label"><span class="fs-row-title">Зсув Y</span></div>
+                <div class="fs-row-control"><div class="fs-slider">
+                  <input type="range" min="-40" max="80" step="1" data-bind="window.shadow.y" data-kind="range" data-unit="px" aria-label="Тінь: зсув Y">
+                  <span class="fs-slider-value">28px</span>
+                </div></div>
+              </div>
+              <div class="fs-row">
+                <div class="fs-row-label"><span class="fs-row-title">Розмиття</span></div>
+                <div class="fs-row-control"><div class="fs-slider">
+                  <input type="range" min="0" max="140" step="2" data-bind="window.shadow.blur" data-kind="range" data-unit="px" aria-label="Тінь: розмиття">
+                  <span class="fs-slider-value">70px</span>
+                </div></div>
+              </div>
+              <div class="fs-row">
+                <div class="fs-row-label"><span class="fs-row-title">Розширення</span></div>
+                <div class="fs-row-control"><div class="fs-slider">
+                  <input type="range" min="-40" max="20" step="1" data-bind="window.shadow.spread" data-kind="range" data-unit="px" aria-label="Тінь: розширення">
+                  <span class="fs-slider-value">-12px</span>
+                </div></div>
+              </div>
+              <div class="fs-row">
+                <div class="fs-row-label"><span class="fs-row-title">Колір і прозорість</span></div>
+                <div class="fs-row-control">
+                  <input class="fs-input" type="color" data-bind="window.shadow.color" data-kind="color" aria-label="Тінь: колір">
+                  <div class="fs-slider" style="width:160px">
+                    <input type="range" min="0" max="100" step="1" data-bind="window.shadow.alpha" data-kind="range" data-unit="%" aria-label="Тінь: прозорість">
+                    <span class="fs-slider-value">60%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="fs-card">
+            <div class="fs-card-head">Відкриття вікна</div>
+            <div class="fs-card-body">
+              <div class="fs-row">
+                <div class="fs-row-label"><span class="fs-row-title">Анімація</span><span class="fs-row-hint">Auto = з пресету</span></div>
+                <div class="fs-row-control">
+                  <div class="fs-segment" role="group" aria-label="Анімація відкриття вікна" data-bind="window.openAnim">
+                    <button type="button" data-value="auto">Auto</button>
+                    <button type="button" data-value="zoom">Zoom</button>
+                    <button type="button" data-value="flip">Flip</button>
+                    <button type="button" data-value="fold">Fold</button>
+                    <button type="button" data-value="liquid">Liquid</button>
+                    <button type="button" data-value="fade">Fade</button>
+                    <button type="button" data-value="slide">Slide</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="fs-card-foot">
+              <button class="fs-btn" type="button" data-action="replay-window">
+                <svg width="14" height="14" aria-hidden="true"><use href="#i-replay"/></svg> Переграти
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================= PANELS ================= -->
+        <section class="fs-section" id="section-panels" data-section="panels" hidden>
+          <div class="fs-section-head">
+            <span class="fs-eyebrow">Panels</span>
+            <h2 class="fs-section-title">Панелі</h2>
+            <p class="fs-section-desc">Як з’являється сама панель FOXSTYLE (і майбутні панелі FoxOS: settings, pulse, foxdocs).</p>
+          </div>
+
+          <div class="fs-card">
+            <div class="fs-card-head">Поява</div>
+            <div class="fs-card-body">
+              <div class="fs-row">
+                <div class="fs-row-label"><span class="fs-row-title">Стиль</span><span class="fs-row-hint">Book = розгортання як обкладинка справа</span></div>
+                <div class="fs-row-control">
+                  <div class="fs-segment" role="group" aria-label="Стиль появи панелі" data-bind="panel.enter">
+                    <button type="button" data-value="book">Book</button>
+                    <button type="button" data-value="slide">Slide</button>
+                    <button type="button" data-value="fade">Fade</button>
+                    <button type="button" data-value="fold">Fold</button>
+                    <button type="button" data-value="zoom">Zoom</button>
+                  </div>
+                </div>
+              </div>
+              <div class="fs-row">
+                <div class="fs-row-label"><span class="fs-row-title">Швидкість</span></div>
+                <div class="fs-row-control">
+                  <div class="fs-segment" role="group" aria-label="Швидкість появи панелі" data-bind="panel.speed">
+                    <button type="button" data-value="fast">Fast</button>
+                    <button type="button" data-value="normal">Normal</button>
+                    <button type="button" data-value="slow">Slow</button>
+                  </div>
+                </div>
+              </div>
+              <div class="fs-row">
+                <div class="fs-row-label"><span class="fs-row-title">Розмиття скла панелі</span></div>
+                <div class="fs-row-control"><div class="fs-slider">
+                  <input type="range" min="0" max="48" step="1" data-bind="panel.blur" data-kind="range" data-unit="px" aria-label="Розмиття панелі">
+                  <span class="fs-slider-value">28px</span>
+                </div></div>
+              </div>
+              <div class="fs-row">
+                <div class="fs-row-label"><span class="fs-row-title">Радіус панелі</span></div>
+                <div class="fs-row-control"><div class="fs-slider">
+                  <input type="range" min="0" max="36" step="1" data-bind="panel.radius" data-kind="range" data-unit="px" aria-label="Радіус панелі">
+                  <span class="fs-slider-value">24px</span>
+                </div></div>
+              </div>
+            </div>
+            <div class="fs-card-foot">
+              <button class="fs-btn" type="button" data-action="replay-panel">
+                <svg width="14" height="14" aria-hidden="true"><use href="#i-replay"/></svg> Переграти
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================= MOTION ================= -->
+        <section class="fs-section" id="section-motion" data-section="motion" hidden>
+          <div class="fs-section-head">
+            <span class="fs-eyebrow">Motion</span>
+            <h2 class="fs-section-title">Анімація</h2>
+            <p class="fs-section-desc">Глобальні тривалості та криві. <code class="fs-mono">prefers-reduced-motion</code> поважається автоматично.</p>
+          </div>
+
+          <div class="fs-card">
+            <div class="fs-card-head">Масштаб руху</div>
+            <div class="fs-card-body">
+              <div class="fs-row">
+                <div class="fs-row-label"><span class="fs-row-title">Режим</span><span class="fs-row-hint">Off вимикає всі анімації</span></div>
+                <div class="fs-row-control">
+                  <div class="fs-segment" role="group" aria-label="Режим руху" data-bind="motion.scale">
+                    <button type="button" data-value="full">Full</button>
+                    <button type="button" data-value="reduced">Reduced</button>
+                    <button type="button" data-value="off">Off</button>
+                  </div>
+                </div>
+              </div>
+              <div class="fs-row">
+                <div class="fs-row-label"><span class="fs-row-title">Fast</span><span class="fs-row-hint">hover, фокус</span></div>
+                <div class="fs-row-control"><div class="fs-slider">
+                  <input type="range" min="60" max="400" step="10" data-bind="motion.fast" data-kind="range" data-unit="ms" aria-label="Тривалість fast">
+                  <span class="fs-slider-value">160ms</span>
+                </div></div>
+              </div>
+              <div class="fs-row">
+                <div class="fs-row-label"><span class="fs-row-title">Medium</span><span class="fs-row-hint">перемикачі, картки</span></div>
+                <div class="fs-row-control"><div class="fs-slider">
+                  <input type="range" min="120" max="800" step="10" data-bind="motion.med" data-kind="range" data-unit="ms" aria-label="Тривалість medium">
+                  <span class="fs-slider-value">320ms</span>
+                </div></div>
+              </div>
+              <div class="fs-row">
+                <div class="fs-row-label"><span class="fs-row-title">Slow</span><span class="fs-row-hint">вікна, панелі, wave</span></div>
+                <div class="fs-row-control"><div class="fs-slider">
+                  <input type="range" min="240" max="1600" step="20" data-bind="motion.slow" data-kind="range" data-unit="ms" aria-label="Тривалість slow">
+                  <span class="fs-slider-value">640ms</span>
+                </div></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="fs-card">
+            <div class="fs-card-head">Криві</div>
+            <div class="fs-card-body">
+              <div class="fs-row">
+                <div class="fs-row-label"><span class="fs-row-title">Стандартна крива</span><span class="fs-row-hint">Застосовується до більшості переходів</span></div>
+                <div class="fs-row-control">
+                  <select class="fs-select" data-bind="motion.ease" data-kind="select" aria-label="Стандартна крива">
+                    <option value="standard">Standard · cubic-bezier(.2,0,0,1)</option>
+                    <option value="decel">Decelerate · (0,0,.2,1)</option>
+                    <option value="elastic">Elastic · (.34,1.56,.64,1)</option>
+                    <option value="bounce">Bounce · (.68,-.6,.32,1.6)</option>
+                    <option value="liquid">Liquid · (.65,0,.1,1)</option>
+                  </select>
+                </div>
+              </div>
+              <div class="fs-row">
+                <div class="fs-row-label"><span class="fs-row-title">Stagger</span><span class="fs-row-hint">Затримка між сусідніми елементами</span></div>
+                <div class="fs-row-control"><div class="fs-slider">
+                  <input type="range" min="0" max="120" step="5" data-bind="motion.stagger" data-kind="range" data-unit="ms" aria-label="Stagger">
+                  <span class="fs-slider-value">45ms</span>
+                </div></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================= APP OPEN (per-element) ================= -->
+        <section class="fs-section" id="section-appopen" data-section="appopen" hidden>
+          <div class="fs-section-head">
+            <span class="fs-eyebrow">App open</span>
+            <h2 class="fs-section-title">Відкриття та поява елементів</h2>
+            <p class="fs-section-desc">Окремі анімації для доку, навігації, карток, плиток і перемикачів.</p>
+          </div>
+
+          <div class="fs-card">
+            <div class="fs-card-head">Поелементно</div>
+            <div class="fs-card-body">
+              <div class="fs-grid-2">
+                <div class="fs-field">
+                  <label for="anim-dock">Іконки доку</label>
+                  <select class="fs-select" id="anim-dock" data-bind="perElementAnims.dock" data-kind="select">
+                    <option value="fs-bounce-in">Bounce in</option>
+                    <option value="fs-elastic-in">Elastic in</option>
+                    <option value="fs-zoom-open">Zoom</option>
+                    <option value="fs-slide-up">Slide up</option>
+                    <option value="fs-fade-in">Fade</option>
+                  </select>
+                </div>
+                <div class="fs-field">
+                  <label for="anim-nav">Пункти навігації</label>
+                  <select class="fs-select" id="anim-nav" data-bind="perElementAnims.nav" data-kind="select">
+                    <option value="fs-fade-up">Fade up</option>
+                    <option value="fs-slide-in-left">Slide in left</option>
+                    <option value="fs-elastic-in">Elastic in</option>
+                    <option value="fs-fade-in">Fade</option>
+                  </select>
+                </div>
+                <div class="fs-field">
+                  <label for="anim-card">Картки</label>
+                  <select class="fs-select" id="anim-card" data-bind="perElementAnims.card" data-kind="select">
+                    <option value="fs-fade-up">Fade up</option>
+                    <option value="fs-zoom-open">Zoom</option>
+                    <option value="fs-flip-open">Flip</option>
+                    <option value="fs-fold-open">Fold</option>
+                    <option value="fs-liquid-open">Liquid</option>
+                  </select>
+                </div>
+                <div class="fs-field">
+                  <label for="anim-tile">Плитки пресетів</label>
+                  <select class="fs-select" id="anim-tile" data-bind="perElementAnims.tile" data-kind="select">
+                    <option value="fs-zoom-open">Zoom</option>
+                    <option value="fs-elastic-in">Elastic in</option>
+                    <option value="fs-fade-up">Fade up</option>
+                    <option value="fs-flip-open">Flip</option>
+                  </select>
+                </div>
+                <div class="fs-field">
+                  <label for="anim-toggle">Перемикачі</label>
+                  <select class="fs-select" id="anim-toggle" data-bind="perElementAnims.toggle" data-kind="select">
+                    <option value="fs-elastic-pop">Elastic pop</option>
+                    <option value="fs-bounce-soft">Bounce soft</option>
+                    <option value="fs-liquid-wobble">Liquid wobble</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div class="fs-card-foot">
+              <button class="fs-btn" type="button" data-action="replay-elements">
+                <svg width="14" height="14" aria-hidden="true"><use href="#i-replay"/></svg> Переграти все
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================= TYPOGRAPHY ================= -->
+        <section class="fs-section" id="section-typography" data-section="typography" hidden>
+          <div class="fs-section-head">
+            <span class="fs-eyebrow">Typography</span>
+            <h2 class="fs-section-title">Типографіка</h2>
+            <p class="fs-section-desc">Шрифти UI, заголовків і моноширинний для терміналу.</p>
+          </div>
+
+          <div class="fs-card">
+            <div class="fs-card-head">Шрифти</div>
+            <div class="fs-card-body">
+              <div class="fs-grid-2">
+                <div class="fs-field">
+                  <label for="font-ui">UI</label>
+                  <select class="fs-select" id="font-ui" data-bind="typography.ui" data-kind="select">
+                    <option value="Inter">Inter</option>
+                    <option value="Space Grotesk">Space Grotesk</option>
+                    <option value="Segoe UI Variable">Segoe UI Variable</option>
+                    <option value="system-ui">System</option>
+                  </select>
+                </div>
+                <div class="fs-field">
+                  <label for="font-display">Заголовки</label>
+                  <select class="fs-select" id="font-display" data-bind="typography.display" data-kind="select">
+                    <option value="Space Grotesk">Space Grotesk</option>
+                    <option value="Inter">Inter</option>
+                    <option value="Segoe UI Variable Display">Segoe UI Variable Display</option>
+                    <option value="system-ui">System</option>
+                  </select>
+                </div>
+                <div class="fs-field">
+                  <label for="font-mono">Моно</label>
+                  <select class="fs-select" id="font-mono" data-bind="typography.mono" data-kind="select">
+                    <option value="JetBrains Mono">JetBrains Mono</option>
+                    <option value="Cascadia Mono">Cascadia Mono</option>
+                    <option value="Consolas">Consolas</option>
+                    <option value="monospace">System mono</option>
+                  </select>
+                </div>
+                <div class="fs-field">
+                  <label for="font-tracking">Трекінг заголовків</label>
+                  <select class="fs-select" id="font-tracking" data-bind="typography.tracking" data-kind="select">
+                    <option value="tight">Tight · −0.02em</option>
+                    <option value="normal">Normal · 0</option>
+                    <option value="wide">Wide · 0.04em</option>
+                  </select>
+                </div>
+              </div>
+              <div class="fs-row">
+                <div class="fs-row-label"><span class="fs-row-title">Базовий розмір</span><span class="fs-row-hint">Масштабує всю панель</span></div>
+                <div class="fs-row-control"><div class="fs-slider">
+                  <input type="range" min="12" max="16" step="0.5" data-bind="typography.size" data-kind="range" data-unit="px" aria-label="Базовий розмір шрифту">
+                  <span class="fs-slider-value">13.5px</span>
+                </div></div>
+              </div>
+              <div class="fs-row">
+                <div class="fs-row-label"><span class="fs-row-title">Вага заголовків</span></div>
+                <div class="fs-row-control">
+                  <div class="fs-segment" role="group" aria-label="Вага заголовків" data-bind="typography.displayWeight">
+                    <button type="button" data-value="500">500</button>
+                    <button type="button" data-value="600">600</button>
+                    <button type="button" data-value="700">700</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================= BACKGROUNDS ================= -->
+        <section class="fs-section" id="section-backgrounds" data-section="backgrounds" hidden>
+          <div class="fs-section-head">
+            <span class="fs-eyebrow">Backgrounds</span>
+            <h2 class="fs-section-title">Фони і текстури</h2>
+            <p class="fs-section-desc">Текстура накладається на скло панелі та на мініатюру робочого столу.</p>
+          </div>
+
+          <div class="fs-card is-textured">
+            <div class="fs-card-head">Текстура</div>
+            <div class="fs-card-body">
+              <div class="fs-row">
+                <div class="fs-row-label"><span class="fs-row-title">Тип</span></div>
+                <div class="fs-row-control">
+                  <div class="fs-segment" role="group" aria-label="Текстура" data-bind="texture.kind">
+                    <button type="button" data-value="none">None</button>
+                    <button type="button" data-value="glass">Glass</button>
+                    <button type="button" data-value="metal">Metal</button>
+                    <button type="button" data-value="fabric">Fabric</button>
+                    <button type="button" data-value="neon-grid">Neon grid</button>
+                  </div>
+                </div>
+              </div>
+              <div class="fs-row">
+                <div class="fs-row-label"><span class="fs-row-title">Інтенсивність</span></div>
+                <div class="fs-row-control"><div class="fs-slider">
+                  <input type="range" min="0" max="100" step="5" data-bind="texture.opacity" data-kind="range" data-unit="%" aria-label="Інтенсивність текстури">
+                  <span class="fs-slider-value">100%</span>
+                </div></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="fs-card">
+            <div class="fs-card-head">Шпалери FoxOS</div>
+            <div class="fs-card-body">
+              <div class="fs-row">
+                <div class="fs-row-label"><span class="fs-row-title">ASCII rain</span><span class="fs-row-hint">Яскравість дощу на мініатюрі</span></div>
+                <div class="fs-row-control"><div class="fs-slider">
+                  <input type="range" min="0" max="100" step="5" data-bind="texture.rain" data-kind="range" data-unit="%" aria-label="ASCII rain">
+                  <span class="fs-slider-value">35%</span>
+                </div></div>
+              </div>
+              <div class="fs-row">
+                <div class="fs-row-label"><span class="fs-row-title">Стиль доку</span><span class="fs-row-hint"><code class="fs-mono">foxlook dock style</code></span></div>
+                <div class="fs-row-control">
+                  <div class="fs-segment" role="group" aria-label="Стиль доку" data-bind="texture.dock">
+                    <button type="button" data-value="pill">Pill</button>
+                    <button type="button" data-value="card">Card</button>
+                    <button type="button" data-value="bar">Bar</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================= LABS ================= -->
+        <section class="fs-section" id="section-labs" data-section="labs" hidden>
+          <div class="fs-section-head">
+            <span class="fs-eyebrow">Labs</span>
+            <h2 class="fs-section-title">Labs <span class="fs-badge" data-kind="labs">β</span></h2>
+            <p class="fs-section-desc">Експериментальні ефекти. Можуть навантажувати GPU на слабких ПК.</p>
+          </div>
+
+          <div class="fs-card" data-labs>
+            <div class="fs-card-head">Ефекти</div>
+            <div class="fs-card-body">
+              <div class="fs-row">
+                <div class="fs-row-label"><span class="fs-row-title">Dynamic shadows</span><span class="fs-row-hint">Тінь вікон слідує за курсором</span></div>
+                <div class="fs-row-control">
+                  <label class="fs-toggle" data-kind="labs">
+                    <input type="checkbox" data-bind="labs.dynamicShadows" data-kind="toggle" aria-label="Dynamic shadows">
+                    <span class="fs-toggle-track"></span><span class="fs-toggle-knob"></span>
+                  </label>
+                </div>
+              </div>
+              <div class="fs-row">
+                <div class="fs-row-label"><span class="fs-row-title">Fox glow</span><span class="fs-row-hint">Акцентне світіння панелі, вікна й Apply</span></div>
+                <div class="fs-row-control">
+                  <label class="fs-toggle" data-kind="labs">
+                    <input type="checkbox" data-bind="labs.foxGlow" data-kind="toggle" aria-label="Fox glow">
+                    <span class="fs-toggle-track"></span><span class="fs-toggle-knob"></span>
+                  </label>
+                </div>
+              </div>
+              <div class="fs-row">
+                <div class="fs-row-label"><span class="fs-row-title">Motion blur</span><span class="fs-row-hint">Розмиття під час швидких переходів</span></div>
+                <div class="fs-row-control">
+                  <label class="fs-toggle" data-kind="labs">
+                    <input type="checkbox" data-bind="labs.motionBlur" data-kind="toggle" aria-label="Motion blur">
+                    <span class="fs-toggle-track"></span><span class="fs-toggle-knob"></span>
+                  </label>
+                </div>
+              </div>
+              <div class="fs-row">
+                <div class="fs-row-label"><span class="fs-row-title">Liquid windows</span><span class="fs-row-hint">Рідке відкриття + легке погойдування</span></div>
+                <div class="fs-row-control">
+                  <label class="fs-toggle" data-kind="labs">
+                    <input type="checkbox" data-bind="labs.liquidWindows" data-kind="toggle" aria-label="Liquid windows">
+                    <span class="fs-toggle-track"></span><span class="fs-toggle-knob"></span>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================= CUSTOM ================= -->
+        <section class="fs-section" id="section-custom" data-section="custom" hidden>
+          <div class="fs-section-head">
+            <span class="fs-eyebrow">Custom</span>
+            <h2 class="fs-section-title">Custom · JSON</h2>
+            <p class="fs-section-desc">Поточний стан теми за модульною схемою <code class="fs-mono">schema/theme.schema.json</code>. Експортуй, редагуй, імпортуй.</p>
+          </div>
+
+          <div class="fs-card">
+            <div class="fs-card-head">Стан теми <span class="fs-badge" data-kind="muted" id="fs-json-size">0 B</span></div>
+            <div class="fs-card-body">
+              <textarea class="fs-textarea" id="fs-json" spellcheck="false" aria-label="JSON теми"></textarea>
+            </div>
+            <div class="fs-card-foot">
+              <input type="file" id="fs-import-file" accept="application/json,.json" class="fs-sr-only" aria-label="Імпортувати JSON">
+              <button class="fs-btn" type="button" data-variant="ghost" data-action="import">Імпорт…</button>
+              <button class="fs-btn" type="button" data-variant="ghost" data-action="apply-json">Застосувати з поля</button>
+              <button class="fs-btn" type="button" data-action="save-custom">Зберегти як Custom</button>
+              <button class="fs-btn" type="button" data-variant="primary" data-action="export">Експорт JSON</button>
+            </div>
+          </div>
+
+          <div class="fs-card">
+            <div class="fs-card-head">Сховище</div>
+            <div class="fs-card-body">
+              <div class="fs-row">
+                <div class="fs-row-label"><span class="fs-row-title">localStorage</span><span class="fs-row-hint"><code class="fs-mono">foxstyle.theme.v1</code> — застосована тема</span></div>
+                <div class="fs-row-control">
+                  <button class="fs-btn" type="button" data-size="sm" data-variant="danger" data-action="clear-storage">Очистити</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================= CLI ================= -->
+        <section class="fs-section" id="section-cli" data-section="cli" hidden>
+          <div class="fs-section-head">
+            <span class="fs-eyebrow">CLI</span>
+            <h2 class="fs-section-title">Команди FoxOS</h2>
+            <p class="fs-section-desc">Еквівалент поточних налаштувань у термінах <code class="fs-mono">sw</code>, <code class="fs-mono">foxos</code>, <code class="fs-mono">foxlook</code>. Скопіюй у Ghostty.</p>
+          </div>
+
+          <div class="fs-card">
+            <div class="fs-card-head">Згенеровано</div>
+            <div class="fs-card-body">
+              <pre class="fs-code" id="fs-cli"><button class="fs-btn fs-code-copy" type="button" data-size="sm" data-variant="ghost" data-action="copy-cli" aria-label="Копіювати команди"><svg width="14" height="14" aria-hidden="true"><use href="#i-copy"/></svg></button><code id="fs-cli-code"></code></pre>
+            </div>
+          </div>
+
+          <div class="fs-card">
+            <div class="fs-card-head">Довідка</div>
+            <div class="fs-card-body">
+              <div class="fs-row">
+                <div class="fs-row-label"><span class="fs-row-title"><code class="fs-mono">sw &lt;theme&gt;</code></span><span class="fs-row-hint">Акцент FoxOS + Ghostty + Windows accent</span></div>
+                <div class="fs-row-control"><span class="fs-kbd">sw purple</span></div>
+              </div>
+              <div class="fs-row">
+                <div class="fs-row-label"><span class="fs-row-title"><code class="fs-mono">sw -&lt;theme&gt;</code></span><span class="fs-row-hint">Тільки колір, без UI</span></div>
+                <div class="fs-row-control"><span class="fs-kbd">sw -slate</span></div>
+              </div>
+              <div class="fs-row">
+                <div class="fs-row-label"><span class="fs-row-title"><code class="fs-mono">foxlook dock style</code></span><span class="fs-row-hint">pill · card · bar</span></div>
+                <div class="fs-row-control"><span class="fs-kbd">foxlook dock style pill</span></div>
+              </div>
+              <div class="fs-row">
+                <div class="fs-row-label"><span class="fs-row-title"><code class="fs-mono">foxos on</code></span><span class="fs-row-hint">ASCII rain + desk prompt</span></div>
+                <div class="fs-row-control"><span class="fs-kbd">foxos on</span></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </main>
+
+      <!-- ---------------------------------------------------- foot -->
+      <footer class="fs-foot">
+        <span class="fs-foot-status" id="fs-status" data-dirty="false">збережено</span>
+        <button class="fs-btn" type="button" data-variant="ghost" data-action="revert" id="fs-revert" disabled>Відмінити</button>
+        <button class="fs-apply" id="fs-apply" type="button" data-dirty="false">
+          <svg width="16" height="16" aria-hidden="true"><use href="#i-check"/></svg>
+          <span>Застосувати</span>
+        </button>
+      </footer>
+
+    </section>
+  </div>
+</div>
+
+<div id="fs-toasts" aria-live="polite" aria-atomic="true"></div>
+
+<script src="assets/js/foxstyle.js" defer></script>
+</body>
+</html>

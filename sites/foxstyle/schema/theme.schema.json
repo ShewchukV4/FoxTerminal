@@ -1,0 +1,175 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/ShewchukV4/FoxTerminal/sites/foxstyle/schema/theme.schema.json",
+  "title": "FOXSTYLE Theme",
+  "description": "Modular appearance theme for FoxOS / FoxTerminal. Consumed by sites/foxstyle/assets/js/foxstyle.js (ThemeEngine) and mapped onto CSS custom properties in assets/css/tokens.css.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "colors"],
+  "properties": {
+    "version": { "type": "integer", "const": 1, "description": "Schema version." },
+    "name": { "type": "string", "maxLength": 40, "description": "Human-readable theme name (shown in preview and export filename)." },
+    "preset": {
+      "type": "string",
+      "enum": ["dark", "light", "neon", "foxpurple", "custom"],
+      "description": "Preset the theme was derived from."
+    },
+
+    "colors": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["theme"],
+      "description": "Color module. `theme` selects the [data-theme] base; other keys are optional overrides (null = inherit from preset).",
+      "properties": {
+        "theme":   { "type": "string", "enum": ["dark", "light", "neon", "foxpurple", "custom"] },
+        "accent":  { "$ref": "#/$defs/hexOrNull", "description": "Primary accent → --fs-accent (maps to FoxOS `sw <name>`)." },
+        "accent2": { "$ref": "#/$defs/hexOrNull", "description": "Secondary accent (fox ember / labs) → --fs-accent2." },
+        "bg":      { "$ref": "#/$defs/hexOrNull", "description": "Desktop canvas → --fs-bg." },
+        "surface": { "$ref": "#/$defs/hexOrNull", "description": "Glass base → --fs-surface-solid." },
+        "ink":     { "$ref": "#/$defs/hexOrNull", "description": "Primary text → --fs-ink." },
+        "glass":   { "type": "number", "minimum": 20, "maximum": 100, "description": "Surface opacity % (custom theme) → --fs-custom-glass." }
+      }
+    },
+
+    "chrome": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Chrome-bar (FoxOS top bar / desk prompt).",
+      "properties": {
+        "opacity":  { "type": "number", "minimum": 0, "maximum": 100, "description": "% → --fs-chrome-opacity" },
+        "blur":     { "type": "number", "minimum": 0, "maximum": 40, "description": "px → --fs-chrome-blur" },
+        "height":   { "type": "number", "minimum": 24, "maximum": 56, "description": "px → --fs-chrome-height" },
+        "floating": { "type": "boolean", "description": "Inset bar with radius → --fs-chrome-radius" },
+        "icons":    { "type": "string", "enum": ["line", "filled", "duotone"], "description": "→ [data-icons]" },
+        "iconSize": { "type": "number", "minimum": 12, "maximum": 22, "description": "px → --fs-chrome-icon-size" }
+      }
+    },
+
+    "window": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "FoxOS app windows.",
+      "properties": {
+        "radius": { "type": "number", "minimum": 0, "maximum": 32, "description": "px → --fs-win-radius" },
+        "shadowPreset": {
+          "type": "string",
+          "enum": ["flat", "soft", "deep", "neon", "custom"],
+          "description": "Named shadow → [data-win-shadow]; `custom` uses `shadow`."
+        },
+        "shadow": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "x":      { "type": "number", "minimum": -40, "maximum": 40 },
+            "y":      { "type": "number", "minimum": -40, "maximum": 80 },
+            "blur":   { "type": "number", "minimum": 0, "maximum": 140 },
+            "spread": { "type": "number", "minimum": -40, "maximum": 20 },
+            "color":  { "$ref": "#/$defs/hex" },
+            "alpha":  { "type": "number", "minimum": 0, "maximum": 100, "description": "% opacity of shadow color" }
+          }
+        },
+        "openAnim": {
+          "type": "string",
+          "enum": ["auto", "zoom", "flip", "fold", "liquid", "fade", "slide"],
+          "description": "→ [data-win-open]; `auto` inherits from preset."
+        }
+      }
+    },
+
+    "panel": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Panel chrome (FOXSTYLE itself and future FoxOS panels).",
+      "properties": {
+        "enter":  { "type": "string", "enum": ["book", "slide", "fade", "fold", "zoom"], "description": "→ [data-panel-enter]" },
+        "speed":  { "type": "string", "enum": ["fast", "normal", "slow"], "description": "→ [data-panel-speed]" },
+        "blur":   { "type": "number", "minimum": 0, "maximum": 48, "description": "px → --fs-panel-blur" },
+        "radius": { "type": "number", "minimum": 0, "maximum": 36, "description": "px → --fs-panel-radius" }
+      }
+    },
+
+    "button": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "style":      { "type": "string", "enum": ["rounded", "sharp", "glass", "liquid"], "description": "→ [data-buttons]" },
+        "radius":     { "type": ["number", "null"], "minimum": 0, "maximum": 28, "description": "px override → --fs-btn-radius; null = family default" },
+        "pressScale": { "type": "number", "minimum": 90, "maximum": 100, "description": "% → --fs-btn-press-scale" }
+      }
+    },
+
+    "motion": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "scale":   { "type": "string", "enum": ["full", "reduced", "off"], "description": "→ [data-motion] / --fs-motion-scale" },
+        "fast":    { "type": "number", "minimum": 60, "maximum": 400, "description": "ms → --fs-dur-fast" },
+        "med":     { "type": "number", "minimum": 120, "maximum": 800, "description": "ms → --fs-dur-med" },
+        "slow":    { "type": "number", "minimum": 240, "maximum": 1600, "description": "ms → --fs-dur-slow" },
+        "ease":    { "type": "string", "enum": ["standard", "decel", "elastic", "bounce", "liquid"], "description": "→ --fs-ease-standard" },
+        "stagger": { "type": "number", "minimum": 0, "maximum": 120, "description": "ms → --fs-stagger" }
+      }
+    },
+
+    "typography": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "ui":      { "type": "string", "description": "UI font family name → --fs-font-ui" },
+        "display": { "type": "string", "description": "Display font → --fs-font-display" },
+        "mono":    { "type": "string", "description": "Monospace font → --fs-font-mono" },
+        "size":    { "type": "number", "minimum": 12, "maximum": 16, "description": "Base px → --fs-fs-md" },
+        "density": { "type": "string", "enum": ["compact", "normal", "comfortable"], "description": "→ [data-density]" },
+        "tracking": { "type": "string", "enum": ["tight", "normal", "wide"], "description": "Display letter-spacing" },
+        "displayWeight": { "type": "string", "enum": ["500", "600", "700"] }
+      }
+    },
+
+    "texture": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Background layers and FoxOS wallpaper nods.",
+      "properties": {
+        "kind":    { "type": "string", "enum": ["none", "glass", "metal", "fabric", "neon-grid"], "description": "→ [data-texture]" },
+        "opacity": { "type": "number", "minimum": 0, "maximum": 100, "description": "% → --fs-texture-opacity" },
+        "rain":    { "type": "number", "minimum": 0, "maximum": 100, "description": "ASCII-rain brightness % → --fs-rain-opacity (CLI: foxos on/off)" },
+        "dock":    { "type": "string", "enum": ["pill", "card", "bar"], "description": "Dock style (CLI: foxlook dock style)" }
+      }
+    },
+
+    "labs": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Experimental flags → [data-lab-*] / --fs-lab-* (0|1).",
+      "properties": {
+        "dynamicShadows": { "type": "boolean" },
+        "foxGlow":        { "type": "boolean" },
+        "motionBlur":     { "type": "boolean" },
+        "liquidWindows":  { "type": "boolean" }
+      }
+    },
+
+    "perElementAnims": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Entry keyframe per element kind (names from assets/css/motion.css) → --fs-anim-*.",
+      "properties": {
+        "dock":   { "$ref": "#/$defs/keyframe" },
+        "nav":    { "$ref": "#/$defs/keyframe" },
+        "card":   { "$ref": "#/$defs/keyframe" },
+        "tile":   { "$ref": "#/$defs/keyframe" },
+        "toggle": { "$ref": "#/$defs/keyframe" }
+      }
+    }
+  },
+
+  "$defs": {
+    "hex": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+    "hexOrNull": { "oneOf": [ { "$ref": "#/$defs/hex" }, { "type": "null" } ] },
+    "keyframe": {
+      "type": "string",
+      "pattern": "^fs-[a-z0-9-]+$",
+      "examples": ["fs-fade-in", "fs-fade-up", "fs-slide-up", "fs-slide-in-left", "fs-elastic-in", "fs-elastic-pop", "fs-bounce-in", "fs-bounce-soft", "fs-liquid-wobble", "fs-zoom-open", "fs-flip-open", "fs-fold-open", "fs-liquid-open"]
+    }
+  }
+}

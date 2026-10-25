@@ -23,7 +23,8 @@ function Get-DeskColors {
         "sky","teal","mint","emerald","lime",
         "gold","amber","peach","coral","ruby",
         "slate","ice","neon","forest","mocha",
-        "black","white","noir","dnote","pride",
+        "black","white","noir","dnote","notebook",
+        "pride",
         "arthas","arthas-dark","arthas-light"
     )
 }
@@ -77,7 +78,18 @@ switch ($verb) {
         Clear-FoxThemeCache
         Sync-FoxTheme
     }
-    { $_ -in @("noir","dnote","pride","arthas") } {
+    { $_ -in @("default","orange","fox") } {
+        if (Get-Command Set-MainTheme -ErrorAction SilentlyContinue) {
+            Set-MainTheme "orange" | Out-Null
+        } else {
+            Save-ActiveTheme "orange"
+            "orange" | Set-Content -LiteralPath (Get-ThemePath) -Encoding UTF8
+            Clear-FoxThemeCache
+            Sync-FoxTheme
+        }
+        Write-DeskLog "theme orange"
+    }
+    { $_ -in @("noir","dnote","notebook","pride","arthas") } {
         $target = if ($verb -eq "arthas") { "arthas-dark" } else { $verb }
         $disk = if (Get-Command Get-FoxOsThemeName -ErrorAction SilentlyContinue) {
             Get-FoxOsThemeName
@@ -226,6 +238,12 @@ switch ($verb) {
     "foxlife" {
         Start-DeskApp "foxlife" @()
     }
+    "foxstyle" {
+        Start-DeskApp "foxstyle" @()
+    }
+    "foxnodes" {
+        Start-DeskApp "foxnodes" @()
+    }
     "mirror" {
         Start-DeskApp "foxmirror" @()
     }
@@ -280,7 +298,33 @@ switch ($verb) {
             Write-DeskLog "shutdown cancelled"
         }
     }
-    { $_ -in @("home","settings") } {
+    "home" {
+        # FoxOS shell Home (GUI). Terminal TUI home: `home term` or `settings`.
+        $foxDir = Join-Path $env:LOCALAPPDATA "FoxTerminal\foxos"
+        $liveOn = $false
+        try {
+            if (Get-Command Test-FoxOsLiveRunning -ErrorAction SilentlyContinue) {
+                $liveOn = [bool](Test-FoxOsLiveRunning)
+            } else {
+                $liveOn = [bool](Get-Process -Name "foxos-live" -ErrorAction SilentlyContinue)
+            }
+        } catch {}
+        if ($liveOn) {
+            New-Item -ItemType Directory -Force -Path $foxDir | Out-Null
+            [System.IO.File]::WriteAllText((Join-Path $foxDir "home.req"), "1", (New-Object System.Text.UTF8Encoding $false))
+            Write-DeskLog "home.req"
+        } else {
+            $pending = Join-Path $foxDir "pending-term.txt"
+            New-Item -ItemType Directory -Force -Path $foxDir | Out-Null
+            [System.IO.File]::WriteAllText($pending, "home", (New-Object System.Text.UTF8Encoding $false))
+            if (-not (Get-Command Start-FoxGhosttyWindow -ErrorAction SilentlyContinue)) {
+                . (Join-Path $cmdDir "ghostty-lib.ps1")
+            }
+            Start-FoxGhosttyWindow | Out-Null
+            Write-DeskLog "home-term"
+        }
+    }
+    "settings" {
         $pending = Join-Path $env:LOCALAPPDATA "FoxTerminal\foxos\pending-term.txt"
         [System.IO.File]::WriteAllText($pending, $verb, (New-Object System.Text.UTF8Encoding $false))
         if (-not (Get-Command Start-FoxGhosttyWindow -ErrorAction SilentlyContinue)) {

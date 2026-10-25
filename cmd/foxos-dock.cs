@@ -146,8 +146,8 @@ namespace FoxOsLive {
         const int MenuW = 280;
         const int MenuRow = 36;
 
-        static readonly string[] MenuActs = { "term", "home", "foxlife", "mirror", "ytm", "settings", "files", "sites", "lock", "off", "windows" };
-        static readonly string[] MenuLabels = { "term", "home", "foxlife", "mirror", "music", "settings", "files", "sites", "lock", "power off", "restore windows" };
+        static readonly string[] MenuActs = { "term", "home", "foxlife", "foxstyle", "mirror", "ytm", "settings", "files", "sites", "lock", "off", "windows" };
+        static readonly string[] MenuLabels = { "term", "home", "foxlife", "foxstyle", "mirror", "music", "settings", "files", "sites", "lock", "power off", "restore windows" };
 
         readonly State state;
         readonly Action<string> runDesk;
@@ -290,6 +290,7 @@ namespace FoxOsLive {
 
         string Style() {
             string s = state.DockStyle ?? "pill";
+            if (s == "bar") return "rail"; // FOXSTYLE "bar" = full-width
             if (s == "rail" || s == "glass" || s == "slim") return s;
             return "pill";
         }
@@ -305,6 +306,8 @@ namespace FoxOsLive {
             return "full";
         }
         int BarH() {
+            // FOXSTYLE Chrome → Height (exact px)
+            if (state.DockBarH >= 36) return Math.Max(40, Math.Min(88, state.DockBarH));
             if (Style() == "slim") return 52;
             if (state.DockSize == "compact") return 58;
             if (state.DockSize == "large") return 74;
@@ -312,10 +315,17 @@ namespace FoxOsLive {
         }
         int Halo() { return 0; }
         int Radius() {
+            if (state.DockRadius >= 0) return Math.Min(state.DockRadius, BarH() / 2);
             if (Style() == "rail") return 0;
             return BarH() / 2;
         }
         int IconPx() {
+            if (state.DockBarH >= 36) {
+                int h = BarH();
+                if (h >= 74) return 44;
+                if (h <= 48) return 30;
+                return 36;
+            }
             if (Style() == "slim" || state.DockSize == "compact") return 32;
             if (state.DockSize == "large") return 44;
             return 38;
@@ -337,6 +347,10 @@ namespace FoxOsLive {
             k = k * 31 + Style().GetHashCode();
             k = k * 31 + (TopBar() ? 1 : 0);
             k = k * 31 + (state.DockHide ? 1 : 0);
+            k = k * 31 + state.DockPad;
+            k = k * 31 + state.DockBarH;
+            k = k * 31 + state.DockBlur;
+            k = k * 31 + state.DockAlpha;
             k = k * 31 + (collapsed ? 1 : 0);
             k = k * 31 + (menuOpen ? 1 : 0);
             k = k * 31 + wins.Count;
@@ -559,22 +573,44 @@ namespace FoxOsLive {
         static readonly Color Choke = Color.FromArgb(255, 1, 2, 3);
 
         void TryBlur() {
-            if (Style() == "rail") {
-                TransparencyKey = Color.Empty;
-                BackColor = Color.FromArgb(16, 18, 24);
-                Opacity = 1.0;
-                blurOn = false;
-                return;
-            }
+            // IMPORTANT: real DWM acrylic (AccentState=4) eats mouse clicks on Win11.
+            // Never enable acrylic. TransparencyKey + WM_NCHITTEST keep island clickable.
+            try { SetAccent(0, 0); } catch { }
+            blurOn = state.DockBlur > 0 && Style() != "rail";
             BackColor = Choke;
             TransparencyKey = Choke;
             Opacity = 1.0;
-            blurOn = false;
+        }
+
+        protected override void WndProc(ref Message m) {
+            // Force hit-test on logical dock/menu even if glass pixels match TransparencyKey.
+            if (m.Msg == 0x0084) { // WM_NCHITTEST
+                long lp = m.LParam.ToInt64();
+                int sx = (short)(lp & 0xFFFF);
+                int sy = (short)((lp >> 16) & 0xFFFF);
+                Point pt = PointToClient(new Point(sx, sy));
+                if (collapsed) {
+                    m.Result = new IntPtr(1); // HTCLIENT
+                    return;
+                }
+                if (PillRect().Contains(pt)) { m.Result = new IntPtr(1); return; }
+                if (menuOpen) {
+                    int menuTop = MenuTop();
+                    var menu = new Rectangle(0, menuTop, MenuW + 8, MenuActs.Length * MenuRow + 8);
+                    if (menu.Contains(pt)) { m.Result = new IntPtr(1); return; }
+                }
+                m.Result = new IntPtr(-1); // HTTRANSPARENT
+                return;
+            }
+            base.WndProc(ref m);
+        }
+
+        void SetAccent(int stateCode, uint gradient) {
             try {
                 var acc = new AccentPolicy();
-                acc.AccentState = 0;
-                acc.AccentFlags = 0;
-                acc.GradientColor = 0;
+                acc.AccentState = stateCode;
+                acc.AccentFlags = 2;
+                acc.GradientColor = unchecked((int)gradient);
                 int sz = Marshal.SizeOf(typeof(AccentPolicy));
                 IntPtr p = Marshal.AllocHGlobal(sz);
                 try {
@@ -595,6 +631,7 @@ namespace FoxOsLive {
             Rectangle sb = screen.Bounds;
             string st = Style();
             int pad = (st == "rail") ? 0 : 10;
+            if (state.DockPad >= 0) pad = state.DockPad;
             int barH = BarH();
             LastBarH = barH;
             int menuH = (menu && !collapsed) ? (MenuActs.Length * MenuRow + 10) : 0;
@@ -1006,21 +1043,15 @@ namespace FoxOsLive {
                 string dir = state.CmdDir;
                 if (string.IsNullOrEmpty(dir)) dir = foxosDir;
                 if (!GhosttyTalk.Open(dir)) {
-                    if (!string.IsNullOrEmpty(pin.Path) && System.IO.File.Exists(pin.Path)) {
-                        try { Process.Start(new ProcessStartInfo(pin.Path) { UseShellExecute = true }); } catch { }
-                    } else runDesk("term");
+                    if (!FoxLaunch.Open(pin.Path)) runDesk("term");
                 }
                 return;
             }
-            if (pin.Live != IntPtr.Zero) {
-                Native.ShowWindow(pin.Live, 9);
-                Native.ShowWindow(pin.Live, 5);
+            if (pin.Live != IntPtr.Zero && Native.IsWindow(pin.Live)) {
                 ActivateWin(pin.Live);
                 return;
             }
-            if (!string.IsNullOrEmpty(pin.Path) && System.IO.File.Exists(pin.Path)) {
-                try { Process.Start(new ProcessStartInfo(pin.Path) { UseShellExecute = true }); } catch { }
-            }
+            FoxLaunch.Open(pin.Path);
         }
 
         void RunMenu(string act) {
@@ -1032,6 +1063,7 @@ namespace FoxOsLive {
                 } catch { runDesk("home"); }
             }
             else if (act == "foxlife") runDesk("foxlife");
+            else if (act == "foxstyle") runDesk("foxstyle");
             else if (act == "mirror") runDesk("mirror");
             else if (act == "ytm") runDesk("ytm");
             else if (act == "settings") runDesk("term settings");
@@ -1069,10 +1101,22 @@ namespace FoxOsLive {
         }
 
         static void ActivateWin(IntPtr h) {
-            if (h == IntPtr.Zero) return;
-            Native.ShowWindow(h, 9);
-            Native.ShowWindow(h, 5);
+            if (h == IntPtr.Zero || !Native.IsWindow(h)) return;
+            try { Native.AllowSetForegroundWindow(-1); } catch { }
+            if (Native.IsIconic(h)) Native.ShowWindow(h, 9);
+            else Native.ShowWindow(h, 5);
+            Native.SetWindowPos(h, IntPtr.Zero, 0, 0, 0, 0, 0x0003);
+            uint destPid;
+            uint destTid = Native.GetWindowThreadProcessId(h, out destPid);
+            IntPtr fg = Native.GetForegroundWindow();
+            uint fgPid;
+            uint fgTid = fg != IntPtr.Zero ? Native.GetWindowThreadProcessId(fg, out fgPid) : 0;
+            uint me = Native.GetCurrentThreadId();
+            if (fgTid != 0 && fgTid != me) Native.AttachThreadInput(me, fgTid, true);
+            if (destTid != 0 && destTid != me) Native.AttachThreadInput(me, destTid, true);
             Native.SetForegroundWindow(h);
+            if (destTid != 0 && destTid != me) Native.AttachThreadInput(me, destTid, false);
+            if (fgTid != 0 && fgTid != me) Native.AttachThreadInput(me, fgTid, false);
         }
 
         Rectangle ZoomBox(Rectangle box, int kind) {
@@ -1143,8 +1187,21 @@ namespace FoxOsLive {
             int rad = Math.Min(Radius(), Math.Max(8, box.Height / 2));
             float breath = (float)(0.5 + 0.5 * Math.Sin(Environment.TickCount / 920.0));
             int glassA = hot ? 150 : (110 + (int)(18 * breath));
-            Color glass = Color.FromArgb(glassA, 18, 20, 28);
-            FillRound(g, box, rad, glass);
+            if (state.DockAlpha >= 0) {
+                int baseA = Math.Max(30, Math.Min(250, state.DockAlpha * 255 / 100));
+                glassA = hot ? Math.Min(255, baseA + 30) : (baseA + (int)(10 * breath));
+                if (glassA > 255) glassA = 255;
+            }
+            // Blur slider = lighter frosted look (no DWM acrylic)
+            if (blurOn && state.DockBlur > 0) {
+                glassA = Math.Max(70, Math.Min(200, glassA - state.DockBlur));
+            }
+            // Opaque blend over night — semi-transparent fills become click-through via TransparencyKey
+            Color night = state.Night.A > 0 ? state.Night : Color.FromArgb(11, 15, 26);
+            int r = (18 * glassA + night.R * (255 - glassA)) / 255;
+            int gg = (20 * glassA + night.G * (255 - glassA)) / 255;
+            int b = (28 * glassA + night.B * (255 - glassA)) / 255;
+            FillRound(g, box, rad, Color.FromArgb(255, r, gg, b));
             int edgeA = 55 + (int)(50 * breath);
             StrokeRound(g, box, rad, Color.FromArgb(edgeA, state.Accent), 1.2f);
         }
@@ -1275,8 +1332,13 @@ namespace FoxOsLive {
             var inner = barR;
                 if (Style() == "rail") {
                 float breath = (float)(0.5 + 0.5 * Math.Sin(Environment.TickCount / 920.0));
-                using (var wash = new SolidBrush(Color.FromArgb(140, state.Night))) g.FillRectangle(wash, barR);
-                using (var rail = new SolidBrush(Color.FromArgb(160 + (int)(70 * breath), state.Accent))) {
+                Color night = state.Night.A > 0 ? state.Night : Color.FromArgb(11, 15, 26);
+                int a = state.DockAlpha >= 0 ? Math.Max(40, Math.Min(240, state.DockAlpha * 255 / 100)) : 180;
+                int rr = (night.R * (255 - a) + 16 * a) / 255;
+                int rg = (night.G * (255 - a) + 18 * a) / 255;
+                int rb = (night.B * (255 - a) + 24 * a) / 255;
+                using (var wash = new SolidBrush(Color.FromArgb(255, rr, rg, rb))) g.FillRectangle(wash, barR);
+                using (var rail = new SolidBrush(Color.FromArgb(200 + (int)(55 * breath), state.Accent))) {
                     g.FillRectangle(rail, 0, TopBar() ? barR.Bottom - 2 : barR.Y, Width, 2);
                 }
                 inner = new Rectangle(barR.X + 10, barR.Y + 6, barR.Width - 20, barR.Height - 12);

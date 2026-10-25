@@ -6,7 +6,8 @@ Full English documentation: from the Ghostty terminal to FoxOS on the Windows de
 > Short README: [`README.md`](README.md)  
 > **Windows other PC:** [`windows/CURSOR_MEGAGUIDE_UA.md`](windows/CURSOR_MEGAGUIDE_UA.md)  
 > **Linux / Kali pack:** [`linux/CURSOR_MEGAGUIDE_UA.md`](linux/CURSOR_MEGAGUIDE_UA.md)  
-> Interactive presentation: `sites/fox-terminal/` (open via `sites`)
+> Interactive presentation: `sites/fox-terminal/` (open via `sites`)  
+> **Single dump for an external chat (ChatGPT etc.):** [`CHATGPT_PROJECT.md`](CHATGPT_PROJECT.md)
 
 ---
 
@@ -17,6 +18,7 @@ Full English documentation: from the Ghostty terminal to FoxOS on the Windows de
 3. [Where things live](#3-where-things-live)
 4. [System layers](#4-system-layers)
 5. [FoxOS and foxlook](#5-foxos-and-foxlook)
+5.4. [FOXSTYLE · Node Launcher · STT](#54-foxstyle--node-launcher--stt)
 6. [home · lock · settings · foxsetup](#6-home--lock--settings--foxsetup)
 7. [Command catalog](#7-command-catalog)
 8. [Workflows and guides](#8-workflows-and-guides)
@@ -43,6 +45,7 @@ Full English documentation: from the Ghostty terminal to FoxOS on the Windows de
 | **FoxOS (`foxos`)** | Animated ASCII wallpaper + Windows accent + desk prompt |
 | **Fox look (`foxlook`)** | Windows “wears” FoxOS: dark mode, cursors, dock, Win keys, shell |
 | **System shell** | `home`, `lock`, `settings`, `foxsetup` — mini-OS after login |
+| **Studio / menu** | `foxstyle` (FoxOS look), `foxnodes` (Node Launcher), `foxstt` (Ukrainian STT) |
 | **Apps** | `foxlife` (notes/finance), `sites` (local web apps), Zen Companion |
 | **builds / foxpack** | Config snapshots and zip packs for another PC |
 
@@ -103,14 +106,19 @@ settings              # settings TUI (or settings -Gui)
 ```
 FireFoxBot/
 ├── cmd/                    ← all commands (.ps1 + .bat wrappers)
+│   ├── foxstyle/           ← C# FOXSTYLE studio (csc → foxstyle.exe)
+│   ├── foxnodes/           ← C# Node Launcher overlay
+│   └── foxlife/            ← C# Life app
 ├── sites/                  ← local mini-sites + hub
-│   └── fox-terminal/       ← interactive presentation / docs UI
+│   ├── fox-terminal/       ← interactive presentation / docs UI
+│   └── foxstyle/           ← token reference only (not the live UI)
 ├── FoxTerminal/
 │   ├── ghostty/config      ← single terminal visual file
 │   ├── ghostty/shaders/    ← per-theme GLSL
 │   ├── install.ps1 / .sh
 │   ├── FOXTERMINAL_GUIDE_UA.md
-│   └── FOXTERMINAL_GUIDE_EN.md   ← this file
+│   ├── FOXTERMINAL_GUIDE_EN.md   ← this file
+│   └── CHATGPT_PROJECT.md  ← dump for an external chat
 ├── builds/                 ← snapshots from `build`
 └── CHANGELOG.md            ← history (`changelog` / `foxdocs`)
 ```
@@ -150,6 +158,9 @@ Think of FoxTerminal as layers:
 | `lock` | Session security | Hides terminal; needs Fox password |
 | `settings` | Control | TUI or browser Control UI |
 | `foxlife` | Separate app | Notes, finance, tables, AI |
+| `foxstyle` | Look studio | Native window: themes, chrome, Node Editor, Assistant |
+| `foxnodes` | Desktop overlay | Radial menu; Ctrl+Alt+Space |
+| `foxstt` | Voice | Local whisper.cpp for the assistant |
 
 ---
 
@@ -271,6 +282,42 @@ foxlook off
 foxos off
 ```
 
+### 5.4 FOXSTYLE · Node Launcher · STT
+
+Three native Windows apps (same pattern as `foxlife`): compiled with `csc.exe` into `%LOCALAPPDATA%\FoxTerminal\foxos\`. `sites/foxstyle/` is a design-system reference only, not the live UI.
+
+```powershell
+foxstyle                      # FoxOS look studio
+foxstyle -NodeEditor          # visual Node Launcher editor
+foxstyle -Preset neon         # preset → style.json → open
+foxstyle -Status              # style.json path
+foxstyle -Rebuild             # force rebuild exe
+foxstyle -Apply theme.json    # import JSON
+foxstyle -Export              # copy style.json to Desktop
+
+foxnodes                      # start / activate overlay
+foxnodes -Show                # show graph on the desktop
+foxnodes -Hide                # hide (daemon stays)
+foxnodes -Stop
+foxnodes -Settings
+foxnodes -Status
+
+foxstt                        # whisper.cpp status
+foxstt -Install               # engine + model (not in git)
+foxstt -Test                  # probe without running commands
+foxstt -Stop
+```
+
+**Apply cycle.** FOXSTYLE writes `launcher.json` (menu tree) and `style.json` (look), then `foxnodes.signal`. The overlay rereads both files and acks `foxnodes.applied`. “Applied” appears only after that ack. If `foxnodes` is not running: “Saved. Will apply after the menu starts.”
+
+Look profiles (compact / soft glass / contrast / theme-matched) do not change the menu tree. Menu motion presets: Restrained / Smooth / Springy / Reduced motion.
+
+**Assistant** (FOXSTYLE → Assistant, or from Node Launcher): text + push-to-talk, local Ollama. Opens search / apps / notes / timer. Full sentences go to the model unless the phrase is a short unambiguous command. The word “YouTube” alone does not open the site — it needs a venue (“on YouTube”) or an explicit command. Trace: `FOXASSIST_TRACE=1` or the FOXSTYLE log.
+
+**STT.** Files live only in `%LOCALAPPDATA%\FoxTerminal\foxos\stt`. `foxstt -Install` installs whisper.cpp b5454 (BLAS CPU) and `large-v3-turbo-q8_0`. In the studio you can pick faster `small-q8_0` (~2 s) or higher-quality turbo (~12 s on CPU). Fallback: `large-v3-turbo-q5_0`.
+
+Menu hotkey: **Ctrl+Alt+Space**.
+
 ---
 
 ## 6) home · lock · settings · foxsetup
@@ -317,11 +364,10 @@ changelog             # history of additions/removals (same viewer as notes)
 ### `foxdocs` — all guides / history
 
 ```powershell
-foxdocs               # CHANGELOG, AGENTS, UA/EN guides, Windows+Linux pack
-foxdocs -List         # paths only, no TUI
+foxdocs               # or foxdocs -List — interactive guide/history picker
 ```
 
-Keys: **↑/↓** select · **←** open in terminal (read-only) · **→** action screen with “Open file + show in Explorer” · **Back** at the bottom of the list · Esc/Q exit.
+One screen: **↑/↓** list · **←** Terminal button · **→** Explorer button (location only) · **Enter** activate · **Back** at bottom · Esc exit.
 
 ---
 
@@ -349,7 +395,7 @@ User-facing commands below. Live inventory is always in `foxhelp`.
 | `settings` | `settings [-Status\|-Gui\|-StopGui]` | settings |
 | `foxsetup` | `foxsetup` | first-boot wizard |
 | `changelog` | `changelog` | change history |
-| `foxdocs` | `foxdocs [-List]` | all guides/history (← terminal, → Explorer) |
+| `foxdocs` | `foxdocs` | all guides/history (arrows; ← terminal, → Explorer) |
 | `off` / `shutdown` | `off` | shut down PC (Yes/No, default No) |
 
 ### 7.3 AI
@@ -427,7 +473,9 @@ foxmirror -Video -Fps 30
 | `sw -<theme>` | quiet theme change **without** fox UI (`sw -slate`, `sw -orange`…) |
 | `pulse [-Once]` | notebook score /100 + CPU/GPU/RAM; live or one shot |
 | `pulse apps` | arrows pick an app → Enter closes; Back → vitals (from live also **A**) |
-| `themes` | main picker (Fox, Arthas, Pride, Noir, Death Note…) |
+| `themes` | main picker (Fox, Arthas, Pride, Noir, Death Note, Notebook) |
+| `default` | Fox Default (orange) — wallpaper + Ghostty colors |
+| `notebook` | parchment desk, paper lines, red margin, ink rain |
 | `noir` | B/W mode (toggle) |
 | `dnote` | Death Note style + intro |
 | `apple` | Death Note scene as large ASCII |
@@ -462,11 +510,14 @@ foxmirror -Video -Fps 30
 | `apps` | `apps firefox / telegram / spotify` |
 | `appbind` | `appbind add code "C:\…\Code.exe"` |
 
-### 7.11 FoxOS Life and Companion
+### 7.11 FoxOS Life, FOXSTYLE, Companion
 
 | Command | Purpose |
 |---------|---------|
 | `foxlife` | native window: notes, finance, tables, AI (`-Status`, `-Rebuild`) |
+| `foxstyle` | look studio + Node Editor + Assistant (`-NodeEditor`, `-Preset`, `-Rebuild`) |
+| `foxnodes` | desktop Node Launcher; Ctrl+Alt+Space (`-Show`, `-Hide`, `-Stop`) |
+| `foxstt` | local Ukrainian STT (`-Install`, `-Test`, `-Stop`) |
 | `foxaddon` | `foxaddon -Install\|-Pack\|-OpenFolder` |
 | `foxzen` | `foxzen status\|default\|theme\|host\|addon` — Zen as primary browser |
 
@@ -676,6 +727,18 @@ FOXTERM_FRIEND_MAX_TURNS=25
 
 `foxlife` also embeds an AI assistant in its own window.
 
+### Desktop assistant (FOXSTYLE / foxnodes)
+
+A separate layer from terminal `friend`:
+
+```powershell
+foxnodes                  # overlay + assistant
+foxstyle                  # Assistant tab: model, mic, permissions, log
+foxstt -Install           # once: whisper.cpp under %LOCALAPPDATA%
+```
+
+Text or push-to-talk → local Ollama. Full sentences go to the model. “YouTube” / “Google” are query objects, not “open the site”, unless there is a venue (“on YouTube”) or a short unambiguous command. Trace: `$env:FOXASSIST_TRACE = "1"`.
+
 ---
 
 ## 14) Security
@@ -711,6 +774,10 @@ Optional from the FoxTerminal folder (admin):
 | No Explorer after `shell on` | Ctrl+Alt+Del → Task Manager → Run → `restore-windows.cmd` |
 | Wrong `foxpack` | Default is clean; personal state needs `-Full` |
 | Firefox/Zen won’t open | `foxzen status`, `ff open youtube`, `blist` |
+| FOXSTYLE says “Saved”, not “Applied” | start `foxnodes`; Apply waits for overlay ack |
+| Node Launcher missing | `foxnodes -Status`; hotkey Ctrl+Alt+Space; `foxnodes -Rebuild` |
+| Assistant hears nothing | `foxstt -Install`, `foxstt -Test`; model in FOXSTYLE → Assistant |
+| Assistant opened YouTube on its own | needs a venue (“on YouTube”) or an explicit command; see `FOXASSIST_TRACE` |
 
 ---
 
@@ -720,10 +787,10 @@ Optional from the FoxTerminal folder (admin):
 `nuser` · `l` · `who` · `uexit` · `home` · `lock` · `settings` · `foxsetup`
 
 ### FoxOS
-`foxos on/off` · `foxlook on/off` · `foxlook cursor …` · `foxlook dock …` · `foxlook shell off`
+`foxos on/off` · `foxlook on/off` · `foxlook cursor …` · `foxlook dock …` · `foxlook shell off` · `foxstyle` · `foxnodes` · `foxstt`
 
 ### AI / media
-`ask` · `friend` · `yt` · `ytm` · `ytm-ui` · `sp` · `sp-ui` · `dj` · `foxmirror`
+`ask` · `friend` · `yt` · `ytm` · `ytm-ui` · `sp` · `sp-ui` · `dj` · `foxmirror` · FOXSTYLE Assistant
 
 ### Notes
 `wai` · `go` · `up` · `nfile` · `edit` · `view` · `changelog` · `foxdocs`
@@ -800,14 +867,14 @@ build -restore before-look
 
 ## Summary
 
-FoxTerminal = **terminal + commands + FoxOS desktop + system shell + sites + AI + companion**.
+FoxTerminal = **terminal + commands + FoxOS desktop + FOXSTYLE / Node Launcher + system shell + sites + AI + companion**.
 
 Stable daily flow:
 
 1. `foxsetup` once → then `l` → `home`
 2. Work via `sites` + notes + `ytm` / `friend`
-3. Desktop optionally via `foxos` + `foxlook`
+3. Desktop optionally via `foxos` + `foxlook` + `foxnodes` / `foxstyle`
 4. Snapshot before experiments: `build`
 5. Share with `foxpack`
 
-Live help anytime: **`foxhelp`**.
+Live help anytime: **`foxhelp`**. All guides: **`foxdocs`**. External chat dump: **`CHATGPT_PROJECT.md`**.

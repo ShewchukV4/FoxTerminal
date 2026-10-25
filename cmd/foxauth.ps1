@@ -393,6 +393,7 @@ function Test-FoxMainThemeName([string]$name) {
         "pride" { return $true }
         "noir" { return $true }
         "dnote" { return $true }
+        "notebook" { return $true }
         default { return $false }
     }
 }
@@ -400,6 +401,11 @@ function Test-FoxMainThemeName([string]$name) {
 function Get-DefaultThemeSeed {
     $disk = Get-DiskThemeName
     if (Test-FoxMainThemeName $disk) { return $disk }
+    # Color chips (violet/neon/…) and FOXSTYLE seeds live in theme.txt too —
+    # previously they fell through to orange so new Ghostty panes ignored Apply.
+    if (-not [string]::IsNullOrWhiteSpace($disk) -and $disk -match '^[a-z0-9][a-z0-9_-]*$') {
+        return $disk.Trim().ToLowerInvariant()
+    }
     return "orange"
 }
 
@@ -531,6 +537,10 @@ function Test-DnoteActive {
     return ((Get-ActiveThemeName) -eq "dnote")
 }
 
+function Test-NotebookActive {
+    return ((Get-ActiveThemeName) -eq "notebook")
+}
+
 function Test-ArthasActive {
     $name = Get-ActiveThemeName
     return ($name -eq "arthas-dark" -or $name -eq "arthas-light")
@@ -566,6 +576,7 @@ function Get-ThemeHex {
         "white" { return "#F2F2F2" }
         "noir"  { return "#888888" }
         "dnote" { return "#B11212" }
+        "notebook" { return "#9A4034" }
         "arthas-dark" { return "#58B8FF" }
         "arthas-light" { return "#E8C36A" }
         default  { return "#DC7A14" }
@@ -657,6 +668,19 @@ function Get-ThemePalette {
         }
         return $global:FOXTERM_PALETTE_CACHE
     }
+    if (Test-NotebookActive) {
+        $global:FOXTERM_PALETTE_CACHE = @{
+            accent  = "#9A4034"
+            accent2 = "#C4A574"
+            accent3 = "#6E4E3A"
+            accent4 = "#E8D9C0"
+            dim     = "#7A6B58"
+            base    = "#1C1914"
+            text    = "#EDE6D6"
+        }
+        return $global:FOXTERM_PALETTE_CACHE
+    }
+    $tn = Get-ActiveThemeName
     if (Test-ArthasActive) {
         if ((Get-ActiveThemeName) -eq "arthas-light") {
             $global:FOXTERM_PALETTE_CACHE = @{
@@ -1066,12 +1090,22 @@ function Apply-TerminalOscColors {
             Write-Host -NoNewline "$esc]12;#909090$esc\"
             $env:FOXTERM_NOIR = "1"
             Remove-Item Env:FOXTERM_DNOTE -ErrorAction SilentlyContinue
+            Remove-Item Env:FOXTERM_NOTEBOOK -ErrorAction SilentlyContinue
         } elseif ($name -eq "dnote") {
             Write-Host -NoNewline "$esc]10;#F2E9E9$esc\"
             Write-Host -NoNewline "$esc]11;#050505$esc\"
             Write-Host -NoNewline "$esc]12;#B11212$esc\"
             $env:FOXTERM_DNOTE = "1"
             Remove-Item Env:FOXTERM_NOIR -ErrorAction SilentlyContinue
+            Remove-Item Env:FOXTERM_ARTHAS -ErrorAction SilentlyContinue
+            Remove-Item Env:FOXTERM_NOTEBOOK -ErrorAction SilentlyContinue
+        } elseif ($name -eq "notebook") {
+            Write-Host -NoNewline "$esc]10;#EDE6D6$esc\"
+            Write-Host -NoNewline "$esc]11;#1C1914$esc\"
+            Write-Host -NoNewline "$esc]12;#9A4034$esc\"
+            $env:FOXTERM_NOTEBOOK = "1"
+            Remove-Item Env:FOXTERM_NOIR -ErrorAction SilentlyContinue
+            Remove-Item Env:FOXTERM_DNOTE -ErrorAction SilentlyContinue
             Remove-Item Env:FOXTERM_ARTHAS -ErrorAction SilentlyContinue
         } elseif ($name -eq "arthas-dark") {
             Write-Host -NoNewline "$esc]10;#D7F1FF$esc\"
@@ -1080,6 +1114,7 @@ function Apply-TerminalOscColors {
             $env:FOXTERM_ARTHAS = "dark"
             Remove-Item Env:FOXTERM_NOIR -ErrorAction SilentlyContinue
             Remove-Item Env:FOXTERM_DNOTE -ErrorAction SilentlyContinue
+            Remove-Item Env:FOXTERM_NOTEBOOK -ErrorAction SilentlyContinue
         } elseif ($name -eq "arthas-light") {
             Write-Host -NoNewline "$esc]10;#FFF1D0$esc\"
             Write-Host -NoNewline "$esc]11;#120F07$esc\"
@@ -1087,6 +1122,7 @@ function Apply-TerminalOscColors {
             $env:FOXTERM_ARTHAS = "light"
             Remove-Item Env:FOXTERM_NOIR -ErrorAction SilentlyContinue
             Remove-Item Env:FOXTERM_DNOTE -ErrorAction SilentlyContinue
+            Remove-Item Env:FOXTERM_NOTEBOOK -ErrorAction SilentlyContinue
         } else {
             $p = Get-ThemePalette
             Write-Host -NoNewline "$esc]10;$($p.text)$esc\"
@@ -1095,6 +1131,7 @@ function Apply-TerminalOscColors {
             Remove-Item Env:FOXTERM_NOIR -ErrorAction SilentlyContinue
             Remove-Item Env:FOXTERM_DNOTE -ErrorAction SilentlyContinue
             Remove-Item Env:FOXTERM_ARTHAS -ErrorAction SilentlyContinue
+            Remove-Item Env:FOXTERM_NOTEBOOK -ErrorAction SilentlyContinue
         }
         $global:FOXTERM_OSC_APPLIED = $name
     } catch {}
@@ -2105,6 +2142,41 @@ function dnote {
     Invoke-DnoteToggle
 }
 
+function Invoke-NotebookToggle {
+    $notebookStatePath = Join-Path $PSScriptRoot "notebook_state.txt"
+    $currentTheme = Get-ActiveThemeName
+
+    if ($currentTheme -eq "notebook") {
+        $restoreTo = if (Test-Path $notebookStatePath) {
+            $saved = (Get-Content -Path $notebookStatePath -Raw -ErrorAction SilentlyContinue).Trim()
+            if ([string]::IsNullOrWhiteSpace($saved)) { "orange" } else { $saved }
+        } else { "orange" }
+        Save-ActiveTheme $restoreTo
+        if (Test-Path $notebookStatePath) { Remove-Item $notebookStatePath -Force }
+        Sync-FoxTheme -ForcePrompt -RedrawPrompt
+        Register-FoxConsoleFocusRepair
+        Write-Host ""
+        Write-Host "  Notebook mode OFF. Theme restored: $restoreTo"
+        Write-Host "  Run notebook again to open the paper world."
+        Write-Host ""
+        return
+    }
+
+    $currentTheme | Set-Content -Path $notebookStatePath -Encoding UTF8
+    Save-ActiveTheme "notebook"
+    Sync-FoxTheme -ForcePrompt -RedrawPrompt
+    Register-FoxConsoleFocusRepair
+    Write-Host ""
+    Write-Host (Color-Text "#C4A574" "  Notebook mode ON.")
+    Write-Host (Color-Text "#EDE6D6" "  Paper desk, ink rain, red margin line.")
+    Write-Host "  Run notebook again to restore: $currentTheme"
+    Write-Host ""
+}
+
+function notebook {
+    Invoke-NotebookToggle
+}
+
 function Invoke-PrideToggle {
     $themePath = Get-ThemePath
     $prideStatePath = Get-PrideStatePath
@@ -2173,6 +2245,7 @@ function Clear-MainThemeStateFiles {
         (Join-Path $PSScriptRoot "noir_state.txt"),
         (Join-Path $PSScriptRoot "noir_state_full.txt"),
         (Join-Path $PSScriptRoot "dnote_state.txt"),
+        (Join-Path $PSScriptRoot "notebook_state.txt"),
         (Join-Path $PSScriptRoot "arthas_state.txt")
     )
     $prideStatePath = if (Get-Command Get-PrideStatePath -ErrorAction SilentlyContinue) {
@@ -2196,6 +2269,9 @@ function Save-MainThemeToggleState([string]$targetTheme, [string]$previousTheme)
         "dnote" {
             $previousTheme | Set-Content -Path (Join-Path $PSScriptRoot "dnote_state.txt") -Encoding UTF8
         }
+        "notebook" {
+            $previousTheme | Set-Content -Path (Join-Path $PSScriptRoot "notebook_state.txt") -Encoding UTF8
+        }
         "pride" {
             if (Get-Command Get-PrideStatePath -ErrorAction SilentlyContinue) {
                 $previousTheme | Set-Content -Path (Get-PrideStatePath) -Encoding UTF8
@@ -2212,7 +2288,7 @@ function Save-MainThemeToggleState([string]$targetTheme, [string]$previousTheme)
 }
 
 function Set-MainTheme([string]$targetTheme) {
-    $allowed = @("orange", "arthas-dark", "arthas-light", "pride", "noir", "dnote")
+    $allowed = @("orange", "arthas-dark", "arthas-light", "pride", "noir", "dnote", "notebook")
     if ($allowed -notcontains $targetTheme) {
         Write-Host "Unknown theme: $targetTheme"
         return $false
@@ -2247,7 +2323,8 @@ function Invoke-MainThemeMenu {
         [pscustomobject]@{ Label = "Arthas"; Theme = "arthas" },
         [pscustomobject]@{ Label = "Pride LGBT"; Theme = "pride" },
         [pscustomobject]@{ Label = "Noir"; Theme = "noir" },
-        [pscustomobject]@{ Label = "Death Note"; Theme = "dnote" }
+        [pscustomobject]@{ Label = "Death Note"; Theme = "dnote" },
+        [pscustomobject]@{ Label = "Notebook"; Theme = "notebook" }
     )
 
     $options = @($themeRows | ForEach-Object { $_.Label }) + "< Back"
@@ -2271,13 +2348,27 @@ function Invoke-MainThemeMenu {
     if ($changed) {
         Write-Host ""
         Write-Host ("  Theme selected: " + $picked.Label)
-        Write-Host ("  You can still use: noir / pride / dnote / arthas / sw")
+        Write-Host ("  You can still use: noir / pride / dnote / notebook / arthas / sw")
         Write-Host ""
     }
 }
 
 function themes {
     Invoke-MainThemeMenu
+}
+
+function default {
+    $changed = Set-MainTheme "orange"
+    if ($changed) {
+        Write-Host ""
+        Write-Host (Color-Text "#DC7A14" "  Fox Default ON.")
+        Write-Host "  Wallpaper + terminal synced."
+        Write-Host ""
+    } else {
+        Write-Host ""
+        Write-Host "  Already on Fox Default."
+        Write-Host ""
+    }
 }
 
 function spider {

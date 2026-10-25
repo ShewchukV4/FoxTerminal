@@ -356,6 +356,17 @@ function Get-FoxOsPalette {
             text    = "#F2E9E9"
         }
     }
+    if ($theme -eq "notebook") {
+        return @{
+            accent  = "#9A4034"
+            accent2 = "#C4A574"
+            accent3 = "#6E4E3A"
+            accent4 = "#E8D9C0"
+            dim     = "#7A6B58"
+            base    = "#1C1914"
+            text    = "#EDE6D6"
+        }
+    }
     if ($theme -eq "arthas-light") {
         return @{
             accent  = "#E8C36A"
@@ -623,7 +634,16 @@ function Set-FoxOsAccent([string]$hex) {
     } catch {
         Set-ItemProperty -Path $accentKey -Name "AccentPalette" -Value $pal
     }
-    Set-ItemProperty -Path $personalize -Name "ColorPrevalence" -Value 0 -Type DWord
+    # FOXSTYLE can ask for accent-tinted taskbar/Start (ColorPrevalence=1)
+    $tbTint = 0
+    $appliedPath = Join-Path (Get-FoxOsDir) "style-applied.json"
+    if (Test-Path -LiteralPath $appliedPath) {
+        try {
+            $ap = Get-Content -LiteralPath $appliedPath -Raw -Encoding UTF8 | ConvertFrom-Json
+            if ($ap.tbAccent -eq "on") { $tbTint = 1 }
+        } catch {}
+    }
+    Set-ItemProperty -Path $personalize -Name "ColorPrevalence" -Value $tbTint -Type DWord
     Set-ItemProperty -Path $personalize -Name "EnableTransparency" -Value 1 -Type DWord
     Set-ItemProperty -Path $desktop -Name "AutoColorization" -Value 0 -Type DWord
 }
@@ -704,6 +724,7 @@ function Get-FoxOsNightHex([string]$theme) {
     switch ($theme) {
         "noir" { return "#0A0A0A" }
         "dnote" { return "#050505" }
+        "notebook" { return "#1C1914" }
         "pride" { return "#160814" }
         "arthas-dark" { return "#060A12" }
         "arthas-light" { return "#120F07" }
@@ -798,6 +819,8 @@ function Get-FoxOsLiveSources {
     if (Test-Path -LiteralPath $chrome) { $list += $chrome }
     $quick = Join-Path $PSScriptRoot "foxos-quick.cs"
     if (Test-Path -LiteralPath $quick) { $list += $quick }
+    $media = Join-Path $PSScriptRoot "foxos-media.cs"
+    if (Test-Path -LiteralPath $media) { $list += $media }
     return $list
 }
 
@@ -826,11 +849,20 @@ function Write-FoxOsLiveState {
         $flag = (@(Get-PrideFoxFlagColors $style) -join ",")
     }
     $fox = Join-Path (Split-Path $PSScriptRoot -Parent) "FoxTerminal\assets\fox.png"
+    $foxUser = $env:FOXTERM_USER
+    if ([string]::IsNullOrWhiteSpace($foxUser)) {
+        $cup = Join-Path $PSScriptRoot "current_user.txt"
+        if (Test-Path -LiteralPath $cup) {
+            $foxUser = (Get-Content -LiteralPath $cup -Raw -ErrorAction SilentlyContinue).Trim()
+        }
+    }
+    if ([string]::IsNullOrWhiteSpace($foxUser)) { $foxUser = $env:USERNAME }
     $obj = @{
         night   = (Get-FoxOsNightHex $theme)
         accent  = $p.accent
         accent2 = $p.accent2
         theme   = $theme
+        user    = $foxUser
         flag    = $flag
         fox     = $fox
         cmd     = $PSScriptRoot
@@ -890,6 +922,45 @@ function Write-FoxOsLiveState {
             if ($last) { [System.IO.File]::WriteAllText($noteOut, ("$last".Trim()), (New-Object System.Text.UTF8Encoding $false)) }
         }
     } catch {}
+    # FOXSTYLE overlay: window corners / taskbar shape always; colors only while theme matches.
+    $obj.winCorner = "default"
+    $obj.winRadius = "-1"
+    $obj.tbRadius = "-1"
+    $obj.tbInset = "0"
+    $obj.dockRadius = "-1"
+    $obj.dockPad = "-1"
+    $obj.dockAlpha = "-1"
+    $applied = Join-Path (Get-FoxOsDir) "style-applied.json"
+    if (Test-Path -LiteralPath $applied) {
+        try {
+            $a = Get-Content -LiteralPath $applied -Raw -Encoding UTF8 | ConvertFrom-Json
+            if ($null -ne $a.dockRadius) { $obj.dockRadius = [string]$a.dockRadius }
+            if ($null -ne $a.dockPad) { $obj.dockPad = [string]$a.dockPad }
+            if ($null -ne $a.dockAlpha) { $obj.dockAlpha = [string]$a.dockAlpha }
+            if ($null -ne $a.dockBarH) { $obj.dockBarH = [string]$a.dockBarH }
+            if ($null -ne $a.dockBlur) { $obj.dockBlur = [string]$a.dockBlur }
+            if ($a.winCorner) { $obj.winCorner = [string]$a.winCorner }
+            if ($null -ne $a.winRadius) { $obj.winRadius = [string]$a.winRadius }
+            if ($null -ne $a.tbRadius) { $obj.tbRadius = [string]$a.tbRadius }
+            if ($null -ne $a.tbInset) { $obj.tbInset = [string]$a.tbInset }
+            if ($a.wallKind) { $obj.wallKind = [string]$a.wallKind }
+            if ($null -ne $a.wallRain) { $obj.wallRain = [string]$a.wallRain }
+            if ($null -ne $a.wallStrength) { $obj.wallStrength = [string]$a.wallStrength }
+            if ($null -ne $a.wallScale) { $obj.wallScale = [string]$a.wallScale }
+            if ($null -ne $a.wallWeight) { $obj.wallWeight = [string]$a.wallWeight }
+            if ($null -ne $a.wallVeil) { $obj.wallVeil = [string]$a.wallVeil }
+            if ($a.foxGlow) { $obj.foxGlow = [string]$a.foxGlow }
+            if ($null -ne $a.foxGlowStrength) { $obj.foxGlowStrength = [string]$a.foxGlowStrength }
+            if ($null -ne $a.foxGlowSpeed) { $obj.foxGlowSpeed = [string]$a.foxGlowSpeed }
+            if ($a.sw -and ([string]$a.sw -eq [string]$theme)) {
+                if ($a.accent) { $obj.accent = [string]$a.accent }
+                if ($a.accent2) { $obj.accent2 = [string]$a.accent2 }
+                if ($a.night) { $obj.night = [string]$a.night }
+                if ($a.dockStyle) { $obj.dockStyle = [string]$a.dockStyle }
+                if ($a.dockPos) { $obj.dockPos = [string]$a.dockPos }
+            }
+        } catch {}
+    }
     $utf8 = New-Object System.Text.UTF8Encoding($false)
     [System.IO.File]::WriteAllText((Get-FoxOsLiveStatePath), ($obj | ConvertTo-Json -Compress), $utf8)
 }
@@ -936,7 +1007,54 @@ function Test-FoxOsLiveRunning {
     }
 }
 
+function Stop-FoxOsMediaWatch {
+    $ps1 = Join-Path $PSScriptRoot "foxos-media.ps1"
+    if (Test-Path -LiteralPath $ps1) {
+        try {
+            & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $ps1 -Mode stop | Out-Null
+        } catch {}
+    }
+    $pidFile = Join-Path (Get-FoxOsDir) "media.pid"
+    if (Test-Path -LiteralPath $pidFile) {
+        $old = 0
+        try { $old = [int]((Get-Content -LiteralPath $pidFile -Raw).Trim()) } catch {}
+        if ($old -gt 0) { Stop-Process -Id $old -Force -ErrorAction SilentlyContinue }
+        Remove-Item -LiteralPath $pidFile -Force -ErrorAction SilentlyContinue
+    }
+}
+
+function Start-FoxOsMediaWatch {
+    if (-not (Test-FoxOsWindows)) { return $false }
+    $ps1 = Join-Path $PSScriptRoot "foxos-media.ps1"
+    if (-not (Test-Path -LiteralPath $ps1)) { return $false }
+    $pidFile = Join-Path (Get-FoxOsDir) "media.pid"
+    if (Test-Path -LiteralPath $pidFile) {
+        $old = 0
+        try { $old = [int]((Get-Content -LiteralPath $pidFile -Raw).Trim()) } catch {}
+        if ($old -gt 0) {
+            $alive = Get-Process -Id $old -ErrorAction SilentlyContinue
+            if ($alive) { return $true }
+        }
+    }
+    # Avoid duplicate watchers fighting over media.pid / media.json
+    try {
+        $dup = Get-CimInstance Win32_Process -Filter "Name = 'powershell.exe'" -ErrorAction SilentlyContinue |
+            Where-Object { $_.CommandLine -like '*foxos-media.ps1*' -and $_.CommandLine -like '*watch*' } |
+            Select-Object -First 1
+        if ($dup) {
+            try { [string]$dup.ProcessId | Set-Content -LiteralPath $pidFile -Encoding ASCII } catch {}
+            return $true
+        }
+    } catch {}
+    Start-Process -FilePath "powershell.exe" -ArgumentList @(
+        "-NoProfile", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden",
+        "-File", $ps1, "-Mode", "watch"
+    ) -WindowStyle Hidden | Out-Null
+    return $true
+}
+
 function Stop-FoxOsLive {
+    Stop-FoxOsMediaWatch
     Get-Process -Name "foxos-live" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
     $pidPath = Get-FoxOsLivePidPath
     if (Test-Path -LiteralPath $pidPath) {
@@ -985,6 +1103,7 @@ function Start-FoxOsLive {
     if (Test-FoxOsLiveRunning) { return $true }
     Start-Process -FilePath $exe -ArgumentList @((Get-FoxOsLiveStatePath)) -WindowStyle Hidden | Out-Null
     Start-Sleep -Milliseconds 400
+    try { Start-FoxOsMediaWatch | Out-Null } catch {}
     # Alt+Tab remap is in foxhotkeys.ahk (#HotIf foxos-live) — without the
     # daemon, Windows Alt+Tab stays and the Fox slide never appears.
     try {

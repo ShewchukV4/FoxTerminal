@@ -28,6 +28,7 @@ namespace FoxOsLive {
         public const int WS_CAPTION = 0x00C00000;
         public const uint DWMWA_CLOAKED = 14;
         public const uint DWMWA_USE_IMMERSIVE_DARK_MODE = 20;
+        public const uint DWMWA_WINDOW_CORNER_PREFERENCE = 33;
         public const uint DWMWA_BORDER_COLOR = 34;
         public const uint DWMWA_CAPTION_COLOR = 35;
         public const uint DWMWA_TEXT_COLOR = 36;
@@ -54,6 +55,8 @@ namespace FoxOsLive {
         public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
         [DllImport("user32.dll")]
         public static extern bool IsIconic(IntPtr hWnd);
+        [DllImport("user32.dll")]
+        public static extern bool IsZoomed(IntPtr hWnd);
         [DllImport("user32.dll")]
         public static extern bool GetWindowRect(IntPtr hWnd, out RECT r);
         [DllImport("user32.dll")]
@@ -90,6 +93,12 @@ namespace FoxOsLive {
         public static extern int DwmSetWindowAttribute(IntPtr hWnd, uint attr, ref uint value, uint size);
         [DllImport("dwmapi.dll")]
         public static extern int DwmGetWindowAttribute(IntPtr hWnd, uint attr, out uint value, uint size);
+        [DllImport("user32.dll")]
+        public static extern int SetWindowRgn(IntPtr hWnd, IntPtr hRgn, bool redraw);
+        [DllImport("gdi32.dll")]
+        public static extern IntPtr CreateRoundRectRgn(int l, int t, int r, int b, int w, int h);
+        [DllImport("gdi32.dll")]
+        public static extern bool DeleteObject(IntPtr obj);
         [DllImport("user32.dll")]
         public static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, UIntPtr extra);
         [DllImport("user32.dll")]
@@ -128,18 +137,44 @@ namespace FoxOsLive {
         public string FoxPath = "";
         public string CmdDir = "";
         public string Theme = "";
+        public string User = "";
         public int Rig = 4;
         // "overlay": a tool window pinned at HWND_BOTTOM above the desktop (desk prompt clickable).
         // "behind":  parented into Explorer's WorkerW, under the icon layer (true wallpaper; prompt unreachable).
         public string Wall = "overlay";
         public bool Shell;
+        // FOXSTYLE system look: window corners (default|square|small|round),
+        // Windows taskbar rounding (px, -1 = untouched) and floating inset (px).
+        public string WinCorner = "default";
+        // Exact corner radius in px for SetWindowRgn (-1 = DWM modes only).
+        public int WinRadius = -1;
+        public int TbRadius = -1;
+        public int TbInset = 0;
+        // FoxOS dock (the taskbar when shell mode is on): corner px, edge gap px, glass alpha 0-100 (-1 = default)
+        public int DockRadius = -1;
+        public int DockPad = -1;
+        public int DockAlpha = -1;
+        public int DockBarH = -1;   // panel height px (from FOXSTYLE Chrome → Height)
+        public int DockBlur = -1;   // 0=off, 1..40 acrylic strength
+        public string WallKind = "glass"; // glass|neon|metal|fabric|none
+        public int WallRain = 30;         // 0..80 column density
+        public int WallStrength = 60;     // 0..100 texture intensity
+        public int WallScale = 50;        // 0..100 grid spacing
+        public int WallWeight = 40;       // 0..100 uniform line thickness
+        public int WallVeil = 50;         // 0..100 accent wash
+        public bool FoxGlow;
+        public int FoxGlowStrength = 70;  // 0..100 pulse amplitude
+        public int FoxGlowSpeed = 50;     // 0..100 pulse rate
         public DateTime Stamp;
     }
 
     static class Json {
         public static string Grab(string json, string key) {
             var m = Regex.Match(json, "\"" + key + "\"\\s*:\\s*\"([^\"]*)\"");
-            return m.Success ? m.Groups[1].Value.Replace("\\\\", "\\") : "";
+            if (m.Success) return m.Groups[1].Value.Replace("\\\\", "\\");
+            // also accept bare numbers / true|false (ConvertTo-Json sometimes omits quotes)
+            m = Regex.Match(json, "\"" + key + "\"\\s*:\\s*(-?\\d+(?:\\.\\d+)?|true|false)", RegexOptions.IgnoreCase);
+            return m.Success ? m.Groups[1].Value : "";
         }
         static Color Hex(string h, Color fallback) {
             if (string.IsNullOrEmpty(h)) return fallback;
@@ -166,6 +201,8 @@ namespace FoxOsLive {
                 if (!string.IsNullOrEmpty(cmd)) s.CmdDir = cmd;
                 var theme = Grab(json, "theme");
                 if (!string.IsNullOrEmpty(theme)) s.Theme = theme;
+                var user = Grab(json, "user");
+                if (!string.IsNullOrEmpty(user)) s.User = user;
                 var flag = Grab(json, "flag");
                 if (!string.IsNullOrEmpty(flag)) {
                     string[] parts = flag.Split(new[] { ',', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries);
@@ -185,6 +222,28 @@ namespace FoxOsLive {
                 if (wall == "behind" || wall == "overlay") s.Wall = wall;
                 var shell = Grab(json, "shell");
                 s.Shell = (shell == "on" || shell == "true" || shell == "1");
+                var wc = Grab(json, "winCorner");
+                if (wc == "default" || wc == "square" || wc == "small" || wc == "round") s.WinCorner = wc;
+                int tbv;
+                if (int.TryParse(Grab(json, "winRadius"), out tbv)) s.WinRadius = Math.Max(-1, Math.Min(48, tbv));
+                if (int.TryParse(Grab(json, "tbRadius"), out tbv)) s.TbRadius = Math.Max(-1, Math.Min(40, tbv));
+                if (int.TryParse(Grab(json, "tbInset"), out tbv)) s.TbInset = Math.Max(0, Math.Min(24, tbv));
+                if (int.TryParse(Grab(json, "dockRadius"), out tbv)) s.DockRadius = Math.Max(-1, Math.Min(60, tbv));
+                if (int.TryParse(Grab(json, "dockPad"), out tbv)) s.DockPad = Math.Max(-1, Math.Min(40, tbv));
+                if (int.TryParse(Grab(json, "dockAlpha"), out tbv)) s.DockAlpha = Math.Max(-1, Math.Min(100, tbv));
+                if (int.TryParse(Grab(json, "dockBarH"), out tbv)) s.DockBarH = Math.Max(-1, Math.Min(96, tbv));
+                if (int.TryParse(Grab(json, "dockBlur"), out tbv)) s.DockBlur = Math.Max(-1, Math.Min(40, tbv));
+                var wk = Grab(json, "wallKind");
+                if (wk == "glass" || wk == "neon" || wk == "metal" || wk == "fabric" || wk == "none") s.WallKind = wk;
+                if (int.TryParse(Grab(json, "wallRain"), out tbv)) s.WallRain = Math.Max(0, Math.Min(80, tbv));
+                if (int.TryParse(Grab(json, "wallStrength"), out tbv)) s.WallStrength = Math.Max(0, Math.Min(100, tbv));
+                if (int.TryParse(Grab(json, "wallScale"), out tbv)) s.WallScale = Math.Max(0, Math.Min(100, tbv));
+                if (int.TryParse(Grab(json, "wallWeight"), out tbv)) s.WallWeight = Math.Max(0, Math.Min(100, tbv));
+                if (int.TryParse(Grab(json, "wallVeil"), out tbv)) s.WallVeil = Math.Max(0, Math.Min(100, tbv));
+                var fg = Grab(json, "foxGlow");
+                s.FoxGlow = (fg == "on" || fg == "true" || fg == "1");
+                if (int.TryParse(Grab(json, "foxGlowStrength"), out tbv)) s.FoxGlowStrength = Math.Max(0, Math.Min(100, tbv));
+                if (int.TryParse(Grab(json, "foxGlowSpeed"), out tbv)) s.FoxGlowSpeed = Math.Max(0, Math.Min(100, tbv));
                 var ds = Grab(json, "dockStyle");
                 if (ds == "rail" || ds == "pill" || ds == "glass" || ds == "slim") s.DockStyle = ds;
                 var dp = Grab(json, "dockPos");
@@ -416,9 +475,12 @@ namespace FoxOsLive {
 
     sealed class Wall : Form {
         const string Glyphs = " .,:;irsXA253hMHGS#9B&@";
-        const string RainSet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ$%#@&*+=:.irsX";
-
+        const string RainSetDefault = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ$%#@&*+=:.irsX";
+        const string RainSetNotebook = "-_=.,'`~|;:/\\ilI ";
         readonly string statePath;
+        string rainSet = RainSetDefault;
+
+
         readonly string logPath;
         readonly Random rng = new Random(7);
         State state;
@@ -488,9 +550,11 @@ namespace FoxOsLive {
         VolumeBoard volWin;
         BatteryBoard batWin;
         ReminderBoard calWin;
+        MediaStrip mediaStrip;
 
         static readonly string[] Allowed = {
-            "sw","noir","dnote","arthas","pride","shader","foxos","foxlook",
+            "sw","default","orange","fox","noir","dnote","notebook",
+            "arthas","pride","shader","foxos","foxlook",
             "ytm","yt","sp","dj","term","sites","youtube","ff","help","rig","note",
             "ser","foxhelp","foxlife","home","lock","settings","mirror",
             "wifi","bt","bright","vol","bat","cal","calendar","reminders","off","shutdown"
@@ -561,6 +625,8 @@ namespace FoxOsLive {
                 LoadLockFlag();
                 CheckIdleLock();
                 LoadDesk();
+                // System look (corners / borders / taskbar) must run even when apps cover the desk.
+                PaintChrome(false);
                 if (covered && !animating && !altBusy) {
                     if ((DateTime.UtcNow - lastCoveredPaint).TotalMilliseconds > 1000) {
                         lastCoveredPaint = DateTime.UtcNow;
@@ -585,9 +651,28 @@ namespace FoxOsLive {
             reqTimer.Tick += delegate { PeekHelpRequest(); };
             Shown += delegate {
                 Attach();
+                EnsureMediaStrip();
                 timer.Start();
                 reqTimer.Start();
             };
+        }
+
+        void EnsureMediaStrip() {
+            try {
+                string dir = Path.GetDirectoryName(statePath);
+                if (mediaStrip == null || mediaStrip.IsDisposed) {
+                    mediaStrip = new MediaStrip(dir);
+                }
+                mediaStrip.Recolor(state.Night, state.Accent, state.Accent2);
+            } catch (Exception ex) { Log("media strip: " + ex.Message); }
+        }
+
+
+        string ThemeName() {
+            return string.IsNullOrEmpty(state.Theme) ? "" : state.Theme;
+        }
+        bool ThemeIs(string name) {
+            return string.Equals(ThemeName(), name, StringComparison.OrdinalIgnoreCase);
         }
 
         void Log(string msg) {
@@ -853,15 +938,41 @@ namespace FoxOsLive {
         }
 
         void ShowHome() {
-            if (homeWin != null && !homeWin.IsDisposed) {
-                homeWin.Recolor(state.Night, state.Accent);
+            ShowHome(null);
+        }
+
+        void ShowHome(string focusTab) {
+            try {
+                if (homeWin != null && !homeWin.IsDisposed) {
+                    homeWin.Recolor(state.Night, state.Accent);
+                    if (!string.IsNullOrEmpty(focusTab)) homeWin.FocusTab(focusTab);
+                    try {
+                        homeWin.TopMost = true;
+                        homeWin.Show();
+                        homeWin.Activate();
+                        homeWin.BringToFront();
+                        Native.SetForegroundWindow(homeWin.Handle);
+                    } catch {
+                        try { homeWin.Show(); homeWin.Activate(); } catch { }
+                    }
+                    return;
+                }
+                homeWin = new HomeLaunch(state.Night, state.Accent, state.Accent2, state.FoxPath, state.Theme, RunDeskLine, FillDeskPrompt);
+                homeWin.FormClosed += delegate { homeWin = null; };
+                if (!string.IsNullOrEmpty(focusTab)) homeWin.FocusTab(focusTab);
+                homeWin.TopMost = true;
                 homeWin.Show();
                 homeWin.Activate();
-                return;
+                homeWin.BringToFront();
+                Native.SetForegroundWindow(homeWin.Handle);
+            } catch (Exception ex) {
+                try {
+                    string dir = Path.GetDirectoryName(statePath) ?? "";
+                    File.AppendAllText(Path.Combine(dir, "home.crash.log"),
+                        DateTime.Now.ToString("o") + "\r\n" + ex + "\r\n\r\n");
+                } catch { }
+                homeWin = null;
             }
-            homeWin = new HomeLaunch(state.Night, state.Accent, state.Accent2, state.FoxPath, state.Theme, RunDeskLine, FillDeskPrompt);
-            homeWin.FormClosed += delegate { homeWin = null; };
-            homeWin.Show();
         }
 
         void ShowAltTab(bool forward) {
@@ -949,11 +1060,140 @@ namespace FoxOsLive {
             return false;
         }
 
+        // Windows taskbar: rounded / floating via window region (works without shell mode).
+        readonly Dictionary<long, string> tbShape = new Dictionary<long, string>();
+        // Per-window rounded corners (true continuum in px — DWM alone only has 3 modes).
+        readonly Dictionary<long, string> winShape = new Dictionary<long, string>();
+
+        void ShapeWindows(bool reset) {
+            try {
+                int rad = state.WinRadius;
+                bool off = reset || rad < 0;
+                IntPtr self = IntPtr.Zero;
+                try { self = Handle; } catch { }
+                var stale = new List<long>(winShape.Keys);
+                Native.EnumWindows(delegate(IntPtr h, IntPtr l) {
+                    if (h == self) return true;
+                    if (!reset && !Native.IsWindowVisible(h)) return true;
+                    int ex = Native.GetWindowLong(h, Native.GWL_EXSTYLE);
+                    if ((ex & Native.WS_EX_TOOLWINDOW) != 0) return true;
+                    int st = Native.GetWindowLong(h, Native.GWL_STYLE);
+                    bool hasCaption = (st & Native.WS_CAPTION) == Native.WS_CAPTION;
+                    bool thick = (st & 0x00040000) != 0;
+                    if (!hasCaption && !thick) return true;
+                    var sb = new StringBuilder(64);
+                    Native.GetClassName(h, sb, sb.Capacity);
+                    string cls = sb.ToString();
+                    if (SkipChromeClass(cls)) return true;
+                    // Don't carve regions into our own FoxOS chrome.
+                    if (cls.IndexOf("WindowsForms10", StringComparison.Ordinal) >= 0) {
+                        var tb = new StringBuilder(80);
+                        Native.GetWindowText(h, tb, tb.Capacity);
+                        if (tb.ToString().StartsWith("FoxOS", StringComparison.OrdinalIgnoreCase)) return true;
+                    }
+                    long key = h.ToInt64();
+                    stale.Remove(key);
+                    bool zoom = false;
+                    try { zoom = Native.IsZoomed(h) || Native.IsIconic(h); } catch { }
+                    if (off || zoom || rad == 0) {
+                        string prevOff;
+                        if (winShape.TryGetValue(key, out prevOff) && prevOff == "off") return true;
+                        winShape[key] = "off";
+                        Native.SetWindowRgn(h, IntPtr.Zero, true);
+                        return true;
+                    }
+                    Native.RECT rc;
+                    if (!Native.GetWindowRect(h, out rc)) return true;
+                    int w = rc.R - rc.L, ht = rc.B - rc.T;
+                    if (w < 80 || ht < 40) return true;
+                    string stamp = w + "x" + ht + ":" + rad;
+                    string prev;
+                    if (winShape.TryGetValue(key, out prev) && prev == stamp) return true;
+                    winShape[key] = stamp;
+                    int ew = Math.Max(2, rad * 2);
+                    IntPtr rgn = Native.CreateRoundRectRgn(0, 0, w + 1, ht + 1, ew, ew);
+                    if (rgn != IntPtr.Zero) {
+                        if (Native.SetWindowRgn(h, rgn, true) == 0) Native.DeleteObject(rgn);
+                    }
+                    return true;
+                }, IntPtr.Zero);
+                for (int i = 0; i < stale.Count; i++) winShape.Remove(stale[i]);
+            } catch { }
+        }
+
+        void ShapeTaskbars(bool reset) {
+            try {
+                var bars = new List<IntPtr>();
+                IntPtr main = Native.FindWindow("Shell_TrayWnd", null);
+                if (main != IntPtr.Zero) bars.Add(main);
+                Native.EnumWindows(delegate(IntPtr h, IntPtr l) {
+                    var cls = new StringBuilder(40);
+                    Native.GetClassName(h, cls, cls.Capacity);
+                    if (cls.ToString() == "Shell_SecondaryTrayWnd") bars.Add(h);
+                    return true;
+                }, IntPtr.Zero);
+                int r = state.TbRadius;
+                bool off = reset || state.Shell || r < 0;
+                for (int i = 0; i < bars.Count; i++) {
+                    IntPtr h = bars[i];
+                    Native.RECT rc;
+                    if (!Native.GetWindowRect(h, out rc)) continue;
+                    int w = rc.R - rc.L, ht = rc.B - rc.T;
+                    if (w <= 0 || ht <= 0) continue;
+                    string key = off ? "off" : (w + "x" + ht + ":" + r + ":" + state.TbInset);
+                    string prev;
+                    if (tbShape.TryGetValue(h.ToInt64(), out prev) && prev == key) continue;
+                    tbShape[h.ToInt64()] = key;
+                    if (off) {
+                        Native.SetWindowRgn(h, IntPtr.Zero, true);
+                        continue;
+                    }
+                    int ins = state.TbInset;
+                    int ew = Math.Max(1, r * 2);
+                    IntPtr rgn = Native.CreateRoundRectRgn(ins, ins > 0 ? ins / 2 + 1 : 0, w - ins + 1, ht - (ins > 0 ? ins / 2 + 1 : 0) + 1, ew, ew);
+                    if (rgn != IntPtr.Zero) {
+                        if (Native.SetWindowRgn(h, rgn, true) == 0) Native.DeleteObject(rgn);
+                    }
+                }
+            } catch { }
+        }
+
         void PaintChrome(bool reset) {
-            if (!reset && (DateTime.UtcNow - lastChrome).TotalMilliseconds < 4000) return;
+            int glowSp = Math.Max(0, Math.Min(100, state.FoxGlowSpeed));
+            int chromeMs = state.FoxGlow ? Math.Max(60, 220 - glowSp) : 1500;
+            if (!reset && (DateTime.UtcNow - lastChrome).TotalMilliseconds < chromeMs) return;
             lastChrome = DateTime.UtcNow;
+            ShapeTaskbars(reset);
+            ShapeWindows(reset);
+            uint corner = 0;
+            if (!reset) {
+                // DWM fallback (3 modes). Exact px continuum is ShapeWindows above.
+                if (state.WinRadius == 0) corner = 1;
+                else if (state.WinRadius > 0 && state.WinRadius <= 8) corner = 3;
+                else if (state.WinRadius > 8) corner = 2;
+                else {
+                    switch (state.WinCorner) {
+                        case "square": corner = 1; break;
+                        case "round": corner = 2; break;
+                        case "small": corner = 3; break;
+                        default: corner = 0; break;
+                    }
+                }
+            }
             uint cap = reset ? Native.DWMWA_COLOR_DEFAULT : ColorRef(state.Night);
-            uint border = reset ? Native.DWMWA_COLOR_DEFAULT : ColorRef(state.Accent);
+            Color borderC = state.Accent;
+            if (!reset && state.FoxGlow) {
+                // Labs FoxGlow: pulse window border (strength + speed from FOXSTYLE)
+                double amp = Math.Max(0, Math.Min(100, state.FoxGlowStrength)) / 100.0;
+                double period = 900.0 - glowSp * 7.0; // 900ms..200ms
+                if (period < 160) period = 160;
+                double pulse = (1.0 - amp * 0.5) + amp * 0.5 * Math.Sin(Environment.TickCount / period);
+                borderC = Color.FromArgb(
+                    (int)Math.Min(255, state.Accent.R * pulse + state.Accent2.R * (1 - pulse)),
+                    (int)Math.Min(255, state.Accent.G * pulse + state.Accent2.G * (1 - pulse)),
+                    (int)Math.Min(255, state.Accent.B * pulse + state.Accent2.B * (1 - pulse)));
+            }
+            uint border = reset ? Native.DWMWA_COLOR_DEFAULT : ColorRef(borderC);
             uint text = reset ? Native.DWMWA_COLOR_DEFAULT : ColorRef(Color.FromArgb(230, 234, 240));
             uint dark = reset ? 0u : 1u;
             IntPtr self = IntPtr.Zero;
@@ -964,7 +1204,9 @@ namespace FoxOsLive {
                 int ex = Native.GetWindowLong(h, Native.GWL_EXSTYLE);
                 if ((ex & Native.WS_EX_TOOLWINDOW) != 0) return true;
                 int st = Native.GetWindowLong(h, Native.GWL_STYLE);
-                if ((st & Native.WS_CAPTION) == 0) return true;
+                bool hasCaption = (st & Native.WS_CAPTION) == Native.WS_CAPTION;
+                bool thick = (st & 0x00040000) != 0; // WS_THICKFRAME (frameless Electron etc.)
+                if (!hasCaption && !thick) return true;
                 var sb = new StringBuilder(64);
                 Native.GetClassName(h, sb, sb.Capacity);
                 if (SkipChromeClass(sb.ToString())) return true;
@@ -972,6 +1214,9 @@ namespace FoxOsLive {
                     uint cloaked;
                     if (Native.DwmGetWindowAttribute(h, Native.DWMWA_CLOAKED, out cloaked, 4) == 0 && cloaked != 0) return true;
                 }
+                // Real window corners across the whole system (Windows 11).
+                Native.DwmSetWindowAttribute(h, Native.DWMWA_WINDOW_CORNER_PREFERENCE, ref corner, 4);
+                if (!hasCaption) return true;
                 Native.DwmSetWindowAttribute(h, Native.DWMWA_USE_IMMERSIVE_DARK_MODE, ref dark, 4);
                 Native.DwmSetWindowAttribute(h, Native.DWMWA_CAPTION_COLOR, ref cap, 4);
                 Native.DwmSetWindowAttribute(h, Native.DWMWA_BORDER_COLOR, ref border, 4);
@@ -1011,13 +1256,17 @@ namespace FoxOsLive {
             speed = new float[cols];
             trail = new int[cols];
             grid = new byte[cols][];
+            // WallRain 0..80 → fraction of active columns; WallKind=none → almost off
+            double dens = state.WallRain / 80.0;
+            if (string.Equals(state.WallKind, "none", StringComparison.OrdinalIgnoreCase)) dens = 0;
+            else if (string.Equals(state.WallKind, "neon", StringComparison.OrdinalIgnoreCase)) dens = Math.Min(1.0, dens + 0.15);
             for (int c = 0; c < cols; c++) {
-                bool on = (c & 1) == 0;
+                bool on = dens > 0.02 && (rng.NextDouble() < dens);
                 head[c] = on ? (float)(rng.NextDouble() * rows) : -200f;
                 speed[c] = on ? (0.18f + (float)rng.NextDouble() * 0.55f) : 0f;
-                trail[c] = on ? (8 + rng.Next(16)) : 0;
+                trail[c] = on ? (6 + rng.Next(4, 8 + state.WallRain / 6)) : 0;
                 grid[c] = new byte[rows];
-                for (int r = 0; r < rows; r++) grid[c][r] = (byte)rng.Next(RainSet.Length);
+                for (int r = 0; r < rows; r++) grid[c][r] = (byte)rng.Next(rainSet.Length);
             }
         }
 
@@ -1028,20 +1277,60 @@ namespace FoxOsLive {
                 (int)(state.Night.B * (1 - t) + ink.B * t));
         }
 
+        bool IsNotebookTheme() { return ThemeIs("notebook"); }
+
+        void SyncRainSet() {
+            string next = IsNotebookTheme() ? RainSetNotebook : RainSetDefault;
+            if (string.Equals(rainSet, next, StringComparison.Ordinal)) return;
+            rainSet = next;
+            if (grid != null) {
+                for (int c = 0; c < cols; c++) {
+                    if (grid[c] == null) continue;
+                    for (int r = 0; r < rows; r++) {
+                        grid[c][r] = (byte)rng.Next(rainSet.Length);
+                    }
+                }
+            }
+        }
+
         void RebuildBrushes() {
+            SyncRainSet();
             if (rainBrushes != null) foreach (var b in rainBrushes) if (b != null) b.Dispose();
             rainBrushes = new SolidBrush[6];
             for (int i = 0; i < 6; i++) {
-                double t = 0.28 + 0.72 * (i / 5.0);
+                double tt = 0.28 + 0.72 * (i / 5.0);
                 Color ink = state.Accent;
                 if (state.Flag != null && state.Flag.Length > 0) {
                     ink = state.Flag[i % state.Flag.Length];
-                    t = 0.42 + 0.50 * (i / 5.0);
+                    tt = 0.42 + 0.50 * (i / 5.0);
                 }
-                rainBrushes[i] = new SolidBrush(MixNight(ink, t));
+                if (IsNotebookTheme() && (state.Flag == null || state.Flag.Length == 0)) {
+                    Color sepia = Color.FromArgb(196, 165, 116);
+                    ink = Color.FromArgb(
+                        (ink.R + sepia.R) / 2,
+                        (ink.G + sepia.G) / 2,
+                        (ink.B + sepia.B) / 2);
+                }
+                rainBrushes[i] = new SolidBrush(MixNight(ink, tt));
             }
             BackColor = state.Night;
             RebuildGlyphs();
+        }
+
+        void DrawNotebookPaper(Graphics g) {
+            int step = Math.Max(22, cellH);
+            using (var rule = new Pen(Color.FromArgb(48, 170, 185, 210), 1f)) {
+                for (int y = step; y < Height; y += step) {
+                    g.DrawLine(rule, 0, y, Width, y);
+                }
+            }
+            int mx = Math.Max(56, Width / 13);
+            using (var margin = new Pen(Color.FromArgb(170, state.Accent), 2.2f)) {
+                g.DrawLine(margin, mx, 0, mx, Height);
+            }
+            using (var wash = new SolidBrush(Color.FromArgb(18, 232, 217, 192))) {
+                g.FillRectangle(wash, ClientRectangle);
+            }
         }
 
         void DropGlyphs() {
@@ -1061,13 +1350,13 @@ namespace FoxOsLive {
             var fmt = rainFmt ?? StringFormat.GenericTypographic;
             rainGlyphs = new Bitmap[6][];
             for (int b = 0; b < 6; b++) {
-                rainGlyphs[b] = new Bitmap[RainSet.Length];
-                for (int i = 0; i < RainSet.Length; i++) {
+                rainGlyphs[b] = new Bitmap[rainSet.Length];
+                for (int i = 0; i < rainSet.Length; i++) {
                     var bmp = new Bitmap(cellW, cellH, PixelFormat.Format32bppPArgb);
                     using (var g = Graphics.FromImage(bmp)) {
                         g.Clear(Color.Transparent);
                         g.TextRenderingHint = TextRenderingHint.SingleBitPerPixelGridFit;
-                        g.DrawString(RainSet.Substring(i, 1), font, rainBrushes[b], 0, 0, fmt);
+                        g.DrawString(rainSet.Substring(i, 1), font, rainBrushes[b], 0, 0, fmt);
                     }
                     rainGlyphs[b][i] = bmp;
                 }
@@ -1219,8 +1508,14 @@ namespace FoxOsLive {
             }
             string hm = Path.Combine(dir, "home.req");
             if (File.Exists(hm)) {
+                string homeFocus = "";
+                try { homeFocus = (File.ReadAllText(hm) ?? "").Trim(); } catch { }
                 try { File.Delete(hm); } catch { }
-                if (!sessionLocked) ShowHome();
+                if (!sessionLocked) {
+                    string tab = homeFocus;
+                    if (string.Equals(tab, "1", StringComparison.OrdinalIgnoreCase)) tab = null;
+                    ShowHome(tab);
+                }
                 return;
             }
             string wifi = Path.Combine(dir, "wifi.req");
@@ -1493,12 +1788,18 @@ namespace FoxOsLive {
             bool wasShell = state.Shell;
             Color wasNight = state.Night;
             Color wasAccent = state.Accent;
+            int wasRain = state.WallRain;
+            string wasKind = state.WallKind;
             Json.Load(statePath, state);
             bool themeChanged = wasNight.ToArgb() != state.Night.ToArgb()
                 || wasAccent.ToArgb() != state.Accent.ToArgb();
             if (themeChanged) {
                 morphFromNight = wasNight;
                 morphT = 0f;
+            }
+            if (wasRain != state.WallRain || !string.Equals(wasKind, state.WallKind, StringComparison.OrdinalIgnoreCase)) {
+                InitRain();
+                RebuildGlyphs();
             }
             DropPanels();
             RebuildBrushes();
@@ -1516,6 +1817,7 @@ namespace FoxOsLive {
             if (volWin != null && !volWin.IsDisposed) volWin.Recolor(state.Night, state.Accent);
             if (batWin != null && !batWin.IsDisposed) batWin.Recolor(state.Night, state.Accent);
             if (calWin != null && !calWin.IsDisposed) calWin.Recolor(state.Night, state.Accent);
+            EnsureMediaStrip();
             EnsureDock();
             if (wasShell != state.Shell) {
                 behind = false;
@@ -1535,7 +1837,112 @@ namespace FoxOsLive {
                     trail[c] = 8 + rng.Next(16);
                 }
                 int hi = ((int)head[c] % rows + rows) % rows;
-                if (rng.Next(100) < 32) grid[c][hi] = (byte)rng.Next(RainSet.Length);
+                if (rng.Next(100) < 32) grid[c][hi] = (byte)rng.Next(rainSet.Length);
+            }
+        }
+        int WallStr() { return Math.Max(0, Math.Min(100, state.WallStrength)); }
+        int WallSc() { return Math.Max(0, Math.Min(100, state.WallScale)); }
+        int WallWt() { return Math.Max(0, Math.Min(100, state.WallWeight)); }
+        int WallVl() { return Math.Max(0, Math.Min(100, state.WallVeil)); }
+        // One uniform stroke for the whole grid (1px..8px)
+        float WallStroke() { return 1f + WallWt() * 7f / 100f; }
+
+        void PaintWallBase(Graphics g) {
+            // Solid base under rain. Strength/veil from FOXSTYLE.
+            string kind = state.WallKind ?? "glass";
+            Rectangle rc = ClientRectangle;
+            if (string.Equals(kind, "none", StringComparison.OrdinalIgnoreCase)) return;
+            int str = WallStr();
+            int veil = WallVl();
+            float k = str / 100f;
+            if (string.Equals(kind, "neon", StringComparison.OrdinalIgnoreCase)) {
+                int drop = (int)(6 + 14 * k);
+                Color deep = Color.FromArgb(
+                    Math.Max(0, state.Night.R - drop),
+                    Math.Max(0, state.Night.G - drop / 2),
+                    Math.Max(0, state.Night.B - drop / 3));
+                using (var br = new SolidBrush(deep)) g.FillRectangle(br, rc);
+                return;
+            }
+            if (string.Equals(kind, "metal", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(kind, "fabric", StringComparison.OrdinalIgnoreCase)) {
+                int lift = (int)(10 + 22 * k);
+                Color steel = Color.FromArgb(
+                    Math.Min(255, state.Night.R + lift),
+                    Math.Min(255, state.Night.G + lift),
+                    Math.Min(255, state.Night.B + lift + 6));
+                using (var br = new System.Drawing.Drawing2D.LinearGradientBrush(rc, steel, state.Night, LinearGradientMode.ForwardDiagonal))
+                    g.FillRectangle(br, rc);
+                return;
+            }
+            // glass default
+            int glowLift = (int)(12 + 40 * k);
+            Color top = Color.FromArgb(
+                Math.Min(255, state.Night.R + glowLift),
+                Math.Min(255, state.Night.G + glowLift * 3 / 4),
+                Math.Min(255, state.Night.B + glowLift + 10));
+            using (var br = new System.Drawing.Drawing2D.LinearGradientBrush(rc, top, state.Night, LinearGradientMode.Vertical))
+                g.FillRectangle(br, rc);
+            int a1 = (int)(18 + veil * 0.7);
+            int a2 = (int)(12 + veil * 0.55);
+            if (a1 > 0) {
+                using (var v1 = new SolidBrush(Color.FromArgb(Math.Min(180, a1), state.Accent)))
+                    g.FillEllipse(v1, -rc.Width / 5, -rc.Height / 4, rc.Width * 2 / 3, rc.Height * 2 / 3);
+            }
+            if (a2 > 0) {
+                using (var v2 = new SolidBrush(Color.FromArgb(Math.Min(160, a2), state.Accent2.A > 0 ? state.Accent2 : state.Accent)))
+                    g.FillEllipse(v2, rc.Width / 3, rc.Height / 2, rc.Width * 2 / 3, rc.Height * 2 / 3);
+            }
+        }
+
+        void PaintWallOverlay(Graphics g) {
+            // One uniform stroke for the whole grid (no major/minor double-weight).
+            string kind = state.WallKind ?? "glass";
+            Rectangle rc = ClientRectangle;
+            int str = WallStr();
+            int sc = WallSc();
+            int veil = WallVl();
+            float stroke = WallStroke();
+            if (str <= 0) return;
+            // scale 0 → tight grid, 100 → wide
+            int step = 18 + sc * 54 / 100; // 18..72
+            if (string.Equals(kind, "neon", StringComparison.OrdinalIgnoreCase)) {
+                int lineA = 50 + str * 170 / 100;
+                using (var pen = new Pen(Color.FromArgb(Math.Min(255, lineA), state.Accent), stroke)) {
+                    pen.StartCap = System.Drawing.Drawing2D.LineCap.Flat;
+                    pen.EndCap = System.Drawing.Drawing2D.LineCap.Flat;
+                    for (int x = 0; x < rc.Width; x += step) g.DrawLine(pen, x, 0, x, rc.Height);
+                    for (int y = 0; y < rc.Height; y += step) g.DrawLine(pen, 0, y, rc.Width, y);
+                }
+                return;
+            }
+            if (string.Equals(kind, "metal", StringComparison.OrdinalIgnoreCase)) {
+                int gap = Math.Max(2, step / 4);
+                int lineA = 35 + str * 100 / 100;
+                using (var pen = new Pen(Color.FromArgb(Math.Min(255, lineA), 220, 220, 230), stroke)) {
+                    for (int y = 0; y < rc.Height; y += gap) g.DrawLine(pen, 0, y, rc.Width, y);
+                }
+                int sheenA = veil * str / 120;
+                if (sheenA > 0) {
+                    using (var sheen = new SolidBrush(Color.FromArgb(Math.Min(120, sheenA), state.Accent)))
+                        g.FillRectangle(sheen, 0, 0, rc.Width, rc.Height / 4 + veil);
+                }
+                return;
+            }
+            if (string.Equals(kind, "fabric", StringComparison.OrdinalIgnoreCase)) {
+                int gap = Math.Max(4, step / 3);
+                int a = 25 + str * 80 / 100;
+                using (var pen = new Pen(Color.FromArgb(Math.Min(220, a), state.Accent), stroke)) {
+                    for (int x = -rc.Height; x < rc.Width; x += gap)
+                        g.DrawLine(pen, x, 0, x + rc.Height, rc.Height);
+                    for (int x = 0; x < rc.Width + rc.Height; x += gap)
+                        g.DrawLine(pen, x, 0, x - rc.Height, rc.Height);
+                }
+                int wash = veil * str / 200;
+                if (wash > 0) {
+                    using (var br = new SolidBrush(Color.FromArgb(Math.Min(80, wash), state.Accent2.A > 0 ? state.Accent2 : state.Accent)))
+                        g.FillRectangle(br, rc);
+                }
             }
         }
 
@@ -1544,6 +1951,9 @@ namespace FoxOsLive {
             g.CompositingMode = CompositingMode.SourceCopy;
             g.Clear(state.Night);
             g.CompositingMode = CompositingMode.SourceOver;
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            PaintWallBase(g);
+            if (IsNotebookTheme()) DrawNotebookPaper(g);
             if (morphT < 1f) {
                 float mt = morphT < 0f ? 0f : (morphT > 1f ? 1f : morphT);
                 float ease = mt * mt * (3f - 2f * mt);
@@ -1574,6 +1984,8 @@ namespace FoxOsLive {
                     }
                 }
             }
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            PaintWallOverlay(g);
             if (foxBmp != null) {
                 float t = foxBoot < 0f ? 0f : (foxBoot > 1f ? 1f : foxBoot);
                 float ease = 1f - (1f - t) * (1f - t);
@@ -2463,6 +2875,10 @@ namespace FoxOsLive {
                 try { PaintChrome(true); } catch { }
                 KillDocks();
                 KillChrome();
+                if (mediaStrip != null && !mediaStrip.IsDisposed) {
+                    try { mediaStrip.Close(); mediaStrip.Dispose(); } catch { }
+                    mediaStrip = null;
+                }
                 if (helpWin != null && !helpWin.IsDisposed) helpWin.Close();
                 if (timer != null) timer.Dispose();
                 if (promptFont != null) promptFont.Dispose();

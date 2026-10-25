@@ -17,4 +17,5 @@
 ```
 
 Повний системний гайд: [`../FOXTERMINAL_GUIDE_UA.md`](../FOXTERMINAL_GUIDE_UA.md).  
+Дамп для стороннього чату: [`../CHATGPT_PROJECT.md`](../CHATGPT_PROJECT.md).  
 У терміналі (pwsh): **`foxdocs`** — усі гайди/історія списком.

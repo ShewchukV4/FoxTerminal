@@ -59,8 +59,10 @@ fox() { pwsh -NoProfile -File "$FOX/cmd/$1.ps1" "${@:2}"; }
 | `sw -slate` (тиха тема) | ⚠️ `fox sw -slate` (без лисиці) якщо є pwsh |
 | `shader on\|off` | ⚠️ або правки в `~/.config/ghostty/config` |
 | `noir` / `pride` / `arthas` / `dnote` | ⚠️ якщо pwsh тягне скрипти |
+| `notebook` / `default` | ⚠️ `fox notebook` / `fox default` якщо є pwsh |
 | `foxos on` | ❌ → wallpaper: `feh` / `gsettings` / `swww` (LINUX_GUIDE §4) |
 | `foxlook on` | ❌ → dark theme DE + dock + hide icons |
+| `foxstyle` / `foxnodes` / `foxstt` | ❌ Windows-only (WinForms + whisper у `%LOCALAPPDATA%`) |
 | `foxlook cursor fox` | ❌ → тема курсорів DE (Bibata, etc.) |
 | `foxlook dock style pill` | ❌ → Dash to Dock / Plank / Waybar |
 | `foxlook shell on` | ❌ ніколи на Linux (і обережно на Windows) |
@@ -102,6 +104,7 @@ fox() { pwsh -NoProfile -File "$FOX/cmd/$1.ps1" "${@:2}"; }
 |---------|-------|
 | `ask "…"` | ⚠️ `fox ask "…"` (потрібні ollama + pwsh) |
 | `friend` | ⚠️ `fox friend` |
+| FOXSTYLE Помічник / `foxstt` | ❌ Windows-only → `friend` / `ask` + ollama |
 | `sum file` | ⚠️ або локальний LLM |
 
 ```bash

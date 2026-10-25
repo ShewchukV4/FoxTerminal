@@ -19,6 +19,7 @@
 - `HARDWARE_SCREEN.md` — швидка таблиця DPI / моніторів / GPU  
 - **`VERIFY_ALL.md`** — прогін кожної команди + Alt+Tab / таскбар  
 - `../FOXTERMINAL_GUIDE_UA.md` — повний системний гайд  
+- `../CHATGPT_PROJECT.md` — один бриф для стороннього чату  
 - `../linux/CURSOR_MEGAGUIDE_UA.md` — якщо раптом Linux  
 - `../../CHANGELOG.md` · `../../AGENTS.md`
 
@@ -253,6 +254,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\FoxTerminal\install.ps1
 | AI | `ask`, `friend` | ✅ + Ollama |
 | Media | `yt`, `ytm`, `sp`, … | ✅ + Firefox |
 | Life | `foxlife` | ✅ + .NET |
+| Студія / меню | `foxstyle`, `foxnodes`, `foxstt` | ✅ Windows-only; csc → `%LOCALAPPDATA%\FoxTerminal\foxos\` |
 | Pack | `build`, `foxpack`, `changelog`, `foxdocs` | ✅ |
 
 Довідка в терміналі: **`foxhelp`**. Усі гайди/історія: **`foxdocs`**.  
@@ -566,7 +568,10 @@ friend
 
 Media: `yt`, `ytm`, `sp`, `sites`.  
 Life: `foxlife`.  
+Студія: `foxstyle`, `foxstyle -NodeEditor`, `foxnodes` (Ctrl+Alt+Space), `foxstt -Install`.  
 Companion: `foxaddon -Install`, `foxzen status`.
+
+Apply FOXSTYLE: «Застосувати» пише `launcher.json` + `style.json`, потім `foxnodes.signal`; статус «Застосовано» лише після ack overlay. Помічник — локальна Ollama + STT; слово «YouTube» саме по собі сайт не відкриває.
 
 ---
 
@@ -585,6 +590,16 @@ Companion: `foxaddon -Install`, `foxzen status`.
 - `foxbg` — підозрілі фонові скрипти.  
 - **`pulse` / `pulse apps`** — vitals ноута + інтерактивне закриття важких ап (Discord/Steam/…); Defender / FoxTerminal / Cursor не чіпати.  
 - SSD: не клади `builds\` гігантські медіа без потреби.
+
+### ★ Не забути на новому ноуті (після 2026-10-21)
+
+```powershell
+foxstyle                 # нативна студія вигляду
+foxstyle -NodeEditor     # дерево / полотно / властивості меню
+foxnodes                 # overlay; Ctrl+Alt+Space
+foxstt -Install          # whisper.cpp у %LOCALAPPDATA% (не в git)
+foxstt -Test             # проба мікрофона без команд
+```
 
 ### ★ Не забути на новому ноуті (після 2026-10-04)
 
@@ -679,7 +694,8 @@ quick 38% · не fullscreen Ghostty на весь span · 2–3 колонки 
 - Гайди UA/EN, linux pack, AGENTS.md уже в git.  
 - Код на shew4uk + ShewchukV4.  
 - Чати Cursor між ПК не синхроняться → MEGAGUIDE = пам’ять.  
-- Цей **windows/CURSOR_MEGAGUIDE_UA.md** — головний контекст для Cursor на іншому Windows.
+- Цей **windows/CURSOR_MEGAGUIDE_UA.md** — головний контекст для Cursor на іншому Windows.  
+- 2026-10-21…10-25: FOXSTYLE / foxnodes / foxstt / notebook у гайдах; для ChatGPT — `../CHATGPT_PROJECT.md`.
 
 ---
 
@@ -746,10 +762,15 @@ foxlook dock style glass
 foxlook export
 foxhotkeys -Restart
 home
+# Win+S (winkeys on)  → FoxOS Home → APPS (пошук будь-якої програми без taskbar)
+# Win+Alt+A           → те саме (якщо Win+S з’їдає Windows Search)
+# Dock Home → вкладка APPS → type → Enter
 
 pulse -Once           # vitals + оцінка ноута
 # pulse apps          # якщо RAM забита — стрілки закрити важке
 sw -slate             # тиха тема без UI (або інший колір)
+foxstyle              # студія вигляду
+foxnodes              # Node Launcher; Ctrl+Alt+Space
 foxdocs               # усі гайди/історія (← термінал, → Explorer, Back)
 
 # Cursor: Open Folder на корінь репо
@@ -796,7 +817,7 @@ foxhotkeys -Status
 
 1. **Alt+Tab** / **Alt+Shift+Tab** / **Win+Tab** — список вікон читабельний; **E** закриває вибране (Fox Alt+Tab).  
 2. **Таскбар** — autohide, трей, іконки вікон, клік по Ghostty.  
-3. **Win** / Win+E / Win+I — згідно `foxlook winkeys`.  
+3. **Win** / Win+E / Win+I — згідно `foxlook winkeys`. **Win+S** → Home **APPS** (запуск програм без taskbar).  
 4. **Win+D** — стіл + rain/desk prompt.  
 5. **Shift+Alt+T** / **Shift+Alt+L** — show / lock.  
 6. Dock + cursor на реальному DPI.  

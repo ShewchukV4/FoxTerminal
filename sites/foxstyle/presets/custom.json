@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "name": "My FoxOS",
+  "preset": "custom",
+  "colors": { "theme": "custom", "accent": "#7B5CFF", "accent2": "#FFA23A", "bg": "#0B0A12", "surface": "#161322", "ink": "#F4F1FF", "glass": 72 },
+  "chrome": { "opacity": 72, "blur": 18, "height": 36, "floating": false, "icons": "line", "iconSize": 16 },
+  "window": {
+    "radius": 16,
+    "shadowPreset": "custom",
+    "shadow": { "x": 0, "y": 28, "blur": 70, "spread": -12, "color": "#000000", "alpha": 60 },
+    "openAnim": "auto"
+  },
+  "panel": { "enter": "book", "speed": "normal", "blur": 28, "radius": 24 },
+  "button": { "style": "glass", "radius": null, "pressScale": 97 },
+  "motion": { "scale": "full", "fast": 160, "med": 320, "slow": 640, "ease": "standard", "stagger": 45 },
+  "typography": { "ui": "Inter", "display": "Space Grotesk", "mono": "JetBrains Mono", "size": 13.5, "density": "normal", "tracking": "tight", "displayWeight": "600" },
+  "texture": { "kind": "glass", "opacity": 100, "rain": 35, "dock": "pill" },
+  "labs": { "dynamicShadows": false, "foxGlow": false, "motionBlur": false, "liquidWindows": false },
+  "perElementAnims": { "dock": "fs-bounce-in", "nav": "fs-fade-up", "card": "fs-fade-up", "tile": "fs-zoom-open", "toggle": "fs-elastic-pop" }
+}

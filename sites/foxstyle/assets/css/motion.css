@@ -1,0 +1,295 @@
+/* ==========================================================================
+   FOXSTYLE — motion library (keyframes only)
+   Every name is referenced via tokens:  --fs-win-open-anim, --fs-panel-enter,
+   --fs-btn-morph …  so swapping a data-attribute swaps the animation.
+   Durations/easings come from tokens.css; keyframes stay geometry-only.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   FADE
+   -------------------------------------------------------------------------- */
+@keyframes fs-fade-in  { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fs-fade-out { from { opacity: 1; } to { opacity: 0; } }
+
+@keyframes fs-fade-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fs-fade-down {
+  from { opacity: 0; transform: translateY(-10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* --------------------------------------------------------------------------
+   SLIDE
+   -------------------------------------------------------------------------- */
+@keyframes fs-slide-up {
+  from { opacity: 0; transform: translate3d(0, 28px, 0); }
+  to   { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+@keyframes fs-slide-down {
+  from { opacity: 0; transform: translate3d(0, -28px, 0); }
+  to   { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+@keyframes fs-slide-in-right {
+  from { opacity: 0; transform: translate3d(48px, 0, 0); }
+  to   { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+@keyframes fs-slide-out-right {
+  from { opacity: 1; transform: translate3d(0, 0, 0); }
+  to   { opacity: 0; transform: translate3d(48px, 0, 0); }
+}
+@keyframes fs-slide-in-left {
+  from { opacity: 0; transform: translate3d(-48px, 0, 0); }
+  to   { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+/* --------------------------------------------------------------------------
+   ELASTIC · BOUNCE  (scale-based, pair with ease-elastic / ease-bounce)
+   -------------------------------------------------------------------------- */
+@keyframes fs-elastic-in {
+  0%   { opacity: 0; transform: scale(0.82); }
+  55%  { opacity: 1; transform: scale(1.04); }
+  75%  {             transform: scale(0.985); }
+  100% {             transform: scale(1); }
+}
+@keyframes fs-elastic-pop {
+  0%   { transform: scale(1); }
+  35%  { transform: scale(1.08); }
+  65%  { transform: scale(0.97); }
+  100% { transform: scale(1); }
+}
+@keyframes fs-bounce-in {
+  0%   { opacity: 0; transform: translateY(-40px) scale(0.96); }
+  45%  { opacity: 1; transform: translateY(8px)   scale(1.01); }
+  70%  {             transform: translateY(-4px)  scale(0.995); }
+  100% {             transform: translateY(0)     scale(1); }
+}
+@keyframes fs-bounce-soft {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-5px); }
+}
+
+/* --------------------------------------------------------------------------
+   LIQUID  (border-radius morph + squash/stretch)
+   -------------------------------------------------------------------------- */
+@keyframes fs-liquid {
+  0%   { border-radius: 42% 58% 60% 40% / 45% 40% 60% 55%; }
+  33%  { border-radius: 58% 42% 45% 55% / 40% 60% 40% 60%; }
+  66%  { border-radius: 45% 55% 58% 42% / 60% 45% 55% 40%; }
+  100% { border-radius: 42% 58% 60% 40% / 45% 40% 60% 55%; }
+}
+@keyframes fs-liquid-wobble {
+  0%   { transform: scale(1, 1); }
+  25%  { transform: scale(1.02, 0.98); }
+  50%  { transform: scale(0.985, 1.015); }
+  75%  { transform: scale(1.008, 0.992); }
+  100% { transform: scale(1, 1); }
+}
+
+/* --------------------------------------------------------------------------
+   WINDOW OPEN FAMILY  (--fs-win-open-anim)
+   -------------------------------------------------------------------------- */
+@keyframes fs-zoom-open {
+  0%   { opacity: 0; transform: scale(0.86) translateY(14px); filter: blur(var(--fs-blur-motion, 0px)); }
+  60%  { opacity: 1; filter: blur(0); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+@keyframes fs-zoom-close {
+  from { opacity: 1; transform: scale(1); }
+  to   { opacity: 0; transform: scale(0.9) translateY(10px); }
+}
+
+@keyframes fs-flip-open {
+  0%   { opacity: 0; transform: perspective(1400px) rotateX(-22deg) translateY(30px) scale(0.94); }
+  60%  { opacity: 1; }
+  100% { opacity: 1; transform: perspective(1400px) rotateX(0) translateY(0) scale(1); }
+}
+@keyframes fs-flip-close {
+  from { opacity: 1; transform: perspective(1400px) rotateX(0); }
+  to   { opacity: 0; transform: perspective(1400px) rotateX(18deg) translateY(-16px) scale(0.96); }
+}
+
+@keyframes fs-fold-open {
+  0%   { opacity: 0; transform: perspective(1600px) rotateY(-70deg) scaleX(0.6); transform-origin: left center; }
+  50%  { opacity: 1; transform: perspective(1600px) rotateY(8deg)   scaleX(1.02); transform-origin: left center; }
+  100% { opacity: 1; transform: perspective(1600px) rotateY(0)      scaleX(1);    transform-origin: left center; }
+}
+@keyframes fs-fold-close {
+  from { opacity: 1; transform: perspective(1600px) rotateY(0); transform-origin: left center; }
+  to   { opacity: 0; transform: perspective(1600px) rotateY(-60deg) scaleX(0.7); transform-origin: left center; }
+}
+
+@keyframes fs-liquid-open {
+  0%   { opacity: 0; transform: scale(0.7, 0.4) translateY(40px);
+         border-radius: 50% 50% 48% 52% / 60% 60% 40% 40%; filter: blur(var(--fs-blur-motion, 0px)); }
+  40%  { opacity: 1; transform: scale(1.06, 0.94) translateY(-6px);
+         border-radius: 30% 30% 26% 28% / 32% 32% 26% 26%; filter: blur(0); }
+  65%  { transform: scale(0.97, 1.03) translateY(2px); border-radius: 22px; }
+  85%  { transform: scale(1.01, 0.99) translateY(0); }
+  100% { opacity: 1; transform: scale(1, 1) translateY(0); border-radius: var(--fs-win-radius, 16px); }
+}
+@keyframes fs-liquid-close {
+  0%   { opacity: 1; transform: scale(1, 1); border-radius: var(--fs-win-radius, 16px); }
+  40%  { transform: scale(1.04, 0.92); }
+  100% { opacity: 0; transform: scale(0.6, 0.3) translateY(40px); border-radius: 50% 50% 48% 52% / 60% 60% 40% 40%; }
+}
+
+/* --------------------------------------------------------------------------
+   BOOK OPEN  — panel enters from the right like a cover being opened.
+   Element must sit inside a perspective wrapper (.fs-book) with
+   transform-origin: right center.  A ::before "page" layer can play
+   fs-book-page for the curl shading.
+   -------------------------------------------------------------------------- */
+@keyframes fs-book-open {
+  0%   { opacity: 0; transform: translate3d(14%, 0, 0) rotateY(-78deg) skewY(-2deg) scale(0.96);
+         filter: brightness(0.55) blur(var(--fs-blur-motion, 0px)); }
+  18%  { opacity: 1; }
+  55%  { transform: translate3d(0, 0, 0) rotateY(6deg) skewY(0.4deg) scale(1.005);
+         filter: brightness(1.05) blur(0); }
+  78%  { transform: rotateY(-2deg) scale(0.999); filter: brightness(1); }
+  100% { opacity: 1; transform: translate3d(0, 0, 0) rotateY(0) skewY(0) scale(1); filter: brightness(1); }
+}
+@keyframes fs-book-close {
+  0%   { opacity: 1; transform: rotateY(0) scale(1); filter: brightness(1); }
+  30%  { transform: rotateY(5deg) scale(1.003); }
+  100% { opacity: 0; transform: translate3d(12%, 0, 0) rotateY(-80deg) skewY(-2deg) scale(0.96); filter: brightness(0.5); }
+}
+/* page-curl shading sweeps across the opening face */
+@keyframes fs-book-page {
+  0%   { opacity: 0.9; transform: translateX(0) scaleX(1); }
+  55%  { opacity: 0.35; transform: translateX(-30%) scaleX(1.4); }
+  100% { opacity: 0;   transform: translateX(-100%) scaleX(1.8); }
+}
+/* spine highlight flickers as the cover passes the light */
+@keyframes fs-book-spine {
+  0%   { opacity: 0; }
+  40%  { opacity: 1; }
+  100% { opacity: 0.55; }
+}
+
+/* --------------------------------------------------------------------------
+   WAVE APPLY  — Apply button ripple + sweeping wave across preview
+   -------------------------------------------------------------------------- */
+@keyframes fs-wave-apply {
+  0%   { --fs-ripple-r: 0px;   opacity: 0.55; }
+  70%  {                       opacity: 0.25; }
+  100% { --fs-ripple-r: 320px; opacity: 0; }
+}
+/* fallback for browsers without @property: scale-based ripple */
+@keyframes fs-wave-apply-scale {
+  0%   { transform: translate(-50%, -50%) scale(0); opacity: 0.6; }
+  100% { transform: translate(-50%, -50%) scale(14); opacity: 0; }
+}
+/* horizontal sweep over the preview mini desktop */
+@keyframes fs-wave-sweep {
+  0%   { transform: translateX(-120%) skewX(-14deg); opacity: 0; }
+  10%  { opacity: 0.9; }
+  100% { transform: translateX(220%) skewX(-14deg); opacity: 0; }
+}
+/* button confirmation squash */
+@keyframes fs-apply-confirm {
+  0%   { transform: scale(1); }
+  30%  { transform: scale(0.96); }
+  60%  { transform: scale(1.03); }
+  100% { transform: scale(1); }
+}
+
+/* --------------------------------------------------------------------------
+   FOX GLOW  — accent bloom pulse (labs: fox-glow)
+   -------------------------------------------------------------------------- */
+@keyframes fs-fox-glow {
+  0%, 100% { --fs-glow-alpha: 0.30; box-shadow: 0 0 22px 0 color-mix(in srgb, var(--fs-accent) 35%, transparent); }
+  50%      { --fs-glow-alpha: 0.70; box-shadow: 0 0 44px 4px color-mix(in srgb, var(--fs-accent) 65%, transparent); }
+}
+@keyframes fs-fox-glow-text {
+  0%, 100% { text-shadow: 0 0 10px color-mix(in srgb, var(--fs-accent) 40%, transparent); }
+  50%      { text-shadow: 0 0 22px color-mix(in srgb, var(--fs-accent) 85%, transparent),
+                          0 0 40px color-mix(in srgb, var(--fs-accent2) 30%, transparent); }
+}
+/* gradient angle drift for accent surfaces */
+@keyframes fs-angle-drift {
+  from { --fs-angle: 135deg; }
+  to   { --fs-angle: 495deg; }
+}
+
+/* --------------------------------------------------------------------------
+   MORPH BUTTON  — liquid/glass buttons on hover
+   -------------------------------------------------------------------------- */
+@keyframes fs-morph-button {
+  0%   { border-radius: var(--fs-btn-radius, 12px); transform: scale(1); }
+  40%  { border-radius: calc(var(--fs-btn-radius, 12px) * 1.6) calc(var(--fs-btn-radius, 12px) * 0.8)
+                        calc(var(--fs-btn-radius, 12px) * 1.5) calc(var(--fs-btn-radius, 12px) * 0.9);
+         transform: scale(1.03, 0.98); }
+  70%  { border-radius: calc(var(--fs-btn-radius, 12px) * 0.9) calc(var(--fs-btn-radius, 12px) * 1.5)
+                        calc(var(--fs-btn-radius, 12px) * 0.85) calc(var(--fs-btn-radius, 12px) * 1.4);
+         transform: scale(0.99, 1.02); }
+  100% { border-radius: var(--fs-btn-radius, 12px); transform: scale(1.02); }
+}
+@keyframes fs-morph-blob {
+  0%, 100% { --fs-liquid-x: 30%; --fs-liquid-y: 40%; }
+  50%      { --fs-liquid-x: 70%; --fs-liquid-y: 60%; }
+}
+
+/* --------------------------------------------------------------------------
+   MICRO — toggles, sliders, nav indicator, skeleton, toast
+   -------------------------------------------------------------------------- */
+@keyframes fs-knob-on {
+  0%   { transform: translateX(0) scaleX(1); }
+  50%  { transform: translateX(10px) scaleX(1.25); }
+  100% { transform: translateX(20px) scaleX(1); }
+}
+@keyframes fs-knob-off {
+  0%   { transform: translateX(20px) scaleX(1); }
+  50%  { transform: translateX(10px) scaleX(1.25); }
+  100% { transform: translateX(0) scaleX(1); }
+}
+@keyframes fs-indicator-slide {
+  from { transform: translateY(var(--fs-ind-from, 0)); }
+  to   { transform: translateY(var(--fs-ind-to, 0)); }
+}
+@keyframes fs-shimmer {
+  from { background-position: -200% 0; }
+  to   { background-position: 200% 0; }
+}
+@keyframes fs-toast-in {
+  from { opacity: 0; transform: translateY(16px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes fs-spin { to { transform: rotate(360deg); } }
+
+/* ascii-rain for preview wallpaper (FoxOS wallpaper nod) */
+@keyframes fs-rain {
+  from { background-position: 0 0, 0 0; }
+  to   { background-position: 0 240px, 0 400px; }
+}
+@keyframes fs-aurora {
+  0%   { filter: hue-rotate(0deg) saturate(1); }
+  100% { filter: hue-rotate(14deg) saturate(1.12); }
+}
+
+/* --------------------------------------------------------------------------
+   REDUCED MOTION — collapse every keyframe to a plain fade
+   -------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  @keyframes fs-book-open    { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes fs-book-close   { from { opacity: 1; } to { opacity: 0; } }
+  @keyframes fs-zoom-open    { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes fs-zoom-close   { from { opacity: 1; } to { opacity: 0; } }
+  @keyframes fs-flip-open    { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes fs-fold-open    { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes fs-fold-close   { from { opacity: 1; } to { opacity: 0; } }
+  @keyframes fs-liquid-open  { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes fs-liquid-close { from { opacity: 1; } to { opacity: 0; } }
+  @keyframes fs-slide-up     { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes fs-slide-in-right  { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes fs-slide-out-right { from { opacity: 1; } to { opacity: 0; } }
+  @keyframes fs-elastic-in   { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes fs-bounce-in    { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes fs-morph-button { from { transform: none; } to { transform: none; } }
+  @keyframes fs-fox-glow     { from { box-shadow: none; } to { box-shadow: none; } }
+  @keyframes fs-wave-sweep   { from { opacity: 0; } to { opacity: 0; } }
+  @keyframes fs-rain         { from { background-position: 0 0; } to { background-position: 0 0; } }
+  @keyframes fs-aurora       { from { filter: none; } to { filter: none; } }
+  @keyframes fs-angle-drift  { from { --fs-angle: 135deg; } to { --fs-angle: 135deg; } }
+}

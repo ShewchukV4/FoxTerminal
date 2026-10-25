@@ -4,6 +4,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.IO;
@@ -133,7 +134,80 @@ namespace FoxOs.Sdk {
                 try { Directory.CreateDirectory(dir); } catch { }
             }
             string json = Dump(value);
-            File.WriteAllText(path, json, new UTF8Encoding(false));
+            string tmp = path + ".tmp";
+            File.WriteAllText(tmp, json, new UTF8Encoding(false));
+            try {
+                if (File.Exists(path)) File.Replace(tmp, path, null);
+                else File.Move(tmp, path);
+            } catch {
+                File.Copy(tmp, path, true);
+                try { File.Delete(tmp); } catch { }
+            }
+        }
+    }
+
+    // foxstyle.exe and foxnodes.exe are separate processes. Apply writes
+    // launcher.json + style.json, then this signal; overlay acks via foxnodes.applied.
+    public static class FoxNodesSync {
+        public static string SignalPath {
+            get { return Path.Combine(FoxPaths.RuntimeDir(), "foxnodes.signal"); }
+        }
+        public static string AppliedPath {
+            get { return Path.Combine(FoxPaths.RuntimeDir(), "foxnodes.applied"); }
+        }
+
+        public static void RequestReload(int revision) {
+            Directory.CreateDirectory(FoxPaths.RuntimeDir());
+            File.WriteAllText(SignalPath, "reload " + Math.Max(1, revision),
+                new UTF8Encoding(false));
+        }
+
+        public static void WriteApplied(int revision) {
+            try {
+                Directory.CreateDirectory(FoxPaths.RuntimeDir());
+                File.WriteAllText(AppliedPath,
+                    Math.Max(1, revision) + "\r\n" + DateTime.UtcNow.ToString("o"),
+                    new UTF8Encoding(false));
+            } catch { }
+        }
+
+        public static bool TryReadApplied(out int revision, out string utc) {
+            revision = 0;
+            utc = "";
+            try {
+                if (!File.Exists(AppliedPath)) return false;
+                string[] lines = File.ReadAllText(AppliedPath, Encoding.UTF8)
+                    .Replace("\r", "").Split('\n');
+                if (lines.Length == 0) return false;
+                if (!int.TryParse(lines[0].Trim(), out revision)) return false;
+                if (lines.Length > 1) utc = lines[1].Trim();
+                return true;
+            } catch { return false; }
+        }
+
+        public static bool OverlayRunning() {
+            try {
+                Process[] list = Process.GetProcessesByName("foxnodes");
+                return list != null && list.Length > 0;
+            } catch { return false; }
+        }
+
+        public static string ParseCommand(string raw, out int revision) {
+            revision = 0;
+            raw = (raw ?? "").Trim();
+            if (raw.Length == 0) return "";
+            int space = raw.IndexOf(' ');
+            if (space <= 0) return raw.ToLowerInvariant();
+            string cmd = raw.Substring(0, space).Trim().ToLowerInvariant();
+            int.TryParse(raw.Substring(space + 1).Trim(), out revision);
+            return cmd;
+        }
+
+        public static string NormalizeMotionStyle(string value) {
+            value = (value ?? "smooth").Trim().ToLowerInvariant();
+            if (value == "restrained" || value == "smooth" ||
+                value == "spring" || value == "minimal") return value;
+            return "smooth";
         }
     }
 

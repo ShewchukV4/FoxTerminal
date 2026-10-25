@@ -20,4 +20,4 @@
 3. Не `foxlook shell on` без явного «так».  
 4. Не `texit` / `off` / `foxreset` у автопрогоні.  
 5. Не коміть без прохання.  
-6. Не забути: `pulse` / `pulse apps`, `sw -<тема>`, Alt+Tab+**E** (див. MEGAGUIDE §15 і шпаргалку §22).
+6. Не забути: `pulse` / `pulse apps`, `sw -<тема>`, Alt+Tab+**E**, `foxstyle` / `foxnodes` / `foxstt` (див. MEGAGUIDE §14–15 і шпаргалку §22).
