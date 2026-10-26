@@ -56,7 +56,7 @@
     });
 
     dirs.forEach(function (d) {
-      if (FS.isOpp(snake.dir, d)) {
+      if (FS.wouldEnterNeck(snake, d) || FS.isOpp(snake.dir, d)) {
         debug.push({ dir: d, score: -999, why: "180" });
         return;
       }

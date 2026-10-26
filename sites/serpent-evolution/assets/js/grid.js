@@ -2,36 +2,31 @@
 (function (FS) {
   "use strict";
 
-  /**
-   * Shared timeline step for all snakes that are due to move:
-   * intent → occupancy forecast → collisions → commit.
-   * Order-independent: resolve by sorted snake ids.
-   */
-  FS.buildOccupancy = function (state, excludeSnakeId) {
+  FS.buildOccupancy = function (state) {
     var map = Object.create(null);
-    function mark(snake, solidTail) {
+    function mark(snake) {
       if (!snake || snake.dead) return;
       for (var i = 0; i < snake.body.length; i++) {
         var c = snake.body[i];
         var isTail = i === snake.body.length - 1;
-        // Standing or growing: tail stays occupied
-        var occupy = true;
-        if (isTail && !solidTail && snake._willVacateTail) occupy = false;
-        if (!occupy) continue;
+        if (isTail && snake._willVacateTail) continue;
         var k = FS.key(c.x, c.y);
         if (!map[k]) map[k] = [];
         map[k].push({ snakeId: snake.id, part: i === 0 ? "head" : (isTail ? "tail" : "body"), index: i });
       }
     }
-    mark(state.player, true);
-    for (var i = 0; i < state.enemies.length; i++) mark(state.enemies[i], true);
+    mark(state.player);
+    for (var i = 0; i < state.enemies.length; i++) mark(state.enemies[i]);
     return map;
   };
 
   FS.isBlockedCell = function (state, x, y) {
     if (!FS.inBounds(state.world, x, y)) return "edge";
     var t = FS.tileAt(state.world, x, y);
-    if (!t || t.block) return "wall";
+    if (!t) return "wall";
+    if (typeof FS.tileWalkable === "function") {
+      if (!FS.tileWalkable(t)) return t.tt === "deep" ? "water" : "wall";
+    } else if (t.block) return "wall";
     return null;
   };
 
@@ -44,7 +39,7 @@
         if (c.x === x && c.y === y) {
           var isTail = i === s.body.length - 1;
           if (ignoreMovingTails && isTail && s._willVacateTail) continue;
-          hits.push({ snake: s, index: i, part: i === 0 ? "head" : (isTail ? "tail" : "body") });
+          hits.push({ snake: s, part: i === 0 ? "head" : (isTail ? "tail" : "body"), index: i });
         }
       }
     }
@@ -54,43 +49,39 @@
   };
 
   /**
-   * Conservative simultaneous resolution.
-   * Each due snake proposes nextHead. We detect:
-   * - wall/edge
-   * - self body (except allowed phase)
-   * - into other body/head
-   * - two heads same cell or swap
-   * Standing player body kills enemy head (not player head cell).
+   * movers: [{ snake, dir, next }]
+   * dir = accepted step direction (committed only after successful commit).
+   * Returns final { deaths, commits } — snakes in deaths never appear in commits.
    */
   FS.resolveMoveRound = function (state, movers) {
-    // movers: [{snake, dir, next}]
-    movers = movers.slice().sort(function (a, b) { return a.snake.id < b.snake.id ? -1 : 1; });
+    movers = movers.slice().sort(function (a, b) {
+      return a.snake.id < b.snake.id ? -1 : (a.snake.id > b.snake.id ? 1 : 0);
+    });
 
-    // Mark who vacates tail
     movers.forEach(function (m) {
       var s = m.snake;
+      // Tail vacates only on a real step without growth, and snake not standing
       s._willVacateTail = !s.standing && s.growthDebt <= 0 && s.body.length > 0;
     });
 
-    var deaths = []; // {snake, reason, cell, savedByHeart?}
-    var commits = [];
+    var deadIds = Object.create(null);
+    var deaths = [];
 
     function kill(snake, reason, cell) {
-      if (snake._dying) return;
+      if (!snake || deadIds[snake.id]) return;
+      deadIds[snake.id] = true;
       snake._dying = true;
       deaths.push({ snake: snake, reason: reason, cell: cell });
     }
 
-    // Head targets
+    // Same-cell head collisions
     var headTargets = Object.create(null);
     movers.forEach(function (m) {
-      var n = m.next;
-      var k = FS.key(n.x, n.y);
+      if (deadIds[m.snake.id]) return;
+      var k = FS.key(m.next.x, m.next.y);
       if (!headTargets[k]) headTargets[k] = [];
       headTargets[k].push(m);
     });
-
-    // Head-on same cell
     Object.keys(headTargets).forEach(function (k) {
       if (headTargets[k].length > 1) {
         headTargets[k].forEach(function (m) {
@@ -103,6 +94,7 @@
     for (var i = 0; i < movers.length; i++) {
       for (var j = i + 1; j < movers.length; j++) {
         var a = movers[i], b = movers[j];
+        if (deadIds[a.snake.id] || deadIds[b.snake.id]) continue;
         if (FS.cellEq(a.next, b.snake.body[0]) && FS.cellEq(b.next, a.snake.body[0])) {
           kill(a.snake, "Зіткнення голів (розворот)", a.next);
           kill(b.snake, "Зіткнення голів (розворот)", b.next);
@@ -110,24 +102,30 @@
       }
     }
 
+    var commits = [];
     movers.forEach(function (m) {
-      if (m.snake._dying) return;
+      if (deadIds[m.snake.id]) return;
       var s = m.snake;
       var n = m.next;
+
+      // Neck geometry (length >= 2)
+      if (FS.wouldEnterNeck(s, m.dir)) {
+        // Should not be scheduled; treat as no-op reject (not death)
+        return;
+      }
+
       var block = FS.isBlockedCell(state, n.x, n.y);
       if (block) {
         kill(s, block === "edge" ? "Закрита межа" : "Стіна / камінь", n);
         return;
       }
 
-      // Self collision
       for (var bi = 0; bi < s.body.length; bi++) {
         var c = s.body[bi];
         if (c.x === n.x && c.y === n.y) {
           var isTail = bi === s.body.length - 1;
           if (isTail && s._willVacateTail) continue;
           if (s.phaseSelf && bi > 0) {
-            // allowed one cell through own body
             s.phaseSelf = false;
             continue;
           }
@@ -136,20 +134,19 @@
         }
       }
 
-      // Other snakes
       var hits = FS.snakeAtCell(state, n.x, n.y, true);
       for (var h = 0; h < hits.length; h++) {
         var hit = hits[h];
         if (hit.snake.id === s.id) continue;
+        if (deadIds[hit.snake.id] && hit.part === "tail") {
+          // dead snake body still blocks except we already skipped vacating; keep solid
+        }
         if (hit.part === "head") {
-          // moving into standing/moving head — head collision
           kill(s, "Зіткнення голів", n);
           kill(hit.snake, "Зіткнення голів", n);
           return;
         }
-        // Into body/tail of other
         if (hit.snake.kind === "player" && hit.snake.standing && hit.part !== "head") {
-          // Enemy hits standing player body → enemy dies
           kill(s, "Врізався в тіло гравця", n);
           return;
         }
@@ -157,23 +154,29 @@
         return;
       }
 
-      commits.push(m);
+      if (!deadIds[s.id]) commits.push(m);
     });
 
-    // Clear temp flags
+    // Final filter: no overlap between deaths and commits
+    commits = commits.filter(function (m) { return !deadIds[m.snake.id]; });
+
     movers.forEach(function (m) { m.snake._willVacateTail = false; });
 
-    return { deaths: deaths, commits: commits };
+    return { deaths: deaths, commits: commits, deadIds: deadIds };
   };
 
-  FS.commitSnakeMove = function (snake, next) {
+  /** Commit move and set committed direction to the mover's accepted dir. */
+  FS.commitSnakeMove = function (snake, next, moveDir) {
     snake.body.unshift({ x: next.x, y: next.y });
     if (snake.growthDebt > 0) {
       snake.growthDebt -= 1;
     } else {
       snake.body.pop();
     }
-    snake.dir = snake.pendingDir || snake.dir;
+    if (moveDir) {
+      snake.dir = moveDir;
+      snake.requestedDir = moveDir;
+    }
     snake.visualFrom = snake.body[1] ? { x: snake.body[1].x, y: snake.body[1].y } : next;
     snake.visualT = 0;
   };

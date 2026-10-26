@@ -16,8 +16,10 @@
       name: opts.name || "Змія",
       arch: opts.arch || "careful",
       body: body,
+      /** Committed facing — last successful move only */
       dir: dir,
-      pendingDir: dir,
+      /** Desired facing for next step (input/AI). Never copied back over dir on commit. */
+      requestedDir: dir,
       growthDebt: 0,
       standing: true,
       dead: false,
@@ -28,7 +30,6 @@
       home: { x: x, y: y },
       stateAI: "forage",
       intentDir: null,
-      nextIntent: null,
       phaseSelf: false,
       slowMul: 1,
       slowT: 0,
@@ -39,7 +40,7 @@
   };
 
   FS.createPlayerSnake = function (nest) {
-    var s = FS.createSnake({
+    return FS.createSnake({
       id: "player",
       kind: "player",
       name: "Ти",
@@ -50,11 +51,40 @@
       stepPeriod: FS.PLAYER_STEP,
       color: FS.COLORS.player
     });
-    return s;
   };
 
   FS.snakeHead = function (s) { return s.body[0]; };
+  FS.snakeNeck = function (s) { return s.body.length >= 2 ? s.body[1] : null; };
   FS.snakeLen = function (s) { return s.body.length; };
+
+  /** Direction from neck → head geometry (authoritative after load). */
+  FS.dirFromBody = function (s) {
+    if (!s.body || s.body.length < 2) return s.dir || "R";
+    var h = s.body[0], n = s.body[1];
+    var dx = h.x - n.x, dy = h.y - n.y;
+    if (dx === 1 && dy === 0) return "R";
+    if (dx === -1 && dy === 0) return "L";
+    if (dx === 0 && dy === 1) return "D";
+    if (dx === 0 && dy === -1) return "U";
+    return s.dir || "R";
+  };
+
+  FS.syncDirFromBody = function (s) {
+    if (s.body && s.body.length >= 2) {
+      s.dir = FS.dirFromBody(s);
+      s.requestedDir = s.dir;
+    }
+  };
+
+  /** True if moving with `dir` would enter the neck cell (180 into body). */
+  FS.wouldEnterNeck = function (s, dir) {
+    if (!s.body || s.body.length < 2 || !dir) return false;
+    var h = s.body[0];
+    var v = FS.dirVec(dir);
+    var next = { x: h.x + v.x, y: h.y + v.y };
+    var neck = s.body[1];
+    return next.x === neck.x && next.y === neck.y;
+  };
 
   FS.setStanding = function (s, standing) {
     s.standing = !!standing;

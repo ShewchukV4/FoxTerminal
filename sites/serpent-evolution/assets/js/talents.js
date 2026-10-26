@@ -5,7 +5,7 @@
   FS.defaultTalents = function () {
     return {
       unlocked: { root: true },
-      forkPicks: {}, // forkId -> "A" | "B"
+      forkPicks: {},
       hearts: 0,
       heartsSpent: 0,
       points: 0,
@@ -14,16 +14,27 @@
   };
 
   FS.recomputeEffects = function (state) {
+    var prevSkills = (state.effects && state.effects.skills) ? state.effects.skills : {};
     var e = {
       turnBuffer: 2,
       playerRate: 5.5,
       foodPreview: false,
+      growthHud: false,
+      pauseDanger: false,
       spaceHud: false,
       vision: 0,
       xpMul: 1,
       regionIntel: false,
-      cargo: FS.CARGO_BASE,
-      firstDeliveryBonus: 0,
+      expandDiscount: 0,
+      expandXp: 0,
+      gardenCapAdd: 0,
+      ripeSpeedMul: 1,
+      ripeHud: false,
+      fruitArrow: false,
+      nestPath: false,
+      nestGlow: false,
+      nestSafety: false,
+      vistaBonus: false,
       deathLoss: 1,
       stealthStand: 1,
       pauseGrid: false,
@@ -31,12 +42,12 @@
       bodyWallHint: false,
       enemyLabel: false,
       foresight: false,
+      spawnWarn: false,
+      aiStateHud: false,
       heartGrace: 0.6,
-      materialGlow: false,
-      nestSafety: false,
       killXp: 0,
-      skipGrowEvery: 0,
-      expandDiscount: 0,
+      dangerXp: false,
+      cosmetics: false,
       skills: {}
     };
 
@@ -52,43 +63,72 @@
       }
     });
 
+    // Preserve skill cooldowns
+    Object.keys(e.skills).forEach(function (k) {
+      if (prevSkills[k] && typeof prevSkills[k].t === "number") {
+        e.skills[k].t = prevSkills[k].t;
+      }
+    });
+    if (e.skills.phaseSelf && e.phaseCdCut) {
+      e.skills.phaseSelf.cd = Math.max(12, (e.skills.phaseSelf.cd || 26) - e.phaseCdCut);
+    }
+
     state.effects = e;
-    state.player.stepPeriod = 1 / e.playerRate;
-    state.cargoMax = e.cargo;
+    if (state.player) {
+      state.player.stepPeriod = 1 / Math.max(2.5, e.playerRate);
+    }
   };
 
-  function applyEffect(e, fx, state) {
+  function applyEffect(e, fx) {
     if (!fx || !fx.kind || fx.kind === "none") return;
-    if (fx.kind === "turnBuffer") e.turnBuffer = fx.value;
+    if (fx.kind === "turnBuffer") e.turnBuffer = Math.max(e.turnBuffer, fx.value);
     if (fx.kind === "playerRate") e.playerRate += fx.add || 0;
     if (fx.kind === "foodPreview") e.foodPreview = true;
+    if (fx.kind === "growthHud") e.growthHud = true;
+    if (fx.kind === "pauseDanger") e.pauseDanger = true;
     if (fx.kind === "spaceHud") e.spaceHud = true;
     if (fx.kind === "vision") e.vision += fx.add || 0;
     if (fx.kind === "xpMul") e.xpMul *= fx.mul || 1;
     if (fx.kind === "regionIntel") e.regionIntel = true;
-    if (fx.kind === "cargo") {
-      e.cargo += fx.add || 0;
-      e.firstDeliveryBonus = fx.firstDeliveryBonus || 0;
-    }
+    if (fx.kind === "expandDiscount") e.expandDiscount += fx.value || 0;
+    if (fx.kind === "expandXp") e.expandXp += fx.value || 0;
+    if (fx.kind === "gardenCapAdd") e.gardenCapAdd += fx.value || 0;
+    if (fx.kind === "ripeSpeedMul") e.ripeSpeedMul *= fx.value || 1;
+    if (fx.kind === "ripeHud") e.ripeHud = true;
+    if (fx.kind === "fruitArrow") e.fruitArrow = true;
+    if (fx.kind === "nestPath") e.nestPath = true;
+    if (fx.kind === "nestGlow") e.nestGlow = true;
+    if (fx.kind === "nestSafety") e.nestSafety = true;
+    if (fx.kind === "vistaBonus") e.vistaBonus = true;
     if (fx.kind === "deathLoss") e.deathLoss = fx.mul;
-    if (fx.kind === "stealthStand") e.stealthStand = fx.mul;
+    if (fx.kind === "stealthStand") e.stealthStand *= fx.mul || 1;
     if (fx.kind === "pauseGrid") e.pauseGrid = true;
     if (fx.kind === "standPressure") e.standPressure = true;
     if (fx.kind === "bodyWallHint") e.bodyWallHint = true;
     if (fx.kind === "enemyLabel") e.enemyLabel = true;
     if (fx.kind === "foresight") e.foresight = true;
+    if (fx.kind === "spawnWarn") e.spawnWarn = true;
+    if (fx.kind === "aiStateHud") e.aiStateHud = true;
     if (fx.kind === "heartGrace") e.heartGrace += fx.add || 0;
-    if (fx.kind === "materialGlow") e.materialGlow = true;
-    if (fx.kind === "nestSafety") e.nestSafety = true;
-    if (fx.kind === "killXp") e.killXp = fx.value;
-    if (fx.kind === "skipGrowEvery") e.skipGrowEvery = fx.n;
-    if (fx.kind === "expandDiscount") e.expandDiscount = fx.value;
-    if (fx.kind === "heart") {
-      // hearts granted only at unlock time, not recomputed
-    }
+    if (fx.kind === "killXp") e.killXp = Math.max(e.killXp, fx.value || 0);
+    if (fx.kind === "dangerXp") e.dangerXp = true;
+    if (fx.kind === "cosmetics") e.cosmetics = true;
+    if (fx.kind === "phaseCdCut") e.phaseCdCut = (e.phaseCdCut || 0) + (fx.value || 0);
     if (fx.kind === "phaseSelf") e.skills.phaseSelf = { cd: fx.cd, t: 0 };
-    if (fx.kind === "shed") e.skills.shed = { amount: fx.amount, cd: fx.cd, minLen: fx.minLen, t: 0 };
+    if (fx.kind === "shedNutrition") e.skills.shed = { keep: fx.keep || 0, cd: fx.cd, t: 0 };
+    if (fx.kind === "selfSlow") e.skills.selfSlow = { dur: fx.dur, cd: fx.cd, mul: fx.mul, t: 0 };
     if (fx.kind === "coldBlood") e.skills.coldBlood = { radius: fx.radius, dur: fx.dur, cd: fx.cd, slowMul: fx.slowMul, t: 0 };
+    if (fx.kind === "heart") { /* unlock-time only */ }
+    if (fx.kind === "soilFarm") e.soilFarm = true;
+    if (fx.kind === "soilIgnore") e.soilIgnore = true;
+    if (fx.kind === "buildPreview") e.buildPreview = true;
+    if (fx.kind === "gardenerRadius") e.gardenerRadius = fx.value || 8;
+    if (fx.kind === "harvestCapAdd") e.harvestCapAdd = (e.harvestCapAdd || 0) + (fx.value || 0);
+    if (fx.kind === "pathLogistics") e.pathLogistics = true;
+    if (fx.kind === "allyCapAdd") e.allyCapAdd = (e.allyCapAdd || 0) + (fx.value || 0);
+    if (fx.kind === "allyFlee") e.allyFlee = true;
+    if (fx.kind === "allyWarn") e.allyWarn = true;
+    if (fx.kind === "farmSpeedMul") e.farmSpeedMul = (e.farmSpeedMul || 1) * (fx.value || 1);
   }
 
   FS.canUnlock = function (state, id) {
@@ -97,7 +137,6 @@
     if (state.talents.unlocked[id]) return { ok: false, why: "Вже відкрито" };
     for (var i = 0; i < node.prereq.length; i++) {
       if (!state.talents.unlocked[node.prereq[i]]) return { ok: false, why: "Потрібен попередній вузол" };
-      // fork prereq counts as unlocked when picked
       if (FS.TALENTS[node.prereq[i]] && FS.TALENTS[node.prereq[i]].fork) {
         if (!state.talents.forkPicks[node.prereq[i]]) return { ok: false, why: "Спочатку зроби вибір на розвилці" };
       }
@@ -144,11 +183,19 @@
     state.heartGraceT = state.effects.heartGrace || 0.6;
     state.ui.heartBreak = { reason: reason, cell: cell, t: 0.85 };
     state.ui.toast = "Серце врятувало: " + reason;
-    // restore last safe body if available
     if (state.player._safeBody) {
       state.player.body = FS.deepClone(state.player._safeBody);
-      state.player.dir = state.player._safeDir || state.player.dir;
+      if (state.player.body.length >= 2) FS.syncDirFromBody(state.player);
+      else {
+        state.player.dir = state.player._safeDir || state.player.dir;
+        state.player.requestedDir = state.player.dir;
+      }
+    } else {
+      FS.syncDirFromBody(state.player);
     }
+    // Keep nutrition on heart save
+    FS.syncLengthToNutrition(state);
+    state.player.visualT = 1;
     FS.clearInput(state.input);
     state.player.standing = true;
     state.player._dying = false;
@@ -172,6 +219,13 @@
         if (e.slowT <= 0) e.slowMul = 1;
       }
     });
+    if (state.effects.dangerXp && state.enemies.length) {
+      state._dangerXpAcc = (state._dangerXpAcc || 0) + dt;
+      if (state._dangerXpAcc > 45) {
+        state._dangerXpAcc = 0;
+        FS.addXp(state, 1);
+      }
+    }
   };
 
   FS.activatePhaseSelf = function (state) {
@@ -188,9 +242,28 @@
     var sk = state.effects.skills.shed;
     if (!sk) return { ok: false, why: "Немає навички" };
     if (sk.t > 0) return { ok: false, why: "Перезарядка" };
-    FS.shrinkSnake(state.player, sk.amount, sk.minLen);
+    var keep = sk.keep | 0;
+    var cost = FS.nutritionOf(state) - keep;
+    if (cost <= 0) {
+      state.ui.toast = "Немає поживи для линяння";
+      return { ok: false, why: "Порожньо" };
+    }
+    var r = FS.spendNutrition(state, cost, function () {
+      sk.t = sk.cd;
+      return { ok: true };
+    }, { reason: "shed" });
+    if (r.ok) state.ui.toast = "Линяння: пожива " + FS.nutritionOf(state) + " · довжина " + state.player.body.length;
+    return r;
+  };
+
+  FS.activateSelfSlow = function (state) {
+    var sk = state.effects.skills.selfSlow;
+    if (!sk) return { ok: false, why: "Немає навички" };
+    if (sk.t > 0) return { ok: false, why: "Перезарядка" };
+    state.player.slowMul = sk.mul;
+    state.player.slowT = sk.dur;
     sk.t = sk.cd;
-    state.ui.toast = "Линяння: довжина " + state.player.body.length;
+    state.ui.toast = "М’яке гальмо";
     return { ok: true };
   };
 
@@ -208,5 +281,55 @@
     sk.t = sk.cd;
     state.ui.toast = "Холодна кров";
     return { ok: true };
+  };
+
+  /** Table for QA: node → effect → consumer */
+  FS.TALENT_CONSUMERS = {
+    turnBuffer: "input queue max",
+    playerRate: "player.stepPeriod",
+    pauseDanger: "renderer pause overlay",
+    growthHud: "HUD pending growth",
+    phaseSelf: "activatePhaseSelf / grid phase",
+    spaceHud: "HUD flood",
+    selfSlow: "activateSelfSlow",
+    phaseCdCut: "recompute phase cd",
+    shedNutrition: "activateShed → spendNutrition",
+    heartGrace: "tryUseHeart",
+    nestGlow: "renderer nest",
+    vision: "camera follow",
+    xpMul: "addXp",
+    ripeHud: "foodHudInfo",
+    fruitArrow: "renderer arrow",
+    regionIntel: "map panel",
+    expandXp: "expandChunk",
+    expandDiscount: "expand cost",
+    gardenCapAdd: "chunkFoodCapacity",
+    ripeSpeedMul: "onFoodEaten delay",
+    nestPath: "renderer nest path",
+    nestSafety: "AI weights",
+    vistaBonus: "landmark vista",
+    pauseGrid: "renderer",
+    standPressure: "AI",
+    bodyWallHint: "HUD",
+    stealthStand: "AI detect",
+    coldBlood: "activateColdBlood",
+    enemyLabel: "HUD",
+    spawnWarn: "expand confirm",
+    foresight: "renderer",
+    killXp: "enemy death",
+    dangerXp: "tickSkills",
+    cosmetics: "progress patterns",
+    aiStateHud: "HUD",
+    heart: "unlockTalent grant",
+    soilFarm: "canPlaceFarm meadow",
+    soilIgnore: "farm soilMul",
+    buildPreview: "build panel reasons",
+    gardenerRadius: "ally gardener range",
+    harvestCapAdd: "farms.dropCap",
+    pathLogistics: "ally path prefer",
+    allyCapAdd: "hireAlly cap",
+    allyFlee: "ally flee home",
+    allyWarn: "ally warn enemy",
+    farmSpeedMul: "tickFarms speed"
   };
 })(window.FoxSerpent);

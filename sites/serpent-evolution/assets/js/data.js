@@ -3,13 +3,16 @@ window.FoxSerpent = window.FoxSerpent || {};
 (function (FS) {
   "use strict";
 
-  FS.VERSION = "1.0.0";
-  FS.SAVE_SCHEMA = 1;
+  FS.VERSION = "1.2.0";
+  FS.SAVE_SCHEMA = 2;
   FS.SAVE_KEY = "fox_serpent_evo_save_v1";
   FS.SAVE_BAK = "fox_serpent_evo_save_bak_v1";
+  FS.GUIDE_VERSION = 3;
+  FS.GUIDE_SEEN_KEY = "fox_serpent_evo_guide_v1";
+  FS.MIGRATION_VERSION = 2;
 
   FS.CELL = 36;
-  FS.CHUNK = 12; // start chunk size
+  FS.CHUNK = 12;
   FS.DIRS = {
     U: { x: 0, y: -1, name: "up", opp: "D" },
     D: { x: 0, y: 1, name: "down", opp: "U" },
@@ -23,29 +26,31 @@ window.FoxSerpent = window.FoxSerpent || {};
     KeyD: "R", ArrowRight: "R"
   };
 
-  FS.PLAYER_STEP = 1 / 5.5; // ~5.5 steps/s hold
+  FS.PLAYER_STEP = 1 / 5.5;
   FS.ENEMY_STEP_BASE = 1 / 3.5;
   FS.START_LENGTH = 3;
   FS.DEATH_LENGTH = 3;
-  FS.CARGO_BASE = 8;
-  FS.FIRST_EXPAND_COST = 12;
+  FS.FIRST_EXPAND_COST = 3;
+  FS.EXPAND_COSTS = [3, 5, 6, 7, 8, 9];
 
   FS.COLORS = {
-    bg: "#0F1A14",
+    bg: "#101b18",
     moss: "#1C3328",
     soil: "#243528",
-    mint: "#69E0BE",
-    teal: "#4DB8A8",
-    amber: "#E8B86A",
-    berry: "#D46A8C",
-    fruit: "#E09050",
+    mint: "#b5d398",
+    teal: "#7e9a62",
+    amber: "#f2d597",
+    berry: "#d68d74",
+    fruit: "#ebbc68",
+    pear: "#c4dcab",
     seed: "#C8D090",
+    golden: "#f0d060",
     stone: "#4A5560",
     nest: "#A07850",
-    text: "#E8F0EA",
-    danger: "#E0746A",
-    heart: "#E87890",
-    player: "#5ECF9A",
+    text: "#eaf3df",
+    danger: "#e7a18d",
+    heart: "#eda99f",
+    player: "#aace78",
     enemyCareful: "#7AA8C8",
     enemyIntercept: "#D08060",
     enemyTerritory: "#B090D0",
@@ -53,255 +58,479 @@ window.FoxSerpent = window.FoxSerpent || {};
   };
 
   FS.REGION_TYPES = {
-    garden: { name: "Плодовий сад", danger: 0, food: 1.3, material: 0.8, stones: 0.15, desc: "Багато їжі, мало каміння." },
-    rocky: { name: "Кам’янистий прохід", danger: 1, food: 0.7, material: 1.4, stones: 0.45, desc: "Матеріал і вузькі шляхи." },
-    thicket: { name: "Заросла галявина", danger: 1, food: 1.1, material: 1.0, stones: 0.25, desc: "Густа рослинність і звивисті маршрути." },
-    corridor: { name: "Вузькі коридори", danger: 2, food: 0.6, material: 1.1, stones: 0.35, desc: "Тіснота — ризик для довгої змії." },
-    shore: { name: "Берегові стежки", danger: 1, food: 1.0, material: 1.0, stones: 0.2, desc: "Кільцеві маршрути біля води." },
-    elder: { name: "Територія дорослих", danger: 3, food: 0.9, material: 1.2, stones: 0.3, desc: "Сильна змія й цінна нагорода." }
-  };
-
-  /* ~24 nodes, 6 forks A/B. B = expendable heart. */
-  FS.TALENTS = {
-    root: {
-      id: "root", name: "Пробудження", branch: "core",
-      desc: "Початок шляху. Змійка пам’ятає галявину.",
-      cost: 0, prereq: [], effect: { kind: "none" }
+    garden: {
+      name: "Плодовий сад", danger: 0, food: 1.35, stones: 0.12,
+      desc: "Багато плодів, широкі стежки, безпечний початок.",
+      palette: "warm"
     },
-    // Movement branch
-    turn_buffer: {
-      id: "turn_buffer", name: "Гнучкий поворот", branch: "move",
-      desc: "Більший буфер команд повороту (2→3).",
-      cost: 1, prereq: ["root"], effect: { kind: "turnBuffer", value: 3 }
+    meadow: {
+      name: "Квіткова галявина", danger: 0, food: 1.2, stones: 0.1,
+      desc: "Відкриті простори й ягоди; добрі кільцеві маршрути.",
+      palette: "bloom"
     },
-    hold_pace: {
-      id: "hold_pace", name: "Рівний крок", branch: "move",
-      desc: "Утримання: +0.4 кроку/с.",
-      cost: 1, prereq: ["turn_buffer"], effect: { kind: "playerRate", add: 0.4 }
+    rocky: {
+      name: "Кам’яні коридори", danger: 1, food: 0.7, stones: 0.42,
+      desc: "Вузькі проходи між брилами — плануй довжину.",
+      palette: "stone"
     },
-    length_sense: {
-      id: "length_sense", name: "Відчуття довжини", branch: "move",
-      desc: "Перед їжею видно +1 сегмент чіткіше; growth debt −10% часу візуально (логіка та сама, підказка довша).",
-      cost: 1, prereq: ["hold_pace"], effect: { kind: "foodPreview", value: true }
+    thicket: {
+      name: "Зарості", danger: 1, food: 1.1, stones: 0.22,
+      desc: "Звивисті стежки, щільніша рослинність.",
+      palette: "dense"
     },
-    fork_maneuver: {
-      id: "fork_maneuver", name: "Розвилка: маневр", branch: "move", fork: true,
-      desc: "Обери сильний талант або серце.",
-      cost: 2, prereq: ["length_sense"],
-      choices: {
-        A: {
-          id: "timely_maneuver", name: "Вчасний маневр",
-          desc: "Раз на 28 с: один крок головою крізь власне тіло (не стіни/вороги). Активація — F.",
-          effect: { kind: "phaseSelf", cd: 28 }
-        },
-        B: {
-          id: "heart_move_1", name: "+1 серце",
-          desc: "Одноразова спроба пережити смертельне зіткнення.",
-          effect: { kind: "heart", value: 1 }
-        }
-      }
+    shore: {
+      name: "Берегова стежка", danger: 1, food: 1.0, stones: 0.18,
+      desc: "Кільцеві маршрути біля води, груші й насіння.",
+      palette: "cool"
     },
-    coil_control: {
-      id: "coil_control", name: "Контроль кільця", branch: "move",
-      desc: "Підказка flood-fill простору біля голови на HUD.",
-      cost: 1, prereq: ["fork_maneuver"], effect: { kind: "spaceHud", value: true }
+    corridor: {
+      name: "Вузькі проходи", danger: 2, food: 0.55, stones: 0.38,
+      desc: "Тіснота карає довге тіло; швидкі рішення.",
+      palette: "narrow"
     },
-    fork_shed: {
-      id: "fork_shed", name: "Розвилка: линяння", branch: "move", fork: true,
-      desc: "Линяння або серце.",
-      cost: 2, prereq: ["coil_control"],
-      choices: {
-        A: {
-          id: "shedding", name: "Линяння",
-          desc: "G: зменшити довжину до max(3, length−5). CD 40 с. Ціна — реальна довжина.",
-          effect: { kind: "shed", amount: 5, cd: 40, minLen: 3 }
-        },
-        B: {
-          id: "heart_move_2", name: "+1 серце",
-          desc: "Ще одна одноразова спроба.",
-          effect: { kind: "heart", value: 1 }
-        }
-      }
-    },
-    // Sense branch
-    wide_eye: {
-      id: "wide_eye", name: "Широкий зір", branch: "sense",
-      desc: "Камера трохи віддаляється; видно +2 клітинки краю.",
-      cost: 1, prereq: ["root"], effect: { kind: "vision", add: 2 }
-    },
-    forage: {
-      id: "forage", name: "Уважний збір", branch: "sense",
-      desc: "Їжа дає +15% досвіду.",
-      cost: 1, prereq: ["wide_eye"], effect: { kind: "xpMul", mul: 1.15 }
-    },
-    scout_mark: {
-      id: "scout_mark", name: "Мітка переходу", branch: "sense",
-      desc: "На карті видно вартість і тип сусідніх ділянок.",
-      cost: 1, prereq: ["forage"], effect: { kind: "regionIntel", value: true }
-    },
-    fork_cargo: {
-      id: "fork_cargo", name: "Розвилка: експедиція", branch: "sense", fork: true,
-      cost: 2, prereq: ["scout_mark"],
-      desc: "Місткість вантажу або серце.",
-      choices: {
-        A: {
-          id: "long_expedition", name: "Довга експедиція",
-          desc: "Місткість вантажу +6. Перша здача з нового регіону: +4 матеріали бонусом.",
-          effect: { kind: "cargo", add: 6, firstDeliveryBonus: 4 }
-        },
-        B: {
-          id: "heart_sense_1", name: "+1 серце",
-          desc: "Одноразова спроба.",
-          effect: { kind: "heart", value: 1 }
-        }
-      }
-    },
-    nest_bond: {
-      id: "nest_bond", name: "Зв’язок із гніздом", branch: "sense",
-      desc: "Після смерті втрачаєш на 25% менше незданого матеріалу.",
-      cost: 1, prereq: ["fork_cargo"], effect: { kind: "deathLoss", mul: 0.75 }
-    },
-    fork_quiet: {
-      id: "fork_quiet", name: "Розвилка: тиша", branch: "sense", fork: true,
-      cost: 2, prereq: ["nest_bond"],
-      desc: "Тиха стежка або серце.",
-      choices: {
-        A: {
-          id: "quiet_path", name: "Тиха стежка",
-          desc: "Стоячи: дальність виявлення ворогами −35%. Близький ворог усе одно бачить.",
-          effect: { kind: "stealthStand", mul: 0.65 }
-        },
-        B: {
-          id: "heart_sense_2", name: "+1 серце",
-          desc: "Одноразова спроба.",
-          effect: { kind: "heart", value: 1 }
-        }
-      }
-    },
-    // Tactics branch
-    read_space: {
-      id: "read_space", name: "Читання простору", branch: "tactics",
-      desc: "На паузі видно силуети зайнятих клітинок чіткіше.",
-      cost: 1, prereq: ["root"], effect: { kind: "pauseGrid", value: true }
-    },
-    bait_patience: {
-      id: "bait_patience", name: "Терпіння", branch: "tactics",
-      desc: "Стоячи біля їжі: ворог трохи рідше йде прямо на тебе (AI вага).",
-      cost: 1, prereq: ["read_space"], effect: { kind: "standPressure", value: true }
-    },
-    body_wall: {
-      id: "body_wall", name: "Стіна з тіла", branch: "tactics",
-      desc: "Підказка: довжина ≥8 відкриває тактику перекриття проходів.",
-      cost: 1, prereq: ["bait_patience"], effect: { kind: "bodyWallHint", value: true }
-    },
-    fork_cold: {
-      id: "fork_cold", name: "Розвилка: холодна кров", branch: "tactics", fork: true,
-      cost: 2, prereq: ["body_wall"],
-      desc: "Сповільнення ворогів або серце.",
-      choices: {
-        A: {
-          id: "cold_blood", name: "Холодна кров",
-          desc: "C: на 2.2 с сповільнює змій у радіусі 5 клітинок. CD 32 с.",
-          effect: { kind: "coldBlood", radius: 5, dur: 2.2, cd: 32, slowMul: 0.45 }
-        },
-        B: {
-          id: "heart_tac_1", name: "+1 серце",
-          desc: "Одноразова спроба.",
-          effect: { kind: "heart", value: 1 }
-        }
-      }
-    },
-    foresight_prep: {
-      id: "foresight_prep", name: "Уважність", branch: "tactics",
-      desc: "Показує ім’я й архетип найближчого ворога.",
-      cost: 1, prereq: ["fork_cold"], effect: { kind: "enemyLabel", value: true }
-    },
-    fork_foresight: {
-      id: "fork_foresight", name: "Розвилка: передчуття", branch: "tactics", fork: true,
-      cost: 2, prereq: ["foresight_prep"],
-      desc: "Передчуття кроку ворога або серце.",
-      choices: {
-        A: {
-          id: "foresight", name: "Передчуття",
-          desc: "Показує наступний уже запланований крок видимого ворога й зону ризику 1 клітинка.",
-          effect: { kind: "foresight", value: true }
-        },
-        B: {
-          id: "heart_tac_2", name: "+1 серце",
-          desc: "Одноразова спроба.",
-          effect: { kind: "heart", value: 1 }
-        }
-      }
-    },
-    // Extra useful nodes
-    soft_start: {
-      id: "soft_start", name: "М’який старт", branch: "move",
-      desc: "Після витрати серця: +0.4 с захисту стояння (не прохід крізь стіни).",
-      cost: 1, prereq: ["fork_maneuver"], effect: { kind: "heartGrace", add: 0.4 }
-    },
-    material_eye: {
-      id: "material_eye", name: "Око матеріалу", branch: "sense",
-      desc: "Матеріал на карті підсвічується бурштином.",
-      cost: 1, prereq: ["wide_eye"], effect: { kind: "materialGlow", value: true }
-    },
-    calm_nest: {
-      id: "calm_nest", name: "Спокійне гніздо", branch: "sense",
-      desc: "Біля гнізда (3 клітинки) перший ворог рідше атакує голову (AI вага).",
-      cost: 1, prereq: ["forage"], effect: { kind: "nestSafety", value: true }
-    },
-    rival_memory: {
-      id: "rival_memory", name: "Пам’ять суперника", branch: "tactics",
-      desc: "Після смерті ворога +1 очко таланту (рідко, раз на змію).",
-      cost: 1, prereq: ["read_space"], effect: { kind: "killXp", value: 1 }
-    },
-    grow_efficient: {
-      id: "grow_efficient", name: "Щільний ріст", branch: "move",
-      desc: "Кожна 4-та їжа не додає сегмент, лише досвід (контроль довжини).",
-      cost: 2, prereq: ["coil_control"], effect: { kind: "skipGrowEvery", n: 4 }
-    },
-    open_ready: {
-      id: "open_ready", name: "Готовність до межі", branch: "sense",
-      desc: "Вартість першого розширення −2 матеріали.",
-      cost: 1, prereq: ["scout_mark"], effect: { kind: "expandDiscount", value: 2 }
+    elder: {
+      name: "Територія дорослих", danger: 3, food: 0.85, stones: 0.28,
+      desc: "Сильна змія-патруль і цінна нагорода за перемогу.",
+      palette: "elder"
     }
   };
 
+  /*
+   * ~48 nodes, 8 A/B forks. Branches: control / explore / tactics
+   * effect.kind must have a consumer in talents.js / renderer / food / AI.
+   */
+  FS.TALENTS = {
+    root: {
+      id: "root", name: "Паростки", branch: "core", icon: "seed",
+      desc: "Центр саду розвитку. Змійка пам’ятає галявину.",
+      cost: 0, prereq: [], effect: { kind: "none" }
+    },
+
+    /* ——— Контроль ——— */
+    turn_buffer: {
+      id: "turn_buffer", name: "Гнучкий поворот", branch: "control", icon: "turn",
+      desc: "Буфер команд повороту 2→3.",
+      cost: 1, prereq: ["root"], effect: { kind: "turnBuffer", value: 3 }
+    },
+    hold_pace: {
+      id: "hold_pace", name: "Рівний крок", branch: "control", icon: "pace",
+      desc: "Утримання: +0.35 кроку/с (м’яко).",
+      cost: 1, prereq: ["turn_buffer"], effect: { kind: "playerRate", add: 0.35 }
+    },
+    danger_hint: {
+      id: "danger_hint", name: "Обережний погляд", branch: "control", icon: "eye",
+      desc: "На паузі підсвічує небезпечну next-клітинку.",
+      cost: 1, prereq: ["hold_pace"], effect: { kind: "pauseDanger", value: true }
+    },
+    growth_preview: {
+      id: "growth_preview", name: "Передчуття росту", branch: "control", icon: "grow",
+      desc: "HUD показує цільову довжину й pending growth.",
+      cost: 1, prereq: ["danger_hint"], effect: { kind: "growthHud", value: true }
+    },
+    fork_maneuver: {
+      id: "fork_maneuver", name: "Розвилка: маневр", branch: "control", fork: true, icon: "fork",
+      desc: "Сильний маневр або серце.",
+      cost: 2, prereq: ["growth_preview"],
+      choices: {
+        A: {
+          id: "timely_maneuver", name: "Вчасний маневр",
+          desc: "F: один крок крізь власне тіло (не стіни). CD 26 с.",
+          effect: { kind: "phaseSelf", cd: 26 }
+        },
+        B: { id: "heart_c1", name: "+1 серце", desc: "Одноразовий порятунок.", effect: { kind: "heart", value: 1 } }
+      }
+    },
+    coil_control: {
+      id: "coil_control", name: "Контроль кільця", branch: "control", icon: "coil",
+      desc: "Flood-fill простору біля голови на HUD.",
+      cost: 1, prereq: ["fork_maneuver"], effect: { kind: "spaceHud", value: true }
+    },
+    soft_brake: {
+      id: "soft_brake", name: "М’яке гальмо", branch: "control", icon: "brake",
+      desc: "V: на 1.4 с сповільнити власний tick (−35%). CD 22 с. Вороги без змін.",
+      cost: 1, prereq: ["coil_control"], effect: { kind: "selfSlow", dur: 1.4, cd: 22, mul: 0.65 }
+    },
+    phase_cd: {
+      id: "phase_cd", name: "Швидкий маневр", branch: "control", icon: "flash",
+      desc: "Cooldown маневру −6 с (якщо взято).",
+      cost: 1, prereq: ["soft_brake"], effect: { kind: "phaseCdCut", value: 6 }
+    },
+    fork_shed: {
+      id: "fork_shed", name: "Розвилка: линяння", branch: "control", fork: true, icon: "fork",
+      desc: "Контрольоване скорочення або серце.",
+      cost: 2, prereq: ["phase_cd"],
+      choices: {
+        A: {
+          id: "shedding", name: "Линяння",
+          desc: "G: скинути до 3 сегментів поживи (ціна = пожива). CD 36 с.",
+          effect: { kind: "shedNutrition", keep: 0, cd: 36 }
+        },
+        B: { id: "heart_c2", name: "+1 серце", desc: "Одноразовий порятунок.", effect: { kind: "heart", value: 1 } }
+      }
+    },
+    soft_start: {
+      id: "soft_start", name: "М’який старт", branch: "control", icon: "shield",
+      desc: "Після серця: +0.45 с grace стояння.",
+      cost: 1, prereq: ["fork_maneuver"], effect: { kind: "heartGrace", add: 0.45 }
+    },
+    turn_master: {
+      id: "turn_master", name: "Майстер повороту", branch: "control", icon: "turn",
+      desc: "Буфер поворотів до 4.",
+      cost: 2, prereq: ["fork_shed"], effect: { kind: "turnBuffer", value: 4 }
+    },
+    calm_hold: {
+      id: "calm_hold", name: "Спокійне утримання", branch: "control", icon: "pace",
+      desc: "Трохи повільніший, але стабільний hold (−0.15/с від бонусів).",
+      cost: 1, prereq: ["hold_pace"], effect: { kind: "playerRate", add: -0.15 }
+    },
+    nest_anchor: {
+      id: "nest_anchor", name: "Якір гнізда", branch: "control", icon: "nest",
+      desc: "Біля гнізда підказка безпечних клітинок яскравіша.",
+      cost: 1, prereq: ["soft_start"], effect: { kind: "nestGlow", value: true }
+    },
+
+    /* ——— Дослідження ——— */
+    wide_eye: {
+      id: "wide_eye", name: "Широкий зір", branch: "explore", icon: "eye",
+      desc: "Камера трохи далі (+vision).",
+      cost: 1, prereq: ["root"], effect: { kind: "vision", add: 2 }
+    },
+    forage: {
+      id: "forage", name: "Уважний збір", branch: "explore", icon: "fruit",
+      desc: "Їжа дає +12% досвіду.",
+      cost: 1, prereq: ["wide_eye"], effect: { kind: "xpMul", mul: 1.12 }
+    },
+    ripe_map: {
+      id: "ripe_map", name: "Карта дозрівання", branch: "explore", icon: "map",
+      desc: "На мінікарті/HUD видно бутони й таймер ділянки.",
+      cost: 1, prereq: ["forage"], effect: { kind: "ripeHud", value: true }
+    },
+    nearest_fruit: {
+      id: "nearest_fruit", name: "Нюх плоду", branch: "explore", icon: "fruit",
+      desc: "Стрілка до найближчого стиглого плоду.",
+      cost: 1, prereq: ["ripe_map"], effect: { kind: "fruitArrow", value: true }
+    },
+    fork_scout: {
+      id: "fork_scout", name: "Розвилка: розвідка", branch: "explore", fork: true, icon: "fork",
+      desc: "Регіональний інтелект або серце.",
+      cost: 2, prereq: ["nearest_fruit"],
+      choices: {
+        A: {
+          id: "region_intel", name: "Огляд межі",
+          desc: "На карті видно тип, небезпеку й вартість сусідів.",
+          effect: { kind: "regionIntel", value: true }
+        },
+        B: { id: "heart_e1", name: "+1 серце", desc: "Одноразовий порятунок.", effect: { kind: "heart", value: 1 } }
+      }
+    },
+    first_visit: {
+      id: "first_visit", name: "Перший крок", branch: "explore", icon: "flag",
+      desc: "Перше відкриття ділянки: +1 XP бонусом після оплати.",
+      cost: 1, prereq: ["fork_scout"], effect: { kind: "expandXp", value: 1 }
+    },
+    open_ready: {
+      id: "open_ready", name: "Готовність до межі", branch: "explore", icon: "gate",
+      desc: "Вартість розширення −1 пожива (мін. 2).",
+      cost: 1, prereq: ["first_visit"], effect: { kind: "expandDiscount", value: 1 }
+    },
+    fork_garden: {
+      id: "fork_garden", name: "Розвилка: сад", branch: "explore", fork: true, icon: "fork",
+      desc: "Багатший сад або серце.",
+      cost: 2, prereq: ["open_ready"],
+      choices: {
+        A: {
+          id: "garden_bounty", name: "Щедрий сад",
+          desc: "Стартова ділянка: +2 до місткості їжі.",
+          effect: { kind: "gardenCapAdd", value: 2 }
+        },
+        B: { id: "heart_e2", name: "+1 серце", desc: "Одноразовий порятунок.", effect: { kind: "heart", value: 1 } }
+      }
+    },
+    ripe_speed: {
+      id: "ripe_speed", name: "Швидке дозрівання", branch: "explore", icon: "time",
+      desc: "Інтервал дозрівання ×0.85 (у межах cap).",
+      cost: 2, prereq: ["fork_garden"], effect: { kind: "ripeSpeedMul", value: 0.85 }
+    },
+    nest_path: {
+      id: "nest_path", name: "Стежка додому", branch: "explore", icon: "nest",
+      desc: "Підказка чистого напрямку до гнізда.",
+      cost: 1, prereq: ["forage"], effect: { kind: "nestPath", value: true }
+    },
+    calm_nest: {
+      id: "calm_nest", name: "Спокійне гніздо", branch: "explore", icon: "nest",
+      desc: "Біля гнізда вороги рідше тиснуть на голову.",
+      cost: 1, prereq: ["nest_path"], effect: { kind: "nestSafety", value: true }
+    },
+    survey: {
+      id: "survey", name: "Огляд галявини", branch: "explore", icon: "map",
+      desc: "Landmark «видова галявина» дає більше інфо про сусідів.",
+      cost: 1, prereq: ["fork_scout"], effect: { kind: "vistaBonus", value: true }
+    },
+    forage_xp2: {
+      id: "forage_xp2", name: "Смачний досвід", branch: "explore", icon: "fruit",
+      desc: "Ще +10% XP з їжі (стек).",
+      cost: 2, prereq: ["ripe_speed"], effect: { kind: "xpMul", mul: 1.1 }
+    },
+    deep_scout: {
+      id: "deep_scout", name: "Глибша розвідка", branch: "explore", icon: "eye",
+      desc: "Vision +2 додатково.",
+      cost: 1, prereq: ["wide_eye"], effect: { kind: "vision", add: 2 }
+    },
+
+    /* ——— Тактика ——— */
+    read_space: {
+      id: "read_space", name: "Читання простору", branch: "tactics", icon: "grid",
+      desc: "На паузі силуети зайнятих клітинок чіткіші.",
+      cost: 1, prereq: ["root"], effect: { kind: "pauseGrid", value: true }
+    },
+    bait_patience: {
+      id: "bait_patience", name: "Терпіння", branch: "tactics", icon: "wait",
+      desc: "Стоячи біля їжі: AI рідше йде прямо на тебе.",
+      cost: 1, prereq: ["read_space"], effect: { kind: "standPressure", value: true }
+    },
+    body_wall: {
+      id: "body_wall", name: "Стіна з тіла", branch: "tactics", icon: "wall",
+      desc: "Підказка тактики перекриття при довжині ≥8.",
+      cost: 1, prereq: ["bait_patience"], effect: { kind: "bodyWallHint", value: true }
+    },
+    stealth_stand: {
+      id: "stealth_stand", name: "Тихе стояння", branch: "tactics", icon: "hide",
+      desc: "Стоячи: дальність виявлення −30%.",
+      cost: 1, prereq: ["body_wall"], effect: { kind: "stealthStand", mul: 0.7 }
+    },
+    fork_cold: {
+      id: "fork_cold", name: "Розвилка: холод", branch: "tactics", fork: true, icon: "fork",
+      desc: "Локальне сповільнення або серце.",
+      cost: 2, prereq: ["stealth_stand"],
+      choices: {
+        A: {
+          id: "cold_blood", name: "Холодна кров",
+          desc: "C: 2.2 с slow у радіусі 5. CD 30 с.",
+          effect: { kind: "coldBlood", radius: 5, dur: 2.2, cd: 30, slowMul: 0.45 }
+        },
+        B: { id: "heart_t1", name: "+1 серце", desc: "Одноразовий порятунок.", effect: { kind: "heart", value: 1 } }
+      }
+    },
+    enemy_label: {
+      id: "enemy_label", name: "Ім’я суперника", branch: "tactics", icon: "tag",
+      desc: "Показує ім’я й архетип найближчого ворога.",
+      cost: 1, prereq: ["fork_cold"], effect: { kind: "enemyLabel", value: true }
+    },
+    spawn_warn: {
+      id: "spawn_warn", name: "Попередження межі", branch: "tactics", icon: "warn",
+      desc: "Довше попередження перед небезпечним розширенням.",
+      cost: 1, prereq: ["enemy_label"], effect: { kind: "spawnWarn", value: true }
+    },
+    fork_foresight: {
+      id: "fork_foresight", name: "Розвилка: передчуття", branch: "tactics", fork: true, icon: "fork",
+      desc: "Передчуття кроку або серце.",
+      cost: 2, prereq: ["spawn_warn"],
+      choices: {
+        A: {
+          id: "foresight", name: "Передчуття",
+          desc: "Показує наступний intent видимого ворога.",
+          effect: { kind: "foresight", value: true }
+        },
+        B: { id: "heart_t2", name: "+1 серце", desc: "Одноразовий порятунок.", effect: { kind: "heart", value: 1 } }
+      }
+    },
+    rival_memory: {
+      id: "rival_memory", name: "Пам’ять суперника", branch: "tactics", icon: "trophy",
+      desc: "Перемога над змією: +1 XP (чесна нагорода).",
+      cost: 1, prereq: ["read_space"], effect: { kind: "killXp", value: 1 }
+    },
+    territory_xp: {
+      id: "territory_xp", name: "Виживання на межі", branch: "tactics", icon: "flag",
+      desc: "+XP за час на небезпечній території (рідко, з лімітом).",
+      cost: 2, prereq: ["fork_foresight"], effect: { kind: "dangerXp", value: true }
+    },
+    fork_quiet: {
+      id: "fork_quiet", name: "Розвилка: тиша", branch: "tactics", fork: true, icon: "fork",
+      desc: "Глибша маскування або серце.",
+      cost: 2, prereq: ["stealth_stand"],
+      choices: {
+        A: {
+          id: "quiet_path", name: "Тиха стежка",
+          desc: "Стоячи: виявлення ще −20% (стек із тихим стоянням).",
+          effect: { kind: "stealthStand", mul: 0.8 }
+        },
+        B: { id: "heart_t3", name: "+1 серце", desc: "Одноразовий порятунок.", effect: { kind: "heart", value: 1 } }
+      }
+    },
+    kill_bonus: {
+      id: "kill_bonus", name: "Тріумф", branch: "tactics", icon: "trophy",
+      desc: "Перемога над розумною змією: +2 XP замість 1.",
+      cost: 2, prereq: ["rival_memory"], effect: { kind: "killXp", value: 2 }
+    },
+    fork_grace: {
+      id: "fork_grace", name: "Розвилка: запасний удар", branch: "tactics", fork: true, icon: "fork",
+      desc: "Довший grace після серця або ще одне серце.",
+      cost: 2, prereq: ["territory_xp"],
+      choices: {
+        A: {
+          id: "long_grace", name: "Довгий подих",
+          desc: "Grace після серця +0.7 с.",
+          effect: { kind: "heartGrace", add: 0.7 }
+        },
+        B: { id: "heart_t4", name: "+1 серце", desc: "Одноразовий порятунок.", effect: { kind: "heart", value: 1 } }
+      }
+    },
+    pattern_collect: {
+      id: "pattern_collect", name: "Візерунки шкіри", branch: "tactics", icon: "scale",
+      desc: "Відкриває косметичні візерунки після перемог (без колізій).",
+      cost: 1, prereq: ["kill_bonus"], effect: { kind: "cosmetics", value: true }
+    },
+    pressure_read: {
+      id: "pressure_read", name: "Читання тиску", branch: "tactics", icon: "grid",
+      desc: "Показує, чи ворог зараз «полює» чи патрулює.",
+      cost: 1, prereq: ["enemy_label"], effect: { kind: "aiStateHud", value: true }
+    },
+
+    /* ——— Господарство ——— */
+    soil_sense: {
+      id: "soil_sense", name: "Відчуття ґрунту", branch: "house", icon: "soil",
+      desc: "Ферма на лузі дозволена (базовий темп).",
+      cost: 1, prereq: ["root"], effect: { kind: "soilFarm", value: true }
+    },
+    earth_hand: {
+      id: "earth_hand", name: "Землероб", branch: "house", icon: "farm",
+      desc: "Менший штраф звичайного ґрунту для ферм.",
+      cost: 1, prereq: ["soil_sense"], effect: { kind: "soilIgnore", value: true }
+    },
+    plan_build: {
+      id: "plan_build", name: "Планувальник", branch: "house", icon: "plan",
+      desc: "У панелі B видно причину відмови чіткіше (завжди).",
+      cost: 1, prereq: ["earth_hand"], effect: { kind: "buildPreview", value: true }
+    },
+    fork_garden_care: {
+      id: "fork_garden_care", name: "Розвилка: сад", branch: "house", fork: true, icon: "fork",
+      desc: "Друга ферма для садівника або серце.",
+      cost: 2, prereq: ["plan_build"],
+      choices: {
+        A: {
+          id: "tended_garden", name: "Доглянутий сад",
+          desc: "Садівник обслуговує другу ферму в радіусі.",
+          effect: { kind: "gardenerRadius", value: 8 }
+        },
+        B: { id: "heart_h1", name: "+1 серце", desc: "Одноразовий порятунок.", effect: { kind: "heart", value: 1 } }
+      }
+    },
+    harvest_cap: {
+      id: "harvest_cap", name: "Запас урожаю", branch: "house", icon: "crate",
+      desc: "+1 фізичний плід у місткості майданчика видачі.",
+      cost: 1, prereq: ["fork_garden_care"], effect: { kind: "harvestCapAdd", value: 1 }
+    },
+    clear_route: {
+      id: "clear_route", name: "Чіткий маршрут", branch: "house", icon: "path",
+      desc: "Носій швидше на стежках (логістика).",
+      cost: 1, prereq: ["harvest_cap"], effect: { kind: "pathLogistics", value: true }
+    },
+    fork_crew: {
+      id: "fork_crew", name: "Розвилка: команда", branch: "house", fork: true, icon: "fork",
+      desc: "Другий союзник або серце.",
+      cost: 2, prereq: ["clear_route"],
+      choices: {
+        A: {
+          id: "crew_two", name: "Другий працівник",
+          desc: "Ліміт союзників +1.",
+          effect: { kind: "allyCapAdd", value: 1 }
+        },
+        B: { id: "heart_h2", name: "+1 серце", desc: "Одноразовий порятунок.", effect: { kind: "heart", value: 1 } }
+      }
+    },
+    careful_worker: {
+      id: "careful_worker", name: "Обережний працівник", branch: "house", icon: "hide",
+      desc: "Союзник раніше йде додому при ворогові поруч.",
+      cost: 1, prereq: ["fork_crew"], effect: { kind: "allyFlee", value: true }
+    },
+    field_sign: {
+      id: "field_sign", name: "Польовий знак", branch: "house", icon: "warn",
+      desc: "Провідник/садівник підсвічує видимого ворога.",
+      cost: 1, prereq: ["careful_worker"], effect: { kind: "allyWarn", value: true }
+    },
+    farm_speed: {
+      id: "farm_speed", name: "Швидкий цикл", branch: "house", icon: "time",
+      desc: "Усі ферми ×0.9 до часу циклу.",
+      cost: 2, prereq: ["earth_hand"], effect: { kind: "farmSpeedMul", value: 0.9 }
+    }
+  };
+
+  /* Grid layout: control left (−), explore center, tactics right (+) */
   FS.TALENT_LAYOUT = [
     { id: "root", x: 0, y: 0 },
-    { id: "turn_buffer", x: -2, y: 1 },
-    { id: "hold_pace", x: -2, y: 2 },
-    { id: "length_sense", x: -2, y: 3 },
-    { id: "fork_maneuver", x: -2, y: 4 },
-    { id: "coil_control", x: -2, y: 5 },
-    { id: "fork_shed", x: -2, y: 6 },
-    { id: "soft_start", x: -3, y: 5 },
-    { id: "grow_efficient", x: -1, y: 5 },
+    /* control */
+    { id: "turn_buffer", x: -3, y: 1 },
+    { id: "hold_pace", x: -3, y: 2 },
+    { id: "calm_hold", x: -4, y: 2 },
+    { id: "danger_hint", x: -3, y: 3 },
+    { id: "growth_preview", x: -3, y: 4 },
+    { id: "fork_maneuver", x: -3, y: 5 },
+    { id: "soft_start", x: -4, y: 6 },
+    { id: "nest_anchor", x: -5, y: 6 },
+    { id: "coil_control", x: -3, y: 6 },
+    { id: "soft_brake", x: -3, y: 7 },
+    { id: "phase_cd", x: -3, y: 8 },
+    { id: "fork_shed", x: -3, y: 9 },
+    { id: "turn_master", x: -3, y: 10 },
+    /* explore */
     { id: "wide_eye", x: 0, y: 1 },
+    { id: "deep_scout", x: 1, y: 1 },
     { id: "forage", x: 0, y: 2 },
-    { id: "scout_mark", x: 0, y: 3 },
-    { id: "fork_cargo", x: 0, y: 4 },
-    { id: "nest_bond", x: 0, y: 5 },
-    { id: "fork_quiet", x: 0, y: 6 },
-    { id: "material_eye", x: 1, y: 2 },
-    { id: "calm_nest", x: -1, y: 2 },
-    { id: "open_ready", x: 1, y: 3 },
-    { id: "read_space", x: 2, y: 1 },
-    { id: "bait_patience", x: 2, y: 2 },
-    { id: "body_wall", x: 2, y: 3 },
-    { id: "fork_cold", x: 2, y: 4 },
-    { id: "foresight_prep", x: 2, y: 5 },
-    { id: "fork_foresight", x: 2, y: 6 },
-    { id: "rival_memory", x: 3, y: 2 }
+    { id: "nest_path", x: -1, y: 2 },
+    { id: "calm_nest", x: -1, y: 3 },
+    { id: "ripe_map", x: 0, y: 3 },
+    { id: "nearest_fruit", x: 0, y: 4 },
+    { id: "fork_scout", x: 0, y: 5 },
+    { id: "survey", x: 1, y: 5 },
+    { id: "first_visit", x: 0, y: 6 },
+    { id: "open_ready", x: 0, y: 7 },
+    { id: "fork_garden", x: 0, y: 8 },
+    { id: "ripe_speed", x: 0, y: 9 },
+    { id: "forage_xp2", x: 0, y: 10 },
+    /* tactics */
+    { id: "read_space", x: 3, y: 1 },
+    { id: "rival_memory", x: 4, y: 1 },
+    { id: "kill_bonus", x: 4, y: 2 },
+    { id: "pattern_collect", x: 5, y: 2 },
+    { id: "bait_patience", x: 3, y: 2 },
+    { id: "body_wall", x: 3, y: 3 },
+    { id: "stealth_stand", x: 3, y: 4 },
+    { id: "fork_quiet", x: 4, y: 4 },
+    { id: "fork_cold", x: 3, y: 5 },
+    { id: "enemy_label", x: 3, y: 6 },
+    { id: "pressure_read", x: 4, y: 6 },
+    { id: "spawn_warn", x: 3, y: 7 },
+    { id: "fork_foresight", x: 3, y: 8 },
+    { id: "territory_xp", x: 3, y: 9 },
+    { id: "fork_grace", x: 3, y: 10 },
+    /* house */
+    { id: "soil_sense", x: -1, y: 1 },
+    { id: "earth_hand", x: -1, y: 2 },
+    { id: "farm_speed", x: -2, y: 2 },
+    { id: "plan_build", x: -1, y: 3 },
+    { id: "fork_garden_care", x: -1, y: 4 },
+    { id: "harvest_cap", x: -1, y: 5 },
+    { id: "clear_route", x: -1, y: 6 },
+    { id: "fork_crew", x: -1, y: 7 },
+    { id: "careful_worker", x: -1, y: 8 },
+    { id: "field_sign", x: -1, y: 9 }
   ];
 
   FS.HELP = [
-    "WASD / стрілки — крок. Відпусти — зупинишся. Вороги продовжують рухатися.",
-    "Утримання — кроки за таймером гри (не ОС-повтор).",
-    "Зіткнення голови зі стіною, тілом або іншою змією — смерть (або серце).",
-    "Стоїш, а ворог врізається в твоє тіло (не голову) — гине ворог.",
-    "Зіткнення голів — смертельне для обох.",
-    "F — вчасний маневр (якщо взято) · G — линяння · C — холодна кров",
-    "T — дерево · Tab — карта · Пробіл — пауза · Esc — меню",
+    "WASD — крок. Відпусти — зупинись. Вороги рухаються далі.",
+    "Пожива 0–9 = довжина 3–12. Покупки землі/ферми/дому скорочують хвіст.",
+    "B — будівництво: грядки, домівка, найм садівника. Урожай — фізичні плоди.",
+    "Tab — відкрити землю (ціна в UI = списання). Seed задає карту.",
+    "Назад у шию — не можна. Стіна/тіло — смерть або серце.",
+    "T — сад розвитку · H — гайд · Пробіл — пауза",
     "Серце рятує один раз і не відновлюється."
+  ];
+
+  FS.LONG_GOALS = [
+    { id: "regions3", title: "Три землі", detail: "Відкрий 3 різні типи територій" },
+    { id: "branch_done", title: "Гілка до кінця", detail: "Заверши одну гілку дерева" },
+    { id: "garden_master", title: "Садовник", detail: "Покращ сад вузлом і дочекайся повного врожаю" },
+    { id: "arch_wins", title: "Архетипи", detail: "Перехитри 2 різних архетипи змій" },
+    { id: "patterns", title: "Візерунки", detail: "Збери 3 косметичні візерунки шкіри" }
   ];
 })(window.FoxSerpent);

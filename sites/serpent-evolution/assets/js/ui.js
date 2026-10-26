@@ -7,10 +7,11 @@
     root.innerHTML = [
       '<div id="hud">',
       '  <div class="hud-left">',
-      '    <div id="len">Довжина <b>3</b></div>',
+      '    <div id="len">Довжина <b>3</b>/12</div>',
+      '    <div id="nutrition">Пожива <b>0</b>/9</div>',
       '    <div id="xp">Досвід <b>0</b></div>',
       '    <div id="points">Очки талантів <b>0</b></div>',
-      '    <div id="cargo">Вантаж <b>0</b> · гніздо <b>0</b></div>',
+      '    <div id="food-hud"></div>',
       '    <div id="hearts" title="Кожне рятує один раз. Не відновлюється"></div>',
       '    <div id="move-ind" class="move-ind">СТОЮ</div>',
       '    <div id="skills"></div>',
@@ -25,8 +26,13 @@
       '  <div class="card">',
       '    <div class="kicker">FOX SERPENT</div>',
       '    <h1>EVOLUTION</h1>',
-      '    <p class="lead"><b>Відпусти клавішу — зупинишся. Вороги продовжують рухатися.</b></p>',
-      '    <p>Клітинкова змійка: таланти, території, одноразові серця й розумні суперники.</p>',
+      '    <p class="lead"><b>Пожива 0–9 = довжина 3–12. Відпусти клавішу — зупинишся.</b></p>',
+      '    <p>Клітинкова змійка: їжа відновлюється, дерево талантів, серця й території.</p>',
+      '    <label class="seed-row">Seed <input id="seed-input" class="selectable" type="text" spellcheck="false" placeholder="випадковий"/></label>',
+      '    <div class="row">',
+      '      <button id="btn-seed-rand" class="btn ghost" type="button">Новий seed</button>',
+      '      <button id="btn-seed-copy" class="btn ghost" type="button">Копіювати</button>',
+      '    </div>',
       '    <div class="row">',
       '      <button id="btn-new" class="btn primary">Нова гра</button>',
       '      <button id="btn-continue" class="btn">Продовжити</button>',
@@ -34,14 +40,27 @@
       '      <input id="import-file" type="file" accept="application/json,.json" hidden />',
       '    </div>',
       '    <p id="cont-msg" class="tiny"></p>',
-      '    <p class="tiny">WASD · T дерево · Tab карта · Пробіл пауза</p>',
+      '    <p class="tiny">WASD · T дерево · B будувати · Tab карта · Пробіл пауза</p>',
       '  </div>',
       '</div>'
     ].join("");
 
+    document.getElementById("btn-seed-rand").onclick = function () {
+      document.getElementById("seed-input").value = String(((Date.now() ^ (Math.random() * 1e9)) >>> 0));
+    };
+    document.getElementById("btn-seed-copy").onclick = function () {
+      var v = document.getElementById("seed-input").value || String(state.world && state.world.seed || "");
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(v);
+      else {
+        document.getElementById("seed-input").select();
+        try { document.execCommand("copy"); } catch (e) {}
+      }
+    };
     document.getElementById("btn-new").onclick = function () {
       FS.unlockAudio(state);
-      FS.newGame(state);
+      var raw = document.getElementById("seed-input").value;
+      FS.newGame(state, raw === "" ? null : raw);
+      document.getElementById("seed-input").value = String(state.world.seed);
       document.getElementById("overlay").classList.add("hidden");
     };
     document.getElementById("btn-continue").onclick = function () {
@@ -84,11 +103,22 @@
 
   FS.renderHUD = function (state) {
     if (!state.started) return;
-    document.getElementById("len").innerHTML = "Довжина <b>" + state.player.body.length + "</b>";
+    var nut = FS.nutritionOf(state);
+    var target = FS.targetLength(nut);
+    var pending = FS.pendingGrowth(state.player);
+    document.getElementById("len").innerHTML = "Довжина <b>" + state.player.body.length + "</b>/12" +
+      (pending ? " <span class='muted'>(+ " + pending + " росте)</span>" : "") +
+      (state.effects.growthHud ? " · ціль " + target : "");
+    var nutLabel = nut >= FS.MAX_NUTRITION ? "Пожива повна · їжа дає лише досвід" : ("Пожива <b>" + nut + "</b>/9");
+    document.getElementById("nutrition").innerHTML = nutLabel;
     document.getElementById("xp").innerHTML = "Досвід <b>" + state.xp + "/" + FS.xpToNext(state.talentLevel) + "</b>";
     document.getElementById("points").innerHTML = "Очки талантів <b>" + state.talents.points + "</b>";
-    document.getElementById("cargo").innerHTML =
-      "Вантаж <b>" + state.cargo + "/" + state.cargoMax + "</b> · гніздо <b>" + state.nestMaterials + "</b>";
+    var fi = FS.foodHudInfo(state);
+    var foodEl = document.getElementById("food-hud");
+    if (fi && (state.effects.ripeHud || true)) {
+      foodEl.textContent = "Їжа на ділянці: " + fi.ripe + "/" + fi.capacity +
+        (fi.next != null ? " · новий плід через " + Math.ceil(fi.next) + " с" : "");
+    } else foodEl.textContent = "";
     var hearts = "";
     for (var i = 0; i < state.talents.hearts; i++) hearts += "♥";
     if (!hearts) hearts = "♡ немає";
@@ -100,6 +130,7 @@
     var skHtml = "";
     if (sk.phaseSelf) skHtml += "F маневр " + (sk.phaseSelf.t > 0 ? sk.phaseSelf.t.toFixed(0) + "с" : "OK") + " · ";
     if (sk.shed) skHtml += "G линяння " + (sk.shed.t > 0 ? sk.shed.t.toFixed(0) + "с" : "OK") + " · ";
+    if (sk.selfSlow) skHtml += "V гальмо " + (sk.selfSlow.t > 0 ? sk.selfSlow.t.toFixed(0) + "с" : "OK") + " · ";
     if (sk.coldBlood) skHtml += "C холод " + (sk.coldBlood.t > 0 ? sk.coldBlood.t.toFixed(0) + "с" : "OK");
     document.getElementById("skills").textContent = skHtml;
 
@@ -144,28 +175,53 @@
     else if (state.ui.panel === "help") el.innerHTML = FS.htmlHelp();
     else if (state.ui.panel === "death") el.innerHTML = FS.htmlDeath(state);
     else if (state.ui.panel === "expand") el.innerHTML = FS.htmlExpand(state);
+    else if (state.ui.panel === "build") el.innerHTML = FS.htmlBuild(state);
     else el.innerHTML = "";
     FS.bindPanel(state);
   };
 
   FS.htmlTalents = function (state) {
-    var html = '<div class="panel-head"><h2>Дерево талантів</h2><button class="btn ghost" data-act="close">Закрити</button></div>';
-    html += '<p class="muted">Очки: ' + state.talents.points + ' · Серця: ' + state.talents.hearts + ' (витрачені лишаються витраченими)</p>';
-    html += '<div class="talent-wrap"><div class="talent-tree" id="talent-tree">';
+    var nut = FS.nutritionOf(state);
+    var html = '<div class="panel-head talent-head"><div><h2>Сад розвитку</h2>';
+    html += '<p class="muted">Очки <b>' + state.talents.points + '</b> · Пожива <b>' + nut + '</b>/9 · Довжина <b>' +
+      state.player.body.length + '</b>/12 · Серця ' + state.talents.hearts + "</p></div>";
+    html += '<button class="btn ghost" data-act="close">Закрити</button></div>';
+    html += '<div class="talent-studio">';
+    html += '<div class="talent-canvas-wrap" id="talent-pan"><div class="talent-tree" id="talent-tree">';
+    // links
+    html += '<svg class="talent-links" width="900" height="820">';
+    FS.TALENT_LAYOUT.forEach(function (lay) {
+      var node = FS.TALENTS[lay.id];
+      if (!node || !node.prereq) return;
+      node.prereq.forEach(function (pid) {
+        var pl = FS.TALENT_LAYOUT.find(function (L) { return L.id === pid; });
+        if (!pl) return;
+        var unlocked = !!state.talents.unlocked[lay.id];
+        html += '<line x1="' + (450 + pl.x * 78) + '" y1="' + (40 + pl.y * 72) +
+          '" x2="' + (450 + lay.x * 78) + '" y2="' + (40 + lay.y * 72) +
+          '" class="tlink' + (unlocked ? " on" : "") + '"/>';
+      });
+    });
+    html += "</svg>";
     FS.TALENT_LAYOUT.forEach(function (lay) {
       var node = FS.TALENTS[lay.id];
       if (!node) return;
       var unlocked = !!state.talents.unlocked[lay.id];
       var can = FS.canUnlock(state, lay.id);
-      var cls = "tnode" + (unlocked ? " on" : "") + (node.fork ? " fork" : "") + (can.ok ? " can" : "");
-      html += '<button type="button" class="' + cls + '" style="left:' + (50 + lay.x * 70) + 'px;top:' + (20 + lay.y * 70) + 'px" data-talent="' + lay.id + '">';
+      var lockedAlt = node.fork && state.talents.forkPicks[lay.id];
+      var cls = "tnode" + (unlocked ? " on" : "") + (node.fork ? " fork" : "") +
+        (can.ok ? " can" : "") + (lockedAlt ? " picked" : "");
+      html += '<button type="button" class="' + cls + '" style="left:' + (410 + lay.x * 78) +
+        'px;top:' + (16 + lay.y * 72) + 'px" data-talent="' + lay.id + '" title="' + node.name + '">';
+      html += '<span class="ticon">' + (node.fork ? "⟐" : (node.branch === "control" ? "◎" : node.branch === "explore" ? "❀" : "◆")) + "</span>";
       html += "<b>" + node.name + "</b>";
-      if (node.fork && state.talents.forkPicks[lay.id]) {
-        html += "<em>" + state.talents.forkPicks[lay.id] + "</em>";
-      }
+      if (node.fork && state.talents.forkPicks[lay.id]) html += "<em>" + state.talents.forkPicks[lay.id] + "</em>";
       html += "</button>";
     });
-    html += '</div><div class="talent-detail" id="talent-detail"><p class="muted">Обери вузол</p></div></div>';
+    html += '</div></div>';
+    html += '<aside class="talent-detail" id="talent-detail"><p class="muted">Обери вузол на схемі. Click вибирає · кнопка підтверджує.</p>';
+    html += '<button class="btn" data-act="talent-focus">До доступних</button></aside></div>';
+    html += '<div class="talent-legend"><span class="leg can">доступно</span><span class="leg on">відкрито</span><span class="leg">заблоковано</span><span class="leg fork">розвилка A/B</span></div>';
     return html;
   };
 
@@ -183,16 +239,85 @@
   };
 
   FS.htmlExpand = function (state) {
+    var nut = FS.nutritionOf(state);
     var html = '<div class="panel-head"><h2>Відкрити територію</h2><button class="btn ghost" data-act="close">Закрити</button></div>';
-    html += '<p>Матеріал у гнізді: <b>' + state.nestMaterials + "</b>. Розширення — окремий вибір, не авто з довжини.</p>";
-    state.world.openOffers.forEach(function (o, i) {
-      var cost = Math.max(4, o.cost - (state.effects.expandDiscount || 0));
-      html += '<div class="offer"><b>' + o.name + "</b><p>" + o.desc + "</p>";
-      html += "<em>Вартість " + cost + " · небезпека " + o.danger +
-        (o.spawnsEnemy ? " · з’явиться змія" : "") + "</em>";
-      html += '<button class="btn' + (state.nestMaterials >= cost ? " primary" : "") + '" data-expand="' + i + '">Відкрити</button></div>';
+    html += '<p>Пожива: <b>' + nut + '</b>/9 · джерело: пожива (скорочує хвіст). Seed ' + state.world.seed + "</p>";
+    state.world.openOffers.forEach(function (o) {
+      var q = FS.getExpansionQuote(state, o.id);
+      html += '<div class="offer"><b>' + o.name + "</b> <span class='tiny'>id " + o.id + "</span><p>" + o.desc + "</p>";
+      if (!q.ok && q.why && q.cost == null) {
+        html += "<em>" + q.why + "</em>";
+      } else {
+        html += "<em>Вартість " + q.cost + " поживи · є " + q.now + "/9 · довжина " +
+          q.lenNow + " → " + q.lenAfter + (q.spawnsEnemy ? " · з’явиться змія" : "") + "</em>";
+        if (!q.ok) html += "<p class='tiny'>" + q.why + " · " + q.source + "</p>";
+        html += '<button class="btn' + (q.ok ? " primary" : "") + '" data-offer="' + o.id + '"' +
+          (q.ok ? "" : " disabled") + ">Відкрити за " + q.cost + "</button>";
+      }
+      html += "</div>";
     });
     if (!state.world.openOffers.length) html += '<p class="muted">Немає сусідніх ділянок.</p>';
+    return html;
+  };
+
+  FS.htmlBuild = function (state) {
+    FS.ensureFarms(state);
+    FS.ensureAllies(state);
+    var h = FS.snakeHead(state.player);
+    var tile = FS.tileAt(state.world, h.x, h.y);
+    var info = FS.describeTile(tile);
+    var html = '<div class="panel-head"><h2>Будівництво (B)</h2><button class="btn ghost" data-act="close">Закрити</button></div>';
+    html += "<p>Під головою: <b>" + info.name + "</b> — " + info.effect + " · " + (info.walk ? "прохід" : "блок") + "</p>";
+    html += "<p class='tiny'>Будує на клітинці голови. Ціна з поживи скорочує хвіст.</p>";
+    html += "<h3>Ферми</h3>";
+    Object.keys(FS.FARM_DEFS).forEach(function (id) {
+      var d = FS.FARM_DEFS[id];
+      var can = FS.canPlaceFarm(state, h.x, h.y, id);
+      var prev = FS.previewSpend(state, d.cost);
+      html += '<div class="offer"><b>' + d.name + "</b><p>" + d.desc + "</p><em>" + d.cost + " поживи · після довжина " +
+        prev.lenNow + " → " + prev.lenAfter + "</em>";
+      if (!can.ok) html += "<p class='tiny'>" + can.why + "</p>";
+      html += '<button class="btn' + (can.ok && prev.ok ? " primary" : "") + '" data-build-farm="' + id + '"' +
+        (can.ok && prev.ok ? "" : " disabled") + ">Посадити</button></div>";
+    });
+    html += "<h3>Домівка / союзник</h3>";
+    var hc = FS.canPlaceHome(state, h.x, h.y, "hut");
+    var hp = FS.previewSpend(state, FS.HOME_DEFS.hut.cost);
+    html += '<div class="offer"><b>Домівка</b><em>' + FS.HOME_DEFS.hut.cost + " поживи</em>";
+    if (!hc.ok) html += "<p class='tiny'>" + hc.why + "</p>";
+    html += '<button class="btn' + (hc.ok && hp.ok ? " primary" : "") + '" data-build-home="hut"' +
+      (hc.ok && hp.ok ? "" : " disabled") + ">Збудувати</button></div>";
+    state.homes.forEach(function (home) {
+      html += '<div class="offer"><b>Дім @' + home.x + "," + home.y + "</b> · мешканці " +
+        home.residents.length + "/" + home.capacity;
+      Object.keys(FS.ALLY_ROLES).forEach(function (role) {
+        var r = FS.ALLY_ROLES[role];
+        html += '<button class="btn" data-hire="' + home.id + ":" + role + '">Найм: ' + r.name +
+          " (" + r.cost + ")</button> ";
+      });
+      html += "</div>";
+    });
+    if (state.allies.length) {
+      html += "<h3>Команди</h3>";
+      state.allies.forEach(function (a) {
+        html += "<p>" + a.name + " [" + a.role + "] " + (a.inside ? "вдома" : a.stateAI) + " ";
+        ["work", "home", "follow", "wait"].forEach(function (c) {
+          html += '<button class="btn ghost" data-ally-cmd="' + a.id + ":" + c + '">' + c + "</button> ";
+        });
+        html += "</p>";
+      });
+    }
+    // farms status
+    if (state.farms.list.length) {
+      html += "<h3>Твої ферми</h3><ul>";
+      state.farms.list.forEach(function (f) {
+        var left = f.stage === "ready" ? "урожай " + f.store.length + "/" + f.storeMax :
+          (f.stage + " · " + Math.max(0, Math.ceil((f.cycle || 14) - (f.t || 0))) + "с");
+        html += "<li>" + f.type + " @" + f.x + "," + f.y + " — " + left +
+          (f.waiting ? " · Урожай чекає" : "") + "</li>";
+      });
+      html += "</ul>";
+    }
     return html;
   };
 
@@ -205,7 +330,10 @@
       '<button class="btn" data-act="export">Експорт</button>',
       '<button class="btn" data-act="talents">Дерево (T)</button>',
       '<button class="btn" data-act="map">Карта</button>',
+      '<button class="btn" data-act="build">Будувати (B)</button>',
       '<button class="btn" data-act="help">Правила</button>',
+      '<button class="btn" data-act="guide">Як грати (гайд)</button>',
+      '<p class="tiny selectable copyable">Seed: ' + (state.world && state.world.seed) + "</p>",
       '<label class="check"><input type="checkbox" id="chk-mute"' + (state.settings.muted ? " checked" : "") + '/> Без звуку</label>',
       '<label class="check"><input type="checkbox" id="chk-motion"' + (state.settings.reducedMotion ? " checked" : "") + '/> Зменшений рух</label>',
       '<button class="btn danger" data-act="new">Новий світ…</button>',
@@ -214,7 +342,9 @@
   };
 
   FS.htmlHelp = function () {
-    return '<div class="panel-head"><h2>Правила</h2><button class="btn ghost" data-act="close">Закрити</button></div><ul class="help">' +
+    return '<div class="panel-head"><h2>Правила</h2><button class="btn ghost" data-act="close">Закрити</button></div>' +
+      '<button class="btn primary" data-act="guide">Показати короткий гайд</button>' +
+      '<ul class="help">' +
       FS.HELP.map(function (t) { return "<li>" + t + "</li>"; }).join("") + "</ul>";
   };
 
@@ -222,15 +352,15 @@
     var d = state.lastDeath || {};
     return '<div class="panel-head"><h2>Смерть</h2></div>' +
       "<p><b>" + (d.reason || "") + "</b></p>" +
-      "<p>Втрачено матеріалу з вантажу: " + (d.lostCargo || 0) + "</p>" +
-      "<p>Таланти, серця (вже витрачені), гніздо й території збережено.</p>" +
+      "<p>Пожива скинута (було " + (d.nutritionLost || 0) + "). Довжина знову 3.</p>" +
+      "<p>Таланти, витрачені серця й відкриті території збережено.</p>" +
       '<button class="btn primary" data-act="respawn">Повернутися до гнізда</button>';
   };
 
   FS.bindPanel = function (state) {
     var el = document.getElementById("panel");
     el.onclick = function (ev) {
-      var t = ev.target.closest("[data-act],[data-talent],[data-expand],[data-fork]");
+      var t = ev.target.closest("[data-act],[data-talent],[data-offer],[data-fork],[data-build-farm],[data-build-home],[data-hire],[data-ally-cmd]");
       if (!t) return;
       if (t.dataset.act === "close") {
         state.ui.panel = null; FS.setPauseReason(state, "panel", false); return;
@@ -244,7 +374,14 @@
       if (t.dataset.act === "talents") { state.ui.panel = "talents"; state.ui.panelDirty = true; FS.renderPanel(state); return; }
       if (t.dataset.act === "map") { state.ui.panel = "map"; state.ui.panelDirty = true; FS.renderPanel(state); return; }
       if (t.dataset.act === "help") { state.ui.panel = "help"; state.ui.panelDirty = true; FS.renderPanel(state); return; }
+      if (t.dataset.act === "guide") {
+        state.ui.panel = null;
+        FS.setPauseReason(state, "panel", false);
+        FS.openGuide(state, { firstRun: false });
+        return;
+      }
       if (t.dataset.act === "expand") { state.ui.panel = "expand"; state.ui.panelDirty = true; FS.renderPanel(state); return; }
+      if (t.dataset.act === "build") { state.ui.panel = "build"; state.ui.panelDirty = true; FS.renderPanel(state); return; }
       if (t.dataset.act === "cam-me") {
         var h = FS.snakeHead(state.player);
         state.renderer.cam.x = (h.x + 0.5) * FS.CELL;
@@ -274,15 +411,70 @@
         }
         return;
       }
-      if (t.dataset.expand != null) {
-        var offer = state.world.openOffers[+t.dataset.expand];
-        if (!offer) return;
-        if (offer.spawnsEnemy && !confirm("Увага: на цій території з’явиться ворожа змія. Продовжити?")) return;
-        var er = FS.expandChunk(state, offer);
+      if (t.dataset.act === "talent-focus") {
+        var first = FS.TALENT_LAYOUT.find(function (L) {
+          return FS.canUnlock(state, L.id).ok;
+        });
+        if (first) FS.showTalentDetail(state, first.id);
+        return;
+      }
+      if (t.dataset.offer) {
+        if (t.disabled) return;
+        var q = FS.getExpansionQuote(state, t.dataset.offer);
+        if (!q.ok) { state.ui.toast = q.why; state.ui.panelDirty = true; FS.renderPanel(state); return; }
+        var msg = "Вартість " + q.cost + " поживи · зараз " + q.now + "/9 · довжина " +
+          q.lenNow + " → " + q.lenAfter + " · " + q.label + ".";
+        if (q.spawnsEnemy) msg += " З’явиться ворожа змія.";
+        if (!confirm(msg + " Продовжити?")) return;
+        var er = FS.purchaseExpansion(state, t.dataset.offer);
         if (!er.ok) state.ui.toast = er.why;
-        else { state.ui.panelDirty = true; FS.renderPanel(state); }
+        state.ui.panelDirty = true;
+        FS.renderPanel(state);
+        return;
+      }
+      if (t.dataset.buildFarm) {
+        var h2 = FS.snakeHead(state.player);
+        var fr = FS.purchaseFarm(state, h2.x, h2.y, t.dataset.buildFarm);
+        state.ui.toast = fr.ok ? "Ферму посаджено" : fr.why;
+        state.ui.panelDirty = true; FS.renderPanel(state); return;
+      }
+      if (t.dataset.buildHome) {
+        var h3 = FS.snakeHead(state.player);
+        var hr = FS.purchaseHome(state, h3.x, h3.y, t.dataset.buildHome);
+        state.ui.toast = hr.ok ? "Домівку збудовано" : hr.why;
+        state.ui.panelDirty = true; FS.renderPanel(state); return;
+      }
+      if (t.dataset.hire) {
+        var partsH = t.dataset.hire.split(":");
+        var hi = FS.hireAlly(state, partsH[0], partsH[1]);
+        state.ui.toast = hi.ok ? "Союзника найнято" : hi.why;
+        state.ui.panelDirty = true; FS.renderPanel(state); return;
+      }
+      if (t.dataset.allyCmd) {
+        var partsC = t.dataset.allyCmd.split(":");
+        FS.allyCommand(state, partsC[0], partsC[1]);
+        state.ui.panelDirty = true; FS.renderPanel(state); return;
       }
     };
+    var pan = document.getElementById("talent-pan");
+    if (pan && !pan._bound) {
+      pan._bound = true;
+      var ox = 0, oy = 0, drag = false, sx = 0, sy = 0;
+      pan.onpointerdown = function (ev) {
+        if (ev.target.closest(".tnode")) return;
+        drag = true; sx = ev.clientX - ox; sy = ev.clientY - oy;
+        pan.setPointerCapture(ev.pointerId);
+      };
+      pan.onpointermove = function (ev) {
+        if (!drag) return;
+        ox = ev.clientX - sx; oy = ev.clientY - sy;
+        var tree = document.getElementById("talent-tree");
+        if (tree) tree.style.transform = "translate(" + ox + "px," + oy + "px)";
+      };
+      pan.onpointerup = function () { drag = false; };
+      pan.onpointercancel = function () { drag = false; };
+      window.addEventListener("blur", function () { drag = false; });
+    }
     var mute = document.getElementById("chk-mute");
     if (mute) mute.onchange = function () { state.settings.muted = mute.checked; };
     var motion = document.getElementById("chk-motion");

@@ -1,24 +1,31 @@
-/* FOX SERPENT — save / backup / export */
+/* FOX SERPENT — save / backup / export / migration */
 (function (FS) {
   "use strict";
 
   FS.serializeState = function (state) {
     return {
       schema: FS.SAVE_SCHEMA,
+      migrationVersion: FS.MIGRATION_VERSION,
       rev: (state.saveRev || 0) + 1,
       version: FS.VERSION,
       seed: state.world.seed,
       time: state.time,
+      nutrition: FS.nutritionOf(state),
       world: {
         tiles: state.world.tiles,
         foods: state.world.foods,
-        materials: state.world.materials,
+        materials: [],
+        landmarks: state.world.landmarks || [],
         nest: state.world.nest,
         chunks: state.world.chunks,
         minX: state.world.minX, maxX: state.world.maxX,
         minY: state.world.minY, maxY: state.world.maxY,
         openOffers: state.world.openOffers
       },
+      foodDirector: FS.serializeFoodDirector ? FS.serializeFoodDirector(state) : null,
+      farms: FS.serializeFarms ? FS.serializeFarms(state) : null,
+      alliesData: FS.serializeAllies ? FS.serializeAllies(state) : null,
+      generatorVersion: state.world.generatorVersion || FS.GENERATOR_VERSION,
       player: {
         body: state.player.body,
         dir: state.player.dir,
@@ -32,8 +39,6 @@
           home: e.home, detectRange: e.detectRange
         };
       }),
-      cargo: state.cargo,
-      nestMaterials: state.nestMaterials,
       xp: state.xp,
       talentLevel: state.talentLevel,
       talents: state.talents,
@@ -45,7 +50,7 @@
 
   FS.validateSave = function (data) {
     if (!data || typeof data !== "object") return "Порожньо";
-    if (data.schema !== FS.SAVE_SCHEMA) return "Чужа схема";
+    if (data.schema !== 1 && data.schema !== 2) return "Чужа схема";
     if (!data.world || !data.player || !data.talents) return "Неповні дані";
     if (typeof data.seed !== "number") return "Поганий seed";
     if (data.talents.hearts < 0) return "Погані серця";
@@ -77,32 +82,55 @@
   };
 
   FS.applySave = function (state, data) {
+    // Backup before migration
+    if ((data.migrationVersion || 0) < FS.MIGRATION_VERSION) {
+      try {
+        localStorage.setItem(FS.SAVE_BAK, JSON.stringify(data));
+      } catch (e) {}
+      data = FS.migrateEconomy(data);
+      state.ui.toast = data.migrationNote || "Сейв оновлено до поживи 0–9";
+    }
+
     state.saveRev = data.rev || 1;
     state.time = data.time || 0;
     state.world = data.world;
     state.world.seed = data.seed;
+    state.world.landmarks = state.world.landmarks || [];
+    state.world.materials = [];
     state.player = FS.createPlayerSnake(state.world.nest);
     state.player.body = data.player.body;
-    state.player.dir = data.player.dir;
     state.player.growthDebt = data.player.growthDebt || 0;
     state.player.foodsEaten = data.player.foodsEaten || 0;
+    if (state.player.body && state.player.body.length >= 2) FS.syncDirFromBody(state.player);
+    else {
+      state.player.dir = data.player.dir || "R";
+      state.player.requestedDir = state.player.dir;
+    }
+    state.player.visualT = 1;
     state.enemies = (data.enemies || []).map(function (e) {
       var s = FS.createSnake(e);
       Object.assign(s, e);
       s.dead = false;
+      s.requestedDir = s.dir;
+      if (s.body && s.body.length >= 2) FS.syncDirFromBody(s);
+      FS.capEnemyLength(s);
+      s.visualT = 1;
       return s;
     });
-    state.cargo = data.cargo || 0;
-    state.nestMaterials = data.nestMaterials || 0;
+    state.nutrition = data.nutrition != null ? data.nutrition : FS.clamp((data.player.body.length || 3) - 3, 0, 9);
+    FS.syncLengthToNutrition(state);
     state.xp = data.xp || 0;
     state.talentLevel = data.talentLevel || 1;
     state.talents = data.talents;
     state.tutorial = data.tutorial || { done: {} };
     state.progress = data.progress || { regionBonus: {} };
     if (data.settings) state.settings = Object.assign(state.settings, data.settings);
+    FS.applyFoodDirector(state, data.foodDirector);
+    if (FS.applyFarms) FS.applyFarms(state, data.farms);
+    if (FS.applyAllies) FS.applyAllies(state, data.alliesData);
     FS.recomputeEffects(state);
     state.paused = false;
-    state.pauseReasons = { manual: false, panel: false, blur: false };
+    state.pauseReasons = { manual: false, panel: false, blur: false, guide: false };
   };
 
   FS.saveGame = function (state, reason) {
@@ -135,7 +163,7 @@
     var best = FS.loadBest();
     if (!best.ok) return best;
     FS.applySave(state, best.data);
-    return { ok: true };
+    return { ok: true, migrated: (best.data.migrationVersion || 0) >= 2 };
   };
 
   FS.exportSave = function (state) {
