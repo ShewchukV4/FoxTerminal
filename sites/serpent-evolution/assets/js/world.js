@@ -119,43 +119,87 @@
   };
 
   FS.purchaseExpansion = function (state, offerId) {
-    if (state._expandLock) return { ok: false, why: "Зачекай" };
+    if (state._expandLock) return { ok: false, why: "Покупка вже виконується", code: "busy" };
     var quote = FS.getExpansionQuote(state, offerId);
-    if (!quote.ok) return quote;
+    if (!quote.ok) {
+      return Object.assign({ code: quote.why && quote.why.indexOf("застаріл") >= 0 ? "stale" : "funds" }, quote);
+    }
     var offer = quote.offer;
     state._expandLock = true;
     try {
-      // Pre-generate into temp world copy check connectivity — generate into real after pay
-      // Atomic: spend only if generation succeeds
-      var snapshotOffers = state.world.openOffers.slice();
+      var snap = {
+        offers: state.world.openOffers.slice(),
+        tiles: Object.assign({}, state.world.tiles),
+        chunks: Object.assign({}, state.world.chunks),
+        landmarks: (state.world.landmarks || []).slice(),
+        foods: (state.world.foods || []).slice(),
+        enemies: state.enemies.slice(),
+        minX: state.world.minX, maxX: state.world.maxX,
+        minY: state.world.minY, maxY: state.world.maxY,
+        regionTypes: Object.assign({}, state.progress.regionTypes || {}),
+        tutorialExpand: !!state.tutorial.done.expand
+      };
+      function rollbackWorld() {
+        state.world.openOffers = snap.offers;
+        state.world.tiles = snap.tiles;
+        state.world.chunks = snap.chunks;
+        state.world.landmarks = snap.landmarks;
+        state.world.foods = snap.foods;
+        state.world.minX = snap.minX; state.world.maxX = snap.maxX;
+        state.world.minY = snap.minY; state.world.maxY = snap.maxY;
+        state.enemies = snap.enemies;
+        state.progress.regionTypes = snap.regionTypes;
+        state.tutorial.done.expand = snap.tutorialExpand;
+      }
       var result = FS.spendNutrition(state, quote.cost, function () {
         try {
           FS.applyGeneratedChunk(state.world, offer.cx, offer.cy, offer.type, false);
-          // stitch: clear gate cells between chunks already done via edge gates
           state.world.openOffers = FS.computeExpandOffers(state.world);
           state.tutorial.done.expand = true;
           state.progress.regionTypes = state.progress.regionTypes || {};
           state.progress.regionTypes[offer.type] = true;
           if (state.effects && state.effects.expandXp) FS.addXp(state, state.effects.expandXp);
-
-          if (offer.spawnsEnemy) {
-            FS.spawnExpandEnemy(state, offer);
-          }
+          if (offer.spawnsEnemy) FS.spawnExpandEnemy(state, offer);
+          if (offer.danger >= 2 && FS.spawnEnemyBase) FS.spawnEnemyBase(state, offer);
+          if (FS.seedTreeInChunk) FS.seedTreeInChunk(state, offer.cx, offer.cy);
           if (FS.ensureDirector) FS.ensureDirector(state);
           state.ui.toast = "Відкрито: " + offer.name + " (−" + quote.cost + " поживи)";
           return { ok: true };
         } catch (err) {
-          return { ok: false, why: "Помилка генерації: " + (err.message || err) };
+          rollbackWorld();
+          return { ok: false, why: "Помилка генерації: " + (err.message || err), code: "gen" };
         }
       }, { reason: "expand", save: true });
 
-      if (!result.ok) {
-        state.world.openOffers = snapshotOffers;
-      }
+      if (!result.ok) rollbackWorld();
       return result;
     } finally {
       state._expandLock = false;
     }
+  };
+
+  FS.spawnEnemyBase = function (state, offer) {
+    var cx = offer.cx * FS.CHUNK + 8;
+    var cy = offer.cy * FS.CHUNK + 8;
+    var t = FS.tileAt(state.world, cx, cy);
+    if (!t || !FS.tileWalkable(t)) return;
+    state.world.landmarks = state.world.landmarks || [];
+    state.world.landmarks.push({
+      id: FS.uid(), kind: "enemy_nest", chunkId: offer.cx + ":" + offer.cy,
+      x: cx, y: cy, name: "Чуже гніздо", done: false
+    });
+    if (FS.ensureWood) FS.ensureWood(state);
+    // light fence ring with a gap (entrance)
+    [[0, -1], [1, 0], [0, 1], [-1, 0]].forEach(function (d, i) {
+      if (i === 0) return; // gap north = entrance
+      var bx = cx + d[0], by = cy + d[1];
+      if (FS.buildingAt(state, bx, by)) return;
+      var bt = FS.tileAt(state.world, bx, by);
+      if (!bt || !FS.tileWalkable(bt)) return;
+      state.buildings.push({
+        id: FS.uid(), kind: "fence", x: bx, y: by, rot: 0, hp: 2, owner: "enemy"
+      });
+    });
   };
 
   // Back-compat alias
@@ -215,19 +259,13 @@
       if (lm.done && lm.kind !== "spring") continue;
       if (lm.kind === "ruin" && !lm.done) {
         var cost = lm.cost || 2;
-        var prev = FS.previewSpend(state, cost);
-        if (!prev.ok) { state.ui.toast = "Відновлення: потрібно " + cost + " поживи"; return { ok: false }; }
-        return FS.spendNutrition(state, cost, function () {
-          lm.done = true;
-          FS.addXp(state, 2);
-          // clear nearby stones
-          [[0, 0], [1, 0], [-1, 0], [0, 1]].forEach(function (d) {
-            var t = FS.tileAt(state.world, lm.x + d[0], lm.y + d[1]);
-            if (t && t.tt === "stone") FS.setTile(state.world, t.x, t.y, FS.makeTile(t.x, t.y, "soil", { biome: t.biome }));
-          });
-          state.ui.toast = "Ділянку відновлено";
-          return { ok: true };
-        }, { reason: "ruin" });
+        state.ui.pendingInteract = { kind: "ruin", id: lm.id, cost: cost };
+        state.ui.toast = "Покинута ділянка · F — відновити за " + cost + " поживи";
+        if (!state.tutorial.done.poiHint) {
+          state.tutorial.done.poiHint = true;
+          state.ui.toast = "Жовтий об’єкт — місце інтересу. F підтверджує (не списує саме по собі).";
+        }
+        return { ok: false, pending: true };
       }
       if (lm.kind === "reward_glade" && !lm.done) {
         lm.done = true;

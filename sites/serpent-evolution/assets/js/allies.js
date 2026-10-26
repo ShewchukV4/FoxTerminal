@@ -157,7 +157,7 @@
       if (FS.wouldEnterNeck(ally, d)) return;
       var v = FS.dirVec(d);
       var nx = h.x + v.x, ny = h.y + v.y;
-      if (FS.isBlockedCell(state, nx, ny)) return;
+      if (FS.isBlockedCell(state, nx, ny, ally)) return;
       // yield to player: don't enter player's next preferred cell / body
       var ph = FS.snakeHead(state.player);
       if (nx === ph.x && ny === ph.y) return;
@@ -292,7 +292,7 @@
       var nh = FS.snakeHead(ally);
       var next = { x: nh.x + hv.x, y: nh.y + hv.y };
       // commit locally (allies move outside enemy collision round for simplicity & player priority)
-      var block = FS.isBlockedCell(state, next.x, next.y);
+      var block = FS.isBlockedCell(state, next.x, next.y, ally);
       if (block) { ally.standing = true; return; }
       if (FS.snakeAtCell(state, next.x, next.y, true).some(function (hh) { return hh.snake.kind === "player" || hh.snake.kind === "enemy"; })) {
         ally.standing = true;

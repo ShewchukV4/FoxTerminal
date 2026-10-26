@@ -20,14 +20,33 @@
     return map;
   };
 
-  FS.isBlockedCell = function (state, x, y) {
+  /**
+   * @param mover optional snake — gates: player/ally always pass; enemies only if open.
+   * Without mover, closed gates block (strict / enemy pathing).
+   */
+  FS.isBlockedCell = function (state, x, y, mover) {
     if (!FS.inBounds(state.world, x, y)) return "edge";
     var t = FS.tileAt(state.world, x, y);
     if (!t) return "wall";
     if (typeof FS.tileWalkable === "function") {
       if (!FS.tileWalkable(t)) return t.tt === "deep" ? "water" : "wall";
     } else if (t.block) return "wall";
+    if (FS.buildingAt) {
+      var b = FS.buildingAt(state, x, y);
+      if (b && FS.buildingBlocksFor(b, mover)) return "wall";
+    }
     return null;
+  };
+
+  FS.buildingBlocksFor = function (b, mover) {
+    if (!b) return false;
+    if (b.kind === "fence" || b.kind === "block" || b.kind === "shed" || b.kind === "hut") return true;
+    if (b.kind === "gate") {
+      var friendly = mover && (mover.kind === "player" || mover.kind === "ally");
+      if (friendly) return false;
+      return b.closed !== false;
+    }
+    return false;
   };
 
   FS.snakeAtCell = function (state, x, y, ignoreMovingTails) {
@@ -114,7 +133,7 @@
         return;
       }
 
-      var block = FS.isBlockedCell(state, n.x, n.y);
+      var block = FS.isBlockedCell(state, n.x, n.y, m.snake);
       if (block) {
         kill(s, block === "edge" ? "Закрита межа" : "Стіна / камінь", n);
         return;

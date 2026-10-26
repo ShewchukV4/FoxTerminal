@@ -11,6 +11,10 @@
       seed: state.world.seed,
       time: state.time,
       nutrition: FS.nutritionOf(state),
+      wood: state.wood || 0,
+      woodCap: state.woodCap || 12,
+      buildings: state.buildings || [],
+      woodNodes: state.woodNodes || [],
       world: {
         tiles: state.world.tiles,
         foods: state.world.foods,
@@ -88,7 +92,8 @@
         localStorage.setItem(FS.SAVE_BAK, JSON.stringify(data));
       } catch (e) {}
       data = FS.migrateEconomy(data);
-      state.ui.toast = data.migrationNote || "Сейв оновлено до поживи 0–9";
+      if (FS.migrateBases) data = FS.migrateBases(data);
+      state.ui.toast = data.migrationNote || "Сейв оновлено";
     }
 
     state.saveRev = data.rev || 1;
@@ -97,6 +102,11 @@
     state.world.seed = data.seed;
     state.world.landmarks = state.world.landmarks || [];
     state.world.materials = [];
+    state.wood = data.wood != null ? data.wood : 0;
+    state.woodCap = data.woodCap || 12;
+    state.buildings = data.buildings || [];
+    state.woodNodes = data.woodNodes || [];
+    state.buildMode = null;
     state.player = FS.createPlayerSnake(state.world.nest);
     state.player.body = data.player.body;
     state.player.growthDebt = data.player.growthDebt || 0;
@@ -129,6 +139,8 @@
     if (FS.applyFarms) FS.applyFarms(state, data.farms);
     if (FS.applyAllies) FS.applyAllies(state, data.alliesData);
     FS.recomputeEffects(state);
+    if (FS.migrateWoodIfNeeded) FS.migrateWoodIfNeeded(state);
+    if (FS.migrateFarmFoodIfNeeded) FS.migrateFarmFoodIfNeeded(state);
     state.paused = false;
     state.pauseReasons = { manual: false, panel: false, blur: false, guide: false };
   };

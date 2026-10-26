@@ -22,23 +22,31 @@
     state.homes = [];
     state.farms = FS.createFarmsState();
     state.nutrition = 0;
+    state.wood = 0;
+    state.woodCap = FS.WOOD_CAP_BASE || 12;
+    state.buildings = [];
+    state.woodNodes = [];
+    state.buildMode = null;
     state.xp = 0;
     state.talentLevel = 1;
     state.talents = FS.defaultTalents();
     state.talents.points = 0;
     state.tutorial = { done: {} };
-    state.progress = { regionBonus: {}, patterns: [], killArch: {}, regionTypes: {} };
+    state.progress = { regionBonus: {}, patterns: [], killArch: {}, regionTypes: {}, woodSeeded: true };
     state.time = 0;
     state.started = true;
     state.pauseReasons = { manual: false, panel: false, blur: false, guide: false };
     state.paused = false;
     state.ui.panel = null;
     state.ui.build = null;
-    state.ui.toast = "Seed " + seed + " · Пожива 0–9 = довжина 3–12";
+    state.ui.expandConfirm = null;
+    state.ui.expandError = "";
+    state.ui.toast = "Seed " + seed + " · Пожива ≠ деревина · B = будівництво";
     state.input = FS.createInput();
     FS.recomputeEffects(state);
     FS.initNutrition(state, 0);
     FS.seedStartFood(state);
+    if (FS.seedWoodNodes) FS.seedWoodNodes(state);
     FS.saveGame(state, "new");
     if (FS.shouldAutoOpenGuide(state)) FS.openGuide(state, { firstRun: true });
   };
@@ -82,6 +90,7 @@
       }
       if (e.code === "Escape") {
         if (e.repeat) return;
+        if (state.buildMode && state.buildMode.on) { FS.exitBuildMode(state); return; }
         if (state.ui.panel) FS.togglePanel(state, state.ui.panel);
         else FS.togglePanel(state, "menu");
         return;
@@ -103,15 +112,50 @@
         return;
       }
 
+      if (state.buildMode && state.buildMode.on) {
+        if (e.code === "KeyB") { if (!e.repeat) FS.exitBuildMode(state); return; }
+        if (e.code === "KeyR") {
+          if (!e.repeat) {
+            state.buildMode.rot = ((state.buildMode.rot || 0) + 1) % 4;
+            state.buildMode.msg = "Поворот " + state.buildMode.rot;
+            if (FS.refreshBuildPalette) FS.refreshBuildPalette(state);
+          }
+          return;
+        }
+        if (e.code === "KeyX") {
+          if (!e.repeat) {
+            state.buildMode.demolish = !state.buildMode.demolish;
+            if (state.buildMode.demolish) state.buildMode.tool = null;
+            else state.buildMode.tool = state.buildMode.tool || "fence";
+            state.buildMode.msg = state.buildMode.demolish ? "Режим знесення (ЛКМ/ПКМ)" : "Режим будівництва";
+            if (FS.refreshBuildPalette) FS.refreshBuildPalette(state);
+          }
+          return;
+        }
+        // movement blocked while building
+        if (FS.DIR_KEYS[e.code]) { e.preventDefault(); FS.clearInput(state.input); return; }
+        if (e.code === "Space") {
+          e.preventDefault();
+          if (!e.repeat) FS.setPauseReason(state, "manual", !state.pauseReasons.manual);
+          return;
+        }
+        return;
+      }
+
       if (state.paused && state.ui.panel) return;
 
-      if (e.code === "KeyF") { FS.activatePhaseSelf(state); return; }
+      if (e.code === "KeyF") {
+        if (FS.tryInteract && FS.tryInteract(state)) return;
+        FS.activatePhaseSelf(state);
+        return;
+      }
       if (e.code === "KeyG") { FS.activateShed(state); return; }
       if (e.code === "KeyC") { FS.activateColdBlood(state); return; }
       if (e.code === "KeyV") { FS.activateSelfSlow(state); return; }
       if (e.code === "KeyB") {
         if (e.repeat) return;
-        FS.togglePanel(state, "build");
+        if (e.shiftKey) FS.togglePanel(state, "build");
+        else FS.enterBuildMode(state);
         return;
       }
 
@@ -165,6 +209,7 @@
     FS.tickFoodDirector(state, dt);
     if (FS.tickFarms) FS.tickFarms(state, dt);
     if (FS.tickAllies) FS.tickAllies(state, dt);
+    if (FS.tickWoodNodes) FS.tickWoodNodes(state, dt);
     (function () {
       var h = FS.snakeHead(state.player);
       var k = FS.key(h.x, h.y);
@@ -176,8 +221,14 @@
 
     var movers = [];
     state.input.tapConsumedDir = null;
+    var building = !!(state.buildMode && state.buildMode.on);
 
-    // --- Player: single intent API; never mutate committed dir here ---
+    // --- Player: frozen in B-mode (enemies keep moving) ---
+    if (building) {
+      FS.clearInput(state.input);
+      state.player.stepAcc = 0;
+      FS.setStanding(state.player, true);
+    } else {
     var held = FS.anyMoveHeld(state.input);
     var intent = null;
     var head = FS.snakeHead(state.player);
@@ -213,6 +264,7 @@
       }
     }
     FS.setStanding(state.player, !movers.some(function (m) { return m.snake === state.player; }));
+    }
 
     // --- Enemies: intent only; commit sets dir ---
     state.enemies.forEach(function (e) {
@@ -266,6 +318,7 @@
       if (m.snake.kind === "player") {
         var pick = FS.pickupAt(state, m.next);
         if (pick && pick.kind === "food") FS.onFood(state, pick.item);
+        if (FS.pickupWoodAt) FS.pickupWoodAt(state, m.next);
       }
     });
 
@@ -311,6 +364,7 @@
     if (!canvas) return;
     var state = FS.createState(canvas);
     FS.bindInput(state, canvas);
+    if (FS.bindBuildInput) FS.bindBuildInput(state, canvas);
     try {
       var best = FS.loadBest();
       var btn = document.getElementById("btn-continue");

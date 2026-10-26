@@ -32,6 +32,11 @@
     state.farms = FS.createFarmsState();
     state.homes = [];
     state.allies = [];
+    state.buildings = [];
+    state.woodNodes = [];
+    state.wood = 0;
+    state.woodCap = 12;
+    state.buildMode = null;
     FS.recomputeEffects(state);
     FS.initNutrition(state, 0);
     FS.seedStartFood(state);
@@ -45,6 +50,10 @@
     assert("start length 3", s.player.body.length === 3);
     assert("start no enemies", s.enemies.length === 0);
     assert("start foods present", s.world.foods.length >= 4);
+    assert("start 4 farms", s.farms.list.length >= 4, "n=" + s.farms.list.length);
+    assert("food only on farms", s.world.foods.every(function (f) {
+      return s.farms.list.some(function (farm) { return farm.x === f.x && farm.y === f.y; });
+    }));
   })();
 
   // Food grows to cap 12; excess no hidden growth
@@ -299,6 +308,85 @@
       } else if (fx && fx.kind !== "none" && !FS.TALENT_CONSUMERS[fx.kind]) missing.push(fx.kind);
     });
     assert("all effects have consumers", missing.length === 0, missing.join(","));
+  })();
+
+  // Talent layout: no rectangle overlap, unique col/row
+  (function () {
+    var keys = {};
+    var dup = 0;
+    FS.TALENT_LAYOUT.forEach(function (L) {
+      var k = L.col + ":" + L.row;
+      if (keys[k]) dup++;
+      keys[k] = L.id;
+    });
+    assert("talent unique slots", dup === 0, "dups=" + dup);
+    var hits = FS.talentLayoutOverlaps();
+    assert("talent no pixel overlap", hits.length === 0, hits.slice(0, 5).join(","));
+    var missing = Object.keys(FS.TALENTS).filter(function (id) {
+      return !FS.TALENT_LAYOUT.some(function (L) { return L.id === id; });
+    });
+    assert("all talents in layout", missing.length === 0, missing.join(","));
+  })();
+
+  // Wood ≠ nutrition; branches only near trees
+  (function () {
+    var s = fresh();
+    FS.seedWoodNodes(s);
+    var trees = s.woodNodes.filter(function (n) { return n.kind === "tree"; });
+    var woods = s.woodNodes.filter(function (n) { return n.kind === "wood"; });
+    assert("has trees", trees.length >= 1, "t=" + trees.length);
+    assert("branches near trees", woods.length >= 1 && woods.every(function (w) {
+      return trees.some(function (t) { return FS.manhattan(w, t) <= 1; });
+    }));
+    var nut = FS.nutritionOf(s);
+    var w0 = s.wood;
+    FS.gainWood(s, 2);
+    assert("wood gain no nutrition", FS.nutritionOf(s) === nut && s.wood === w0 + 2);
+    var spot = { x: s.world.nest.x + 2, y: s.world.nest.y + 2 };
+    var br = FS.commitBuild(s, spot.x, spot.y, "fence");
+    assert("fence build", br.ok, br.why);
+    assert("fence blocks enemy", !!FS.isBlockedCell(s, spot.x, spot.y, { kind: "enemy" }));
+    assert("fence blocks player", !!FS.isBlockedCell(s, spot.x, spot.y, s.player));
+    var gateSpot = { x: spot.x + 1, y: spot.y };
+    s.wood += 2;
+    var gr = FS.commitBuild(s, gateSpot.x, gateSpot.y, "gate");
+    assert("gate build", gr.ok, gr.why);
+    assert("closed gate blocks enemy", !!FS.isBlockedCell(s, gateSpot.x, gateSpot.y, { kind: "enemy" }));
+    assert("gate open for player", !FS.isBlockedCell(s, gateSpot.x, gateSpot.y, s.player));
+    var lenBefore = s.player.body.length;
+    FS.spendWood(s, 1, function () { return { ok: true }; }, { save: false });
+    assert("wood spend keeps length", s.player.body.length === lenBefore);
+  })();
+
+  // Build mode freezes player; enemies still scheduled
+  (function () {
+    var s = fresh();
+    FS.enterBuildMode(s);
+    assert("build mode on", s.buildMode && s.buildMode.on && !s.paused);
+    var hx = FS.snakeHead(s.player).x;
+    s.input.tapPending = "R";
+    FS.fixedUpdate(s, 1 / 60);
+    assert("build freezes player", FS.snakeHead(s.player).x === hx && s.player.standing);
+    FS.exitBuildMode(s);
+    assert("exit clears build", !s.buildMode);
+  })();
+
+  // Expand rollback snapshot restores chunks on gen fail (simulated)
+  (function () {
+    var s = fresh();
+    FS.initNutrition(s, 5);
+    while (s.player.growthDebt > 0) {
+      var h = FS.snakeHead(s.player);
+      FS.commitSnakeMove(s.player, { x: h.x + 1, y: h.y }, "R");
+    }
+    var offer = s.world.openOffers[0];
+    var beforeChunks = Object.keys(s.world.chunks).length;
+    var real = FS.applyGeneratedChunk;
+    FS.applyGeneratedChunk = function () { throw new Error("boom"); };
+    var er = FS.purchaseExpansion(s, offer.id);
+    FS.applyGeneratedChunk = real;
+    assert("gen fail rolls back", !er.ok && Object.keys(s.world.chunks).length === beforeChunks);
+    assert("gen fail refunds nutrition", FS.nutritionOf(s) === 5);
   })();
 
   // Guide pause resources

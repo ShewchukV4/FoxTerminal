@@ -194,4 +194,20 @@
     data._preMigration = backup;
     return data;
   };
+
+  /** v3: wood + buildings on old maps without wiping world. */
+  FS.migrateBases = function (data) {
+    if (!data || (data.migrationVersion || 0) >= 3) return data;
+    if (!data._preMigration) data._preMigration = FS.deepClone(data);
+    data.wood = data.wood != null ? data.wood : 4;
+    data.woodCap = data.woodCap || 12;
+    data.buildings = data.buildings || [];
+    data.woodNodes = data.woodNodes || [];
+    data.progress = data.progress || {};
+    data.progress.woodSeeded = false;
+    data.migrationVersion = 3;
+    data.migrationNote = (data.migrationNote ? data.migrationNote + " · " : "") +
+      "Додано деревину/будівлі. Старі покупки ферм не списуються знову.";
+    return data;
+  };
 })(window.FoxSerpent);

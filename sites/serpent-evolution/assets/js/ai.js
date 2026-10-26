@@ -17,7 +17,7 @@
         var nx = c.x + v.x, ny = c.y + v.y;
         var k = FS.key(nx, ny);
         if (seen[k]) continue;
-        if (FS.isBlockedCell(state, nx, ny)) continue;
+        if (FS.isBlockedCell(state, nx, ny, { kind: "enemy", id: snakeId })) continue;
         var hits = FS.snakeAtCell(state, nx, ny, true).filter(function (h) {
           return h.snake.id !== snakeId;
         });
@@ -62,7 +62,7 @@
       }
       var v = FS.dirVec(d);
       var next = { x: head.x + v.x, y: head.y + v.y };
-      if (FS.isBlockedCell(state, next.x, next.y)) {
+      if (FS.isBlockedCell(state, next.x, next.y, snake)) {
         debug.push({ dir: d, score: -900, why: "wall" });
         return;
       }
@@ -99,6 +99,24 @@
         var before = FS.manhattan(head, food);
         var after = FS.manhattan(next, food);
         score += (before - after) * 8;
+      }
+
+      // Raid ripe farms if path exists (no magic protected flag — only walkability)
+      if (state.farms && state.farms.list && snake.raidTarget) {
+        var rt = snake.raidTarget;
+        score += (FS.manhattan(head, rt) - FS.manhattan(next, rt)) * 12;
+      } else if (state.farms && state.farms.list && snake.knowsFarm) {
+        var ripe = null, rd = 1e9;
+        state.farms.list.forEach(function (f) {
+          if (f.stage !== "ready" || !f.store || !f.store.length) return;
+          if (FS.manhattan(head, f) > (snake.detectRange || 8) + 2 && !snake.memoryFarms) return;
+          var d0 = FS.manhattan(head, f);
+          if (d0 < rd) { rd = d0; ripe = f; }
+        });
+        if (ripe) {
+          snake.raidTarget = { x: ripe.x, y: ripe.y, farmId: ripe.id };
+          score += (FS.manhattan(head, ripe) - FS.manhattan(next, ripe)) * 11;
+        }
       }
 
       // arch weights
@@ -157,18 +175,69 @@
         if (FS.isOpp(snake.dir, dirs[j])) continue;
         var vv = FS.dirVec(dirs[j]);
         var nn = { x: head.x + vv.x, y: head.y + vv.y };
-        if (!FS.isBlockedCell(state, nn.x, nn.y)) {
+        if (!FS.isBlockedCell(state, nn.x, nn.y, snake)) {
           best = dirs[j];
           break;
         }
       }
     }
 
+    // Discover farms in vision → memory for raids
+    if (state.farms && state.farms.list) {
+      state.farms.list.forEach(function (f) {
+        if (FS.manhattan(head, f) <= (snake.detectRange || 8)) {
+          snake.memoryFarms = snake.memoryFarms || {};
+          snake.memoryFarms[f.id] = { x: f.x, y: f.y };
+          snake.knowsFarm = true;
+          if (f.stage === "ready" && f.store && f.store.length && !snake._raidWarned) {
+            snake._raidWarned = true;
+            state.ui.toast = "Увага: змія помітила твою грядку!";
+            state.ui.raidWarn = 4;
+          }
+        }
+      });
+    }
+    // Steal when on ripe farm cell
+    if (snake.raidTarget) {
+      var rf = FS.farmAt && FS.farmAt(state, snake.raidTarget.x, snake.raidTarget.y);
+      if (rf && head.x === rf.x && head.y === rf.y && rf.stage === "ready") {
+        if (rf.store && rf.store.length) {
+          rf.store.pop();
+          state.ui.toast = "Рейд: вкрадено урожай з грядки";
+        }
+        rf.stage = "planted";
+        rf.t = 0;
+        rf.waiting = false;
+        snake.raidTarget = null;
+        snake._raidWarned = false;
+        if (snake.body.length < FS.MAX_LENGTH) FS.growSnake(snake, 1);
+        FS.capEnemyLength(snake);
+      } else if (rf && FS.isBlockedCell(state, rf.x, rf.y, snake) && FS.manhattan(head, rf) <= 1) {
+        // unreachable behind fence — give up
+        snake.raidTarget = null;
+        snake.stateAI = "patrol";
+      }
+    }
+
     snake._aiDebug = { options: debug, pick: best, state: snake.stateAI, seesPlayer: seesPlayer };
-    if (seesPlayer) snake.stateAI = snake.arch === "careful" ? "avoid" : "intercept";
+    if (snake.raidTarget) snake.stateAI = "raid";
+    else if (seesPlayer) snake.stateAI = snake.arch === "careful" ? "avoid" : "intercept";
     else if (food) snake.stateAI = "forage";
     else snake.stateAI = "patrol";
 
     return best || snake.dir;
+  };
+
+  /** Path openness from enemy to farm — for UI inspect. */
+  FS.farmRaidOpenings = function (state, farm) {
+    if (!farm) return [];
+    var openings = [];
+    [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(function (d) {
+      var x = farm.x + d[0], y = farm.y + d[1];
+      if (!FS.isBlockedCell(state, x, y, { kind: "enemy" })) {
+        openings.push({ x: x, y: y });
+      }
+    });
+    return openings;
   };
 })(window.FoxSerpent);

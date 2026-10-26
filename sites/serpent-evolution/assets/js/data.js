@@ -3,13 +3,13 @@ window.FoxSerpent = window.FoxSerpent || {};
 (function (FS) {
   "use strict";
 
-  FS.VERSION = "1.2.0";
+  FS.VERSION = "1.3.0";
   FS.SAVE_SCHEMA = 2;
   FS.SAVE_KEY = "fox_serpent_evo_save_v1";
   FS.SAVE_BAK = "fox_serpent_evo_save_bak_v1";
-  FS.GUIDE_VERSION = 3;
+  FS.GUIDE_VERSION = 4;
   FS.GUIDE_SEEN_KEY = "fox_serpent_evo_guide_v1";
-  FS.MIGRATION_VERSION = 2;
+  FS.MIGRATION_VERSION = 3;
 
   FS.CELL = 36;
   FS.CHUNK = 12;
@@ -455,75 +455,145 @@ window.FoxSerpent = window.FoxSerpent || {};
     }
   };
 
-  /* Grid layout: control left (−), explore center, tactics right (+) */
+  /*
+   * 4 vertical columns — col 0..3, row 0..n
+   * Pixel layout computed in UI: NODE_W=132, NODE_H=52, GAP_X=28, GAP_Y=16
+   * Never put two nodes on same (col,row).
+   */
+  FS.TALENT_COLS = {
+    control: 0, house: 1, explore: 2, tactics: 3, core: 1.5
+  };
   FS.TALENT_LAYOUT = [
-    { id: "root", x: 0, y: 0 },
-    /* control */
-    { id: "turn_buffer", x: -3, y: 1 },
-    { id: "hold_pace", x: -3, y: 2 },
-    { id: "calm_hold", x: -4, y: 2 },
-    { id: "danger_hint", x: -3, y: 3 },
-    { id: "growth_preview", x: -3, y: 4 },
-    { id: "fork_maneuver", x: -3, y: 5 },
-    { id: "soft_start", x: -4, y: 6 },
-    { id: "nest_anchor", x: -5, y: 6 },
-    { id: "coil_control", x: -3, y: 6 },
-    { id: "soft_brake", x: -3, y: 7 },
-    { id: "phase_cd", x: -3, y: 8 },
-    { id: "fork_shed", x: -3, y: 9 },
-    { id: "turn_master", x: -3, y: 10 },
-    /* explore */
-    { id: "wide_eye", x: 0, y: 1 },
-    { id: "deep_scout", x: 1, y: 1 },
-    { id: "forage", x: 0, y: 2 },
-    { id: "nest_path", x: -1, y: 2 },
-    { id: "calm_nest", x: -1, y: 3 },
-    { id: "ripe_map", x: 0, y: 3 },
-    { id: "nearest_fruit", x: 0, y: 4 },
-    { id: "fork_scout", x: 0, y: 5 },
-    { id: "survey", x: 1, y: 5 },
-    { id: "first_visit", x: 0, y: 6 },
-    { id: "open_ready", x: 0, y: 7 },
-    { id: "fork_garden", x: 0, y: 8 },
-    { id: "ripe_speed", x: 0, y: 9 },
-    { id: "forage_xp2", x: 0, y: 10 },
-    /* tactics */
-    { id: "read_space", x: 3, y: 1 },
-    { id: "rival_memory", x: 4, y: 1 },
-    { id: "kill_bonus", x: 4, y: 2 },
-    { id: "pattern_collect", x: 5, y: 2 },
-    { id: "bait_patience", x: 3, y: 2 },
-    { id: "body_wall", x: 3, y: 3 },
-    { id: "stealth_stand", x: 3, y: 4 },
-    { id: "fork_quiet", x: 4, y: 4 },
-    { id: "fork_cold", x: 3, y: 5 },
-    { id: "enemy_label", x: 3, y: 6 },
-    { id: "pressure_read", x: 4, y: 6 },
-    { id: "spawn_warn", x: 3, y: 7 },
-    { id: "fork_foresight", x: 3, y: 8 },
-    { id: "territory_xp", x: 3, y: 9 },
-    { id: "fork_grace", x: 3, y: 10 },
-    /* house */
-    { id: "soil_sense", x: -1, y: 1 },
-    { id: "earth_hand", x: -1, y: 2 },
-    { id: "farm_speed", x: -2, y: 2 },
-    { id: "plan_build", x: -1, y: 3 },
-    { id: "fork_garden_care", x: -1, y: 4 },
-    { id: "harvest_cap", x: -1, y: 5 },
-    { id: "clear_route", x: -1, y: 6 },
-    { id: "fork_crew", x: -1, y: 7 },
-    { id: "careful_worker", x: -1, y: 8 },
-    { id: "field_sign", x: -1, y: 9 }
+    { id: "root", col: 1.5, row: 0 },
+    /* control col 0 */
+    { id: "turn_buffer", col: 0, row: 1 },
+    { id: "hold_pace", col: 0, row: 2 },
+    { id: "calm_hold", col: 0, row: 3 },
+    { id: "danger_hint", col: 0, row: 4 },
+    { id: "growth_preview", col: 0, row: 5 },
+    { id: "fork_maneuver", col: 0, row: 6 },
+    { id: "soft_start", col: 0, row: 7 },
+    { id: "coil_control", col: 0, row: 8 },
+    { id: "nest_anchor", col: 0, row: 9 },
+    { id: "soft_brake", col: 0, row: 10 },
+    { id: "phase_cd", col: 0, row: 11 },
+    { id: "fork_shed", col: 0, row: 12 },
+    { id: "turn_master", col: 0, row: 13 },
+    /* house col 1 */
+    { id: "soil_sense", col: 1, row: 1 },
+    { id: "earth_hand", col: 1, row: 2 },
+    { id: "farm_speed", col: 1, row: 3 },
+    { id: "plan_build", col: 1, row: 4 },
+    { id: "fork_garden_care", col: 1, row: 5 },
+    { id: "harvest_cap", col: 1, row: 6 },
+    { id: "clear_route", col: 1, row: 7 },
+    { id: "fork_crew", col: 1, row: 8 },
+    { id: "careful_worker", col: 1, row: 9 },
+    { id: "field_sign", col: 1, row: 10 },
+    /* explore col 2 */
+    { id: "wide_eye", col: 2, row: 1 },
+    { id: "deep_scout", col: 2, row: 2 },
+    { id: "forage", col: 2, row: 3 },
+    { id: "nest_path", col: 2, row: 4 },
+    { id: "calm_nest", col: 2, row: 5 },
+    { id: "ripe_map", col: 2, row: 6 },
+    { id: "nearest_fruit", col: 2, row: 7 },
+    { id: "fork_scout", col: 2, row: 8 },
+    { id: "survey", col: 2, row: 9 },
+    { id: "first_visit", col: 2, row: 10 },
+    { id: "open_ready", col: 2, row: 11 },
+    { id: "fork_garden", col: 2, row: 12 },
+    { id: "ripe_speed", col: 2, row: 13 },
+    { id: "forage_xp2", col: 2, row: 14 },
+    /* tactics col 3 */
+    { id: "read_space", col: 3, row: 1 },
+    { id: "rival_memory", col: 3, row: 2 },
+    { id: "kill_bonus", col: 3, row: 3 },
+    { id: "pattern_collect", col: 3, row: 4 },
+    { id: "bait_patience", col: 3, row: 5 },
+    { id: "body_wall", col: 3, row: 6 },
+    { id: "stealth_stand", col: 3, row: 7 },
+    { id: "fork_quiet", col: 3, row: 8 },
+    { id: "fork_cold", col: 3, row: 9 },
+    { id: "enemy_label", col: 3, row: 10 },
+    { id: "pressure_read", col: 3, row: 11 },
+    { id: "spawn_warn", col: 3, row: 12 },
+    { id: "fork_foresight", col: 3, row: 13 },
+    { id: "territory_xp", col: 3, row: 14 },
+    { id: "fork_grace", col: 3, row: 15 }
   ];
+
+  FS.TALENT_NODE = { w: 132, h: 52, gapX: 28, gapY: 16, pad: 24 };
+
+  FS.talentPixel = function (lay) {
+    var N = FS.TALENT_NODE;
+    return {
+      x: N.pad + lay.col * (N.w + N.gapX),
+      y: N.pad + lay.row * (N.h + N.gapY),
+      cx: N.pad + lay.col * (N.w + N.gapX) + N.w / 2,
+      cy: N.pad + lay.row * (N.h + N.gapY) + N.h / 2,
+      w: N.w, h: N.h
+    };
+  };
+
+  FS.talentTreeBounds = function () {
+    var N = FS.TALENT_NODE;
+    var maxCol = 0, maxRow = 0;
+    FS.TALENT_LAYOUT.forEach(function (L) {
+      if (L.col > maxCol) maxCol = L.col;
+      if (L.row > maxRow) maxRow = L.row;
+    });
+    return {
+      w: Math.ceil(N.pad * 2 + (maxCol + 1) * (N.w + N.gapX)),
+      h: Math.ceil(N.pad * 2 + (maxRow + 1) * (N.h + N.gapY))
+    };
+  };
+
+  FS.talentLayoutOverlaps = function () {
+    var boxes = FS.TALENT_LAYOUT.map(function (L) {
+      var p = FS.talentPixel(L);
+      return { id: L.id, x: p.x, y: p.y, r: p.x + p.w, b: p.y + p.h };
+    });
+    var hits = [];
+    for (var i = 0; i < boxes.length; i++) {
+      for (var j = i + 1; j < boxes.length; j++) {
+        var a = boxes[i], b = boxes[j];
+        if (a.x < b.r && a.r > b.x && a.y < b.b && a.b > b.y) hits.push(a.id + "+" + b.id);
+      }
+    }
+    return hits;
+  };
+
+  FS.OBJECT_LEGEND = [
+    { kind: "food", name: "Плід", look: "фрукт/ягоди", action: "Пройди головою — +пожива", color: "amber" },
+    { kind: "tree", name: "Дерево", look: "стовбур + крона", action: "F поруч — заготівля; гілки лише під кроною", color: "wood" },
+    { kind: "wood", name: "Гілки", look: "в’язка під деревом", action: "Підбери головою — +деревина", color: "wood" },
+    { kind: "stump", name: "Пень", look: "пеньок", action: "F поруч — заготівля +2–3", color: "wood" },
+    { kind: "bush", name: "Плодовий кущ", look: "квітка/кущ", action: "Підказка місця їжі", color: "mint" },
+    { kind: "farm_ready", name: "Готовий урожай", look: "фрукт на грядці", action: "Стань на грядку або садівник", color: "amber" },
+    { kind: "drop_pad", name: "Майданчик видачі", look: "квадрат біля гнізда", action: "Сюди носять плоди", color: "nest" },
+    { kind: "poi", name: "Місце інтересу", look: "окрема іконка", action: "F / підтвердження взаємодії", color: "amber" },
+    { kind: "fence", name: "Паркан", look: "дерев’яна огорожа", action: "Блокує ворогів", color: "wood" },
+    { kind: "gate", name: "Ворота", look: "ворота", action: "Свої проходять, вороги — ні", color: "wood" },
+    { kind: "enemy_nest", name: "Чуже гніздо", look: "ворожий вхід", action: "Патруль / рейди", color: "danger" }
+  ];
+
+  FS.BUILD_COSTS = {
+    fence: { wood: 1, name: "Паркан" },
+    gate: { wood: 2, name: "Ворота" },
+    block: { wood: 2, name: "Блок" },
+    plot: { wood: 2, nutrition: 1, name: "Грядка" },
+    hut: { wood: 5, name: "Домівка" },
+    shed: { wood: 4, name: "Склад" }
+  };
 
   FS.HELP = [
     "WASD — крок. Відпусти — зупинись. Вороги рухаються далі.",
-    "Пожива 0–9 = довжина 3–12. Покупки землі/ферми/дому скорочують хвіст.",
-    "B — будівництво: грядки, домівка, найм садівника. Урожай — фізичні плоди.",
-    "Tab — відкрити землю (ціна в UI = списання). Seed задає карту.",
-    "Назад у шию — не можна. Стіна/тіло — смерть або серце.",
-    "T — сад розвитку · H — гайд · Пробіл — пауза",
-    "Серце рятує один раз і не відновлюється."
+    "Пожива 0–9 = довжина 3–12. Їжа росте лише на грядках (на старті — 4).",
+    "Деревина — окремо. Гілки спавняться лише коло / під деревом; F біля дерева — заготівля.",
+    "B — будівництво будь-де на відкритій карті. ЛКМ ставити · ПКМ / X знести (−50% деревини).",
+    "Tab — купівля землі за поживу. Підтвердження в панелі.",
+    "T — дерево · H — гайд/легенда · Пробіл — пауза світу"
   ];
 
   FS.LONG_GOALS = [

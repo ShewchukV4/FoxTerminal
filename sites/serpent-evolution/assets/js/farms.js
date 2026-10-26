@@ -47,8 +47,9 @@
     var tile = FS.tileAt(state.world, x, y);
     if (!tile) return { ok: false, why: "Поза картою" };
     var def = FS.tileDef(tile);
-    if (!def.farm && !(state.effects && state.effects.soilFarm && def.id === "meadow")) {
-      return { ok: false, why: "Потрібен родючий / звичайний ґрунт" };
+    // meadow OK for plots (food only grows on farms); fertile/soil preferred via soilMul
+    if (!def.farm && def.id !== "meadow" && !(state.effects && state.effects.soilFarm && def.id === "meadow")) {
+      return { ok: false, why: "Потрібен ґрунт / луг під грядку" };
     }
     if (FS.farmAt(state, x, y)) return { ok: false, why: "Вже є ферма" };
     if (FS.manhattan({ x: x, y: y }, state.world.nest) < 2) return { ok: false, why: "Занадто близько до гнізда" };
@@ -66,6 +67,28 @@
     return { ok: true, cost: fdef.cost, def: fdef, tile: tile };
   };
 
+  /** Place farm without charging (used by wood+nutrition B-build). */
+  FS.placeFarmAt = function (state, x, y, farmType) {
+    var check = FS.canPlaceFarm(state, x, y, farmType);
+    if (!check.ok) return check;
+    FS.ensureFarms(state);
+    var farm = {
+      id: FS.uid(), type: farmType, x: x, y: y,
+      stage: "planted", t: 0, cycle: check.def.cycle,
+      store: [], storeMax: check.def.store,
+      yield: check.def.yield, kind: check.def.kind,
+      boost: check.def.boost || 0, upgrades: {},
+      waiting: false, reservedBy: null
+    };
+    var td = FS.tileDef(check.tile);
+    farm.soilMul = td.farmMul || 1;
+    if (state.effects && state.effects.soilIgnore) farm.soilMul = Math.max(farm.soilMul, 1);
+    state.farms.list.push(farm);
+    FS.setTile(state.world, x, y, FS.makeTile(x, y, "plot", { biome: check.tile.biome }));
+    state.tutorial.done.farm = true;
+    return { ok: true, farm: farm };
+  };
+
   FS.purchaseFarm = function (state, x, y, farmType) {
     if (state._farmLock) return { ok: false, why: "Зачекай" };
     var check = FS.canPlaceFarm(state, x, y, farmType);
@@ -75,24 +98,10 @@
     state._farmLock = true;
     try {
       return FS.spendNutrition(state, check.cost, function () {
-        FS.ensureFarms(state);
-        var farm = {
-          id: FS.uid(), type: farmType, x: x, y: y,
-          stage: "planted", t: 0, cycle: check.def.cycle,
-          store: [], storeMax: check.def.store,
-          yield: check.def.yield, kind: check.def.kind,
-          boost: check.def.boost || 0, upgrades: {},
-          waiting: false, reservedBy: null
-        };
-        // soil mul
-        var td = FS.tileDef(check.tile);
-        farm.soilMul = td.farmMul || 1;
-        if (state.effects && state.effects.soilIgnore) farm.soilMul = Math.max(farm.soilMul, 1);
-        state.farms.list.push(farm);
-        FS.setTile(state.world, x, y, FS.makeTile(x, y, "plot", { biome: check.tile.biome }));
-        state.tutorial.done.farm = true;
+        var placed = FS.placeFarmAt(state, x, y, farmType);
+        if (!placed.ok) return placed;
         state.ui.toast = "Посаджено: " + check.def.name;
-        return { ok: true, farm: farm };
+        return placed;
       }, { reason: "farm" });
     } finally {
       state._farmLock = false;
@@ -159,13 +168,78 @@
     return null;
   };
 
+  /** Physical fruit sits on the plot cell — only place food grows. */
+  FS.ensureFarmFruit = function (state, farm) {
+    if (!farm || farm.type === "nursery") return;
+    var has = state.world.foods.some(function (f) {
+      return f.x === farm.x && f.y === farm.y;
+    });
+    if (has) return;
+    var kind = farm.kind || "berry";
+    var def = (FS.FOOD_DEFS && FS.FOOD_DEFS[kind]) || { nutrition: 1, xp: 1 };
+    state.world.foods.push({
+      id: FS.uid(), x: farm.x, y: farm.y,
+      kind: kind, phase: "ripe", age: 0,
+      nutrition: def.nutrition || 1, xp: def.xp || 1,
+      fromFarm: farm.id
+    });
+  };
+
+  FS.onFarmFoodTaken = function (state, food) {
+    if (!food || !food.fromFarm) return;
+    FS.ensureFarms(state);
+    var farm = state.farms.list.filter(function (f) { return f.id === food.fromFarm; })[0];
+    if (!farm) farm = FS.farmAt(state, food.x, food.y);
+    if (!farm) return;
+    if (farm.store && farm.store.length) farm.store.pop();
+    farm.stage = "recover";
+    farm.t = 0;
+    farm.waiting = false;
+  };
+
+  FS.seedStartFarms = function (state) {
+    FS.ensureFarms(state);
+    var have = state.farms.list.filter(function (f) { return f.type !== "nursery"; }).length;
+    var need = Math.max(0, 4 - have);
+    if (need <= 0) {
+      state.farms.list.forEach(function (f) {
+        if (f.stage === "ready") FS.ensureFarmFruit(state, f);
+      });
+      return;
+    }
+    var nest = state.world.nest;
+    var spots = [];
+    var r, dx, dy, x, y;
+    for (r = 2; r <= 7 && spots.length < need; r++) {
+      for (dx = -r; dx <= r && spots.length < need; dx++) {
+        for (dy = -r; dy <= r && spots.length < need; dy++) {
+          if (Math.abs(dx) + Math.abs(dy) !== r) continue;
+          x = nest.x + dx;
+          y = nest.y + dy;
+          if (spots.some(function (s) { return s.x === x && s.y === y; })) continue;
+          if (!FS.canPlaceFarm(state, x, y, "berry").ok) continue;
+          spots.push({ x: x, y: y });
+        }
+      }
+    }
+    spots.slice(0, need).forEach(function (s) {
+      var placed = FS.placeFarmAt(state, s.x, s.y, "berry");
+      if (!placed.ok) return;
+      var farm = placed.farm;
+      farm.stage = "ready";
+      farm.t = 0;
+      farm.store = [{ kind: "berry" }];
+      FS.ensureFarmFruit(state, farm);
+    });
+    state.tutorial.done.farm = true;
+  };
+
   FS.tickFarms = function (state, dt) {
     if (!state.started || state.paused) return;
     if (state.guide && state.guide.open) return;
     if (typeof document !== "undefined" && document.hidden) return;
     FS.ensureFarms(state);
 
-    // nursery boost map
     var boostAt = Object.create(null);
     state.farms.list.forEach(function (f) {
       if (f.type === "nursery" && f.boost) {
@@ -186,6 +260,11 @@
       if (f.upgrades && f.upgrades.speed) speed *= 0.9;
       if (state.effects && state.effects.farmSpeedMul) speed *= state.effects.farmSpeedMul;
 
+      if (f.stage === "ready") {
+        FS.ensureFarmFruit(state, f);
+        return;
+      }
+
       if (f.stage === "planted" || f.stage === "growing" || f.stage === "recover") {
         f.t += dt * (1 / Math.max(0.5, speed));
         var need = f.stage === "recover" ? f.cycle * 0.35 : f.cycle;
@@ -195,18 +274,14 @@
             f.stage = "planted";
             f.t = 0;
           } else {
-            // produce into store
             var space = f.storeMax - f.store.length;
-            var n = Math.min(f.yield || 1, space);
-            if (n <= 0) {
-              f.stage = "ready";
-              f.waiting = true;
-            } else {
-              for (var i = 0; i < n; i++) f.store.push({ kind: f.kind || "berry" });
-              f.stage = "ready";
-              f.waiting = f.store.length >= f.storeMax;
-              f.t = 0;
-            }
+            var n = Math.min(f.yield || 1, Math.max(1, space));
+            f.store = [];
+            for (var i = 0; i < n; i++) f.store.push({ kind: f.kind || "berry" });
+            f.stage = "ready";
+            f.waiting = false;
+            f.t = 0;
+            FS.ensureFarmFruit(state, f);
           }
         }
       }

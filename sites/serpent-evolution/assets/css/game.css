@@ -28,7 +28,8 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); c
 }
 #ui-root { position: fixed; inset: 0; pointer-events: none; z-index: 5; }
 #ui-root .btn, #ui-root .panel, #ui-root .panel *, #ui-root .overlay, #ui-root .overlay *,
-#ui-root input, #ui-root .tnode, #ui-root .guide-overlay, #ui-root .guide-overlay * { pointer-events: auto; }
+#ui-root input, #ui-root .tnode, #ui-root .guide-overlay, #ui-root .guide-overlay *,
+#ui-root .build-palette, #ui-root .build-palette * { pointer-events: auto; }
 
 .guide-overlay {
   position: absolute; inset: 0; z-index: 40;
@@ -149,18 +150,26 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
   cursor: grab; touch-action: none;
 }
 .talent-tree {
-  position: relative; width: 900px; height: 820px; transform-origin: 0 0;
+  position: relative; transform-origin: 0 0; will-change: transform;
 }
-.talent-links { position: absolute; inset: 0; pointer-events: none; }
+.talent-links { position: absolute; left: 0; top: 0; pointer-events: none; overflow: visible; }
 .tlink { stroke: #456348; stroke-width: 2; }
 .tlink.on { stroke: #b5d398; stroke-width: 2.5; }
+.tbranch {
+  position: absolute; font-size: 11px; letter-spacing: 0.06em; opacity: 0.55; text-align: center;
+  pointer-events: none;
+}
 .tnode {
-  position: absolute; width: 118px; padding: 8px 8px 8px 10px; border-radius: 12px;
+  position: absolute; padding: 6px 8px; border-radius: 12px; box-sizing: border-box;
   border: 1px solid rgba(255,255,255,0.14); background: rgba(24,38,32,0.92);
   color: inherit; font: 11px var(--font); text-align: left; cursor: pointer;
+  overflow: hidden; display: flex; flex-direction: column; justify-content: center;
 }
 .tnode .ticon { opacity: 0.7; margin-right: 4px; }
-.tnode b { display: block; font-size: 12px; margin-top: 2px; }
+.tnode b {
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden; font-size: 12px; line-height: 1.2; margin-top: 2px; font-weight: 600;
+}
 .tnode.on { border-color: var(--mint); background: rgba(105,224,190,0.16); box-shadow: inset 0 0 0 1px rgba(105,224,190,0.25); }
 .tnode.can { border-color: var(--amber); box-shadow: 0 0 0 1px rgba(242,213,151,0.35); }
 .tnode.fork { outline: 1px dashed rgba(232,120,144,0.55); }
@@ -184,7 +193,22 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
 .offer {
   border: 1px solid var(--line); border-radius: 12px; padding: 12px; margin-bottom: 10px;
 }
+.offer.confirm { border-color: var(--amber); box-shadow: 0 0 0 1px rgba(232,184,106,0.35); }
 .offer em { display: block; font-style: normal; color: var(--amber); font-size: 12px; margin: 6px 0; }
+.expand-err { color: var(--danger); font-size: 13px; margin: 8px 0; }
+
+.build-palette {
+  position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%);
+  z-index: 12; pointer-events: auto; width: min(720px, 94vw);
+  background: var(--glass); border: 1px solid var(--line); border-radius: 16px;
+  padding: 10px 14px; backdrop-filter: blur(8px);
+}
+.build-palette.hidden { display: none; }
+.bp-title { font-size: 12px; letter-spacing: 0.08em; color: var(--mint); margin-bottom: 4px; }
+.bp-wood { font-size: 13px; margin-bottom: 8px; }
+.bp-tools { display: flex; flex-wrap: wrap; gap: 6px; }
+.bp-msg { color: var(--amber); font-size: 12px; margin: 6px 0 0; }
+#wood { opacity: 0.95; }
 
 @media (max-width: 900px) {
   #hud { grid-template-columns: 1fr; }

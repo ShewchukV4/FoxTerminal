@@ -55,8 +55,11 @@
 
     this.drawTiles(state);
     this.drawNest(state);
+    this.drawBuildings(state);
+    this.drawWoodNodes(state);
     this.drawLandmarks(state);
     this.drawItems(state);
+    this.drawBuildPreview(state);
     this.drawSnakes(state);
     this.drawFruitArrow(state);
     this.drawForesight(state);
@@ -69,64 +72,57 @@
 
   FS.Renderer.prototype.drawTiles = function (state) {
     var ctx = this.ctx;
-    var q = state.settings.quality;
     var cell = FS.CELL;
-    var colors = {
-      meadow: "#243528", fertile: "#3a5a32", soil: "#3a4030", path: "#4a5a40",
-      mud: "#3a3028", shallow: "#2a4850", deep: "#1a3040", stone: "#4A5560",
-      thicket: "#1e3a28", bridge: "#6a5a40", plot: "#4a6a38", home_door: "#5a4a38"
-    };
+    // Calm base field: soft green soil; water/stone/plot as clear exceptions — not a 12-color mosaic
+    var base = FS.COLORS.soil || "#243528";
+    var pathTint = "#2a3a2e";
     for (var key in state.world.tiles) {
       var t = state.world.tiles[key];
       var x = t.x * cell, y = t.y * cell;
       var tt = t.tt || (t.block ? "stone" : "meadow");
       ctx.globalAlpha = 0.95;
-      ctx.fillStyle = colors[tt] || FS.COLORS.soil;
+      if (tt === "deep") ctx.fillStyle = "#1a3040";
+      else if (tt === "shallow") ctx.fillStyle = "#243e48";
+      else if (tt === "stone" || t.block) ctx.fillStyle = "#2e3438";
+      else if (tt === "bridge") ctx.fillStyle = "#3a4030";
+      else if (tt === "plot") ctx.fillStyle = "#2c4028";
+      else if (tt === "path") ctx.fillStyle = pathTint;
+      else ctx.fillStyle = base;
       ctx.fillRect(x + 1, y + 1, cell - 2, cell - 2);
-      if (tt === "path") {
-        ctx.strokeStyle = "rgba(242,213,151,0.25)";
-        ctx.strokeRect(x + 8, y + 8, cell - 16, cell - 16);
-      }
-      if (tt === "fertile" && q !== "low") {
-        ctx.fillStyle = "rgba(181,211,152,0.2)";
-        ctx.beginPath();
-        ctx.arc(x + cell * 0.5, y + cell * 0.5, 6, 0, Math.PI * 2);
-        ctx.fill();
-      }
       if (tt === "deep" || tt === "shallow") {
-        ctx.fillStyle = tt === "deep" ? "rgba(40,80,100,0.5)" : "rgba(60,120,140,0.35)";
-        ctx.fillRect(x + 2, y + 2, cell - 4, cell - 4);
+        ctx.fillStyle = tt === "deep" ? "rgba(50,100,120,0.45)" : "rgba(70,130,150,0.3)";
+        ctx.fillRect(x + 3, y + 3, cell - 6, cell - 6);
       }
       if (tt === "stone" || t.block) {
         ctx.globalAlpha = 1;
         ctx.fillStyle = FS.COLORS.stone;
-        roundRect(ctx, x + 6, y + 6, cell - 12, cell - 12, 6);
+        roundRect(ctx, x + 7, y + 7, cell - 14, cell - 14, 5);
         ctx.fill();
       }
       if (tt === "bridge") {
         ctx.fillStyle = "#8a7a55";
         ctx.fillRect(x + 4, y + cell * 0.35, cell - 8, cell * 0.3);
       }
-      ctx.globalAlpha = 0.06;
+      ctx.globalAlpha = 0.05;
       ctx.strokeStyle = "#fff";
       ctx.strokeRect(x, y, cell, cell);
     }
     ctx.globalAlpha = 1;
-    // farms overlay
     if (state.farms && state.farms.list) {
       state.farms.list.forEach(function (f) {
         var fx = f.x * cell, fy = f.y * cell;
-        ctx.fillStyle = f.stage === "ready" ? "rgba(232,184,106,0.45)" : "rgba(105,224,190,0.25)";
-        ctx.fillRect(fx + 6, fy + 6, cell - 12, cell - 12);
-        if (f.stage === "ready") {
-          ctx.fillStyle = FS.COLORS.amber;
-          ctx.font = "12px Segoe UI";
-          ctx.textAlign = "center";
-          ctx.fillText("◆", fx + cell / 2, fy + cell / 2 + 4);
+        ctx.fillStyle = "rgba(90,120,70,0.55)";
+        ctx.fillRect(fx + 5, fy + 5, cell - 10, cell - 10);
+        if (f.stage === "ready" && f.store && f.store.length) {
+          FS.drawFruit(ctx, f.kind || "berry", fx + cell / 2, fy + cell / 2, 0.7, {
+            phase: "ripe", time: state.time, reducedMotion: state.settings.reducedMotion
+          });
+        } else if (f.stage === "growing" || f.stage === "planted") {
+          ctx.fillStyle = "#6a9a58";
+          ctx.fillRect(fx + cell * 0.42, fy + cell * 0.35, 4, cell * 0.3);
         }
       });
     }
-    // border
     ctx.strokeStyle = "rgba(105,224,190,0.35)";
     ctx.lineWidth = 3;
     ctx.strokeRect(
@@ -135,6 +131,113 @@
       (state.world.maxX - state.world.minX + 1) * cell + 4,
       (state.world.maxY - state.world.minY + 1) * cell + 4
     );
+  };
+
+  FS.Renderer.prototype.drawBuildings = function (state) {
+    if (!state.buildings) return;
+    var ctx = this.ctx;
+    var cell = FS.CELL;
+    state.buildings.forEach(function (b) {
+      var x = b.x * cell, y = b.y * cell;
+      if (b.kind === "fence") {
+        ctx.fillStyle = b.owner === "enemy" ? "#6a4040" : "#8a6a40";
+        ctx.fillRect(x + 4, y + 10, cell - 8, 8);
+        ctx.fillRect(x + 8, y + 4, 6, cell - 8);
+      } else if (b.kind === "gate") {
+        ctx.strokeStyle = b.closed !== false ? "#c4a060" : "#69E0BE";
+        ctx.lineWidth = 3;
+        ctx.strokeRect(x + 6, y + 6, cell - 12, cell - 12);
+        ctx.fillStyle = b.closed !== false ? "rgba(140,100,50,0.45)" : "rgba(105,224,190,0.2)";
+        ctx.fillRect(x + 8, y + 8, cell - 16, cell - 16);
+      } else if (b.kind === "block") {
+        ctx.fillStyle = "#5a6068";
+        roundRect(ctx, x + 5, y + 5, cell - 10, cell - 10, 4);
+        ctx.fill();
+      } else if (b.kind === "hut" || b.kind === "shed") {
+        ctx.fillStyle = b.kind === "shed" ? "#6a5a38" : "#7a5a40";
+        ctx.fillRect(x + 6, y + 10, cell - 12, cell - 14);
+        ctx.fillStyle = "#503828";
+        ctx.beginPath();
+        ctx.moveTo(x + 4, y + 12);
+        ctx.lineTo(x + cell / 2, y + 4);
+        ctx.lineTo(x + cell - 4, y + 12);
+        ctx.fill();
+      }
+    });
+  };
+
+  FS.Renderer.prototype.drawWoodNodes = function (state) {
+    if (!state.woodNodes) return;
+    var ctx = this.ctx;
+    var cell = FS.CELL;
+    // trees first (behind branch piles)
+    state.woodNodes.forEach(function (n) {
+      if (n.kind !== "tree") return;
+      var x = (n.x + 0.5) * cell, y = (n.y + 0.5) * cell;
+      // canopy shade
+      ctx.fillStyle = "rgba(40,70,40,0.28)";
+      ctx.beginPath();
+      ctx.arc(x, y - 2, cell * 0.72, 0, Math.PI * 2);
+      ctx.fill();
+      // trunk
+      ctx.fillStyle = n.cd > 0 ? "#5a4830" : "#6a5030";
+      ctx.fillRect(x - 4, y - 2, 8, cell * 0.42);
+      // foliage
+      ctx.fillStyle = n.cd > 0 ? "#3a5a38" : "#4a7a48";
+      ctx.beginPath();
+      ctx.arc(x, y - cell * 0.28, cell * 0.38, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#5a9a58";
+      ctx.beginPath();
+      ctx.arc(x - 8, y - cell * 0.18, cell * 0.26, 0, Math.PI * 2);
+      ctx.arc(x + 9, y - cell * 0.2, cell * 0.24, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#e8d0a0";
+      ctx.font = "10px Segoe UI";
+      ctx.textAlign = "center";
+      ctx.fillText("F", x, y + cell * 0.42);
+    });
+    state.woodNodes.forEach(function (n) {
+      if (n.kind === "tree") return;
+      if (n.cd > 0 && n.kind === "wood") return;
+      var x = (n.x + 0.5) * cell, y = (n.y + 0.5) * cell;
+      if (n.kind === "stump") {
+        ctx.fillStyle = n.cd > 0 ? "rgba(90,70,40,0.35)" : "#6a5030";
+        ctx.beginPath();
+        ctx.arc(x, y, cell * 0.22, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "#c4a060";
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      } else {
+        // branch pile under / beside tree
+        ctx.fillStyle = "#8a6a38";
+        ctx.fillRect(x - 10, y - 3, 20, 6);
+        ctx.fillRect(x - 6, y - 8, 4, 14);
+        ctx.fillRect(x + 2, y - 6, 4, 12);
+        ctx.fillStyle = "#e8d0a0";
+        ctx.font = "10px Segoe UI";
+        ctx.textAlign = "center";
+        ctx.fillText("≡", x, y + 12);
+      }
+    });
+  };
+
+  FS.Renderer.prototype.drawBuildPreview = function (state) {
+    if (!state.buildMode || !state.buildMode.on || !state.buildMode.hover) return;
+    var ctx = this.ctx;
+    var cell = FS.CELL;
+    var cells = [state.buildMode.hover];
+    if (state.buildMode.drag && state.buildMode.tool === "fence") {
+      cells = FS.lineCells(state.buildMode.drag.from, state.buildMode.drag.to || state.buildMode.hover);
+    }
+    cells.forEach(function (c) {
+      var ok = state.buildMode.demolish
+        ? !!(FS.buildingAt(state, c.x, c.y) && FS.buildingAt(state, c.x, c.y).owner === "player")
+        : (state.buildMode.tool && FS.canBuildAt(state, c.x, c.y, state.buildMode.tool).ok);
+      ctx.fillStyle = ok ? "rgba(105,224,190,0.35)" : "rgba(224,116,106,0.35)";
+      ctx.fillRect(c.x * cell + 2, c.y * cell + 2, cell - 4, cell - 4);
+    });
   };
 
   FS.Renderer.prototype.drawNest = function (state) {
@@ -156,19 +259,37 @@
   FS.Renderer.prototype.drawLandmarks = function (state) {
     var ctx = this.ctx;
     var cell = FS.CELL;
+    var icons = {
+      bush: "❀", drop_pad: "▣", ruin: "⌂", spring: "💧", reward_glade: "✧",
+      fertile_garden: "⚘", enemy_nest: "⚠", bridge_site: "≂", rival: "◇"
+    };
     (state.world.landmarks || []).forEach(function (lm) {
       var x = (lm.x + 0.5) * cell, y = (lm.y + 0.5) * cell;
-      ctx.fillStyle = lm.done ? "rgba(181,211,152,0.25)" : "rgba(242,213,151,0.35)";
-      ctx.beginPath();
-      ctx.arc(x, y, cell * 0.35, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = FS.COLORS.amber;
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
+      if (lm.kind === "drop_pad") {
+        ctx.strokeStyle = "rgba(160,120,80,0.7)";
+        ctx.strokeRect(lm.x * cell + 6, lm.y * cell + 6, cell - 12, cell - 12);
+        return;
+      }
+      if (lm.kind === "enemy_nest") {
+        ctx.fillStyle = "rgba(180,60,60,0.35)";
+        ctx.beginPath();
+        ctx.arc(x, y, cell * 0.4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "#E0746A";
+        ctx.stroke();
+      } else {
+        ctx.fillStyle = lm.done ? "rgba(181,211,152,0.2)" : "rgba(242,213,151,0.28)";
+        ctx.beginPath();
+        ctx.arc(x, y, cell * 0.32, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = lm.kind === "bush" ? "#b5d398" : FS.COLORS.amber;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
       ctx.fillStyle = FS.COLORS.text;
-      ctx.font = "10px Segoe UI";
+      ctx.font = "11px Segoe UI";
       ctx.textAlign = "center";
-      ctx.fillText(lm.kind === "bush" ? "❀" : "◆", x, y + 3);
+      ctx.fillText(icons[lm.kind] || "?", x, y + 4);
     });
   };
 
