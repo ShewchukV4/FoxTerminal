@@ -115,6 +115,12 @@
           "name": "Fox Realm Forge",
           "url": "./fox-realm-forge/index.html",
           "description": "Генератор фентезі-світу: Voronoi, біоми, річки, держави, міста (як Azgaar FMG)"
+        },
+        {
+          "id": "fox-genesis",
+          "name": "FOX GENESIS",
+          "url": "./fox-genesis/index.html",
+          "description": "Еволюційна сага: мутації, колонія, біоми, союзники — зміни себе і переживи зміну світу"
         }
       ]
     },
