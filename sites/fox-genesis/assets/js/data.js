@@ -3,8 +3,41 @@ window.FoxGenesis = window.FoxGenesis || {};
 (function (FG) {
   "use strict";
 
-  FG.VERSION = "1.0.0";
-  FG.SAVE_SCHEMA = 1;
+  FG.VERSION = "1.1.0";
+  FG.SAVE_SCHEMA = 2;
+
+  /* Field heal (R): cargo biomass first, then colony stock */
+  FG.FIELD_HEAL = { hp: 20, biomass: 3, cd: 4, cast: 0.35 };
+  FG.NEST_REST = { delay: 1.4, rate: 7, enemyRadius: 160 };
+  FG.GENERATION_COST = { biomass: 35, mineral: 10, sample: 1, minGenTime: 120, minKills: 3 };
+
+  /* Active abilities only — passives never steal Q/E/RMB */
+  FG.ABILITY_DEFS = {
+    needles: { energy: 10, cd: 0.7, group: "attack", miss: "spend" },
+    acid: { energy: 12, cd: 0.9, group: "attack", miss: "spend" },
+    electric: { energy: 14, cd: 1.1, group: "attack", miss: "spend" },
+    web: { energy: 10, cd: 1.0, group: "attack", miss: "spend" },
+    tentacle: { energy: 9, cd: 0.8, group: "attack", miss: "refund_partial" },
+    tailmace: { energy: 12, cd: 0.95, group: "attack", miss: "spend" },
+    parasite: { energy: 15, cd: 4, group: "attack", miss: "spend" },
+    sporeburst: { energy: 11, cd: 2.2, group: "utility", miss: "spend" },
+    biolume: { energy: 6, cd: 3, group: "utility", miss: "spend" },
+    camouflage: { energy: 8, cd: 4, group: "utility", miss: "spend" },
+    gasbags: { energy: 10, cd: 2.5, group: "utility", miss: "spend" },
+    diggers: { energy: 12, cd: 2.8, group: "utility", miss: "spend" },
+    regen: { energy: 10, cd: 3.5, biomass: 2, group: "support", miss: "block" },
+    pheromone: { energy: 8, cd: 5, group: "support", miss: "spend" },
+    symbiont: { energy: 12, cd: 6, group: "support", miss: "spend" },
+    vibesense: { energy: 6, cd: 3, group: "utility", miss: "spend" },
+    filter: { energy: 4, cd: 2, group: "utility", miss: "spend" },
+    splitform: { energy: 20, cd: 8, group: "late", miss: "spend" }
+  };
+
+  FG.PATHS = {
+    hunter: { name: "Мисливець", steps: ["needles", "jaws", "spikes"] },
+    guardian: { name: "Вартовий", steps: ["carapace", "filmshield", "regen"] },
+    colony: { name: "Колонія", steps: ["pheromone", "incubator", "garden"] }
+  };
   FG.WORLD_W = 4200;
   FG.WORLD_H = 4200;
   FG.TILE = 48;
@@ -319,7 +352,7 @@ window.FoxGenesis = window.FoxGenesis || {};
     store: { id: "store", name: "Сховище", cost: { biomass: 15, mineral: 12 }, radius: 70, desc: "Запас для експедицій." },
     turret: { id: "turret", name: "Захисний наріст", cost: { biomass: 22, mineral: 14 }, radius: 160, desc: "Стріляє / затримує ворогів." },
     healbay: { id: "healbay", name: "Відновлювальна камера", cost: { biomass: 24, mineral: 8 }, radius: 80, desc: "Лікує і повертає у стрій." },
-    tunnel: { id: "tunnel", name: "Тунельний вузол", cost: { biomass: 35, mineral: 20 }, radius: 60, desc: "Зв’язок між гніздами." }
+    tunnel: { id: "tunnel", name: "Тунельний вузол", cost: { biomass: 35, mineral: 20 }, radius: 60, desc: "Зв’язок між гніздами.", hidden: true, stub: true }
   };
 
   FG.ROLES = {
@@ -385,12 +418,17 @@ window.FoxGenesis = window.FoxGenesis || {};
   ];
 
   FG.HELP_TEXT = [
-    "WASD — рух · Миша — напрямок",
-    "ЛКМ — атака · ПКМ — здібність органа",
-    "Q / E — інші здібності · Shift — ривок",
-    "F — взаємодія / збір / гніздо",
-    "Tab — карта · M — еволюція · C — колонія",
-    "Пробіл — тактична пауза · Esc — меню",
-    "Перебудова тіла застосовується лише в гнізді."
+    "WASD — рух · Миша — напрямок · ЛКМ — укус",
+    "ПКМ / Q / E — призначені здібності органів (див. панель знизу)",
+    "R — польове лікування (біомаса з вантажу або колонії)",
+    "Shift — ривок (потрібні ривкові лапи + енергія)",
+    "F — збір / здати вантаж у гнізді · біля серця — безкоштовний відпочинок",
+    "Tab — карта · M — еволюція · C — колонія · H — довідка",
+    "Пробіл — пауза · Esc — меню. Лікування й перебудова — у гнізді або R."
   ];
+
+  FG.SLOT_NAMES = {
+    head: "Голова / чуття", attack: "Атака", back: "Спина / захист",
+    move: "Рух", aux: "Допоміжний"
+  };
 })(window.FoxGenesis);

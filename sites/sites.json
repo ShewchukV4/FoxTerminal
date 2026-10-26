@@ -121,6 +121,12 @@
           "name": "FOX GENESIS",
           "url": "./fox-genesis/index.html",
           "description": "Еволюційна сага: мутації, колонія, біоми, союзники — зміни себе і переживи зміну світу"
+        },
+        {
+          "id": "serpent-evolution",
+          "name": "FOX SERPENT: EVOLUTION",
+          "url": "./serpent-evolution/index.html",
+          "description": "Клітинкова змійка: стоп коли відпустив, таланти vs серця, території й розумні змії"
         }
       ]
     },

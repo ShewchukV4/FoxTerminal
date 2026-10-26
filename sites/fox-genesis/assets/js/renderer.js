@@ -81,8 +81,11 @@
     ctx.translate(-this.cam.x, -this.cam.y);
 
     this.drawTerrain(state, q);
+    this.drawBarriers(state);
     this.drawWater(state);
+    this.drawDecor(state, q);
     this.drawResources(state);
+    this.drawLocations(state);
     this.drawBuildings(state);
     this.drawWebs(state);
     this.drawHazards(state);
@@ -90,6 +93,7 @@
     this.drawProjectiles(state);
     this.drawParticles(state, q);
     this.drawTelegraphs(state);
+    this.drawWaypoint(state);
     this.drawFog(state);
 
     ctx.restore();
@@ -103,7 +107,8 @@
   FG.Renderer.prototype.drawTerrain = function (state, q) {
     var ctx = this.ctx;
     var viewR = (Math.max(this.canvas.width, this.canvas.height) / this.dpr) / this.cam.z * 0.7;
-    var step = q === "low" ? 96 : 64;
+    // Large natural patches — step fixed for geography; quality only affects edge soft moss
+    var step = 80;
     var x0 = Math.floor((this.cam.x - viewR) / step) * step;
     var y0 = Math.floor((this.cam.y - viewR) / step) * step;
     var x1 = this.cam.x + viewR;
@@ -113,49 +118,25 @@
       for (var y = y0; y < y1; y += step) {
         var bio = FG.biomeAtWorld(state.world, x + step / 2, y + step / 2);
         var b = FG.BIOMES[bio];
-        var n = FG.hash2(Math.floor(x / step), Math.floor(y / step), state.world.seed);
+        var n = FG.hash2(Math.floor(x / 80), Math.floor(y / 80), state.world.seed);
+        var jx = (FG.hash2(Math.floor(x / 80), Math.floor(y / 80), state.world.seed + 3) - 0.5) * 28;
+        var jy = (FG.hash2(Math.floor(x / 80), Math.floor(y / 80), state.world.seed + 7) - 0.5) * 28;
         ctx.fillStyle = b.color;
-        ctx.globalAlpha = 0.85 + n * 0.15;
+        ctx.globalAlpha = 0.88 + n * 0.12;
         ctx.beginPath();
-        roundPatch(ctx, x + n * 10, y + n * 8, step * 1.15, step * 1.05, 18);
+        roundPatch(ctx, x + jx, y + jy, step * (1.05 + n * 0.25), step * (0.95 + n * 0.2), 22 + n * 10);
         ctx.fill();
-
-        // moss / detail
-        if (q !== "low" && n > 0.55) {
-          ctx.globalAlpha = 0.2;
+        if (q !== "low" && n > 0.5) {
+          ctx.globalAlpha = 0.18;
           ctx.fillStyle = b.accent;
           ctx.beginPath();
-          ctx.ellipse(x + 20 + n * 30, y + 20 + n * 20, 8 + n * 10, 5 + n * 6, n, 0, Math.PI * 2);
+          ctx.ellipse(x + 20 + n * 30 + jx, y + 20 + n * 20 + jy, 10 + n * 12, 6 + n * 8, n, 0, Math.PI * 2);
           ctx.fill();
-        }
-        // trees in grove
-        if (bio === "grove" && n > 0.72 && q !== "low") {
-          this.drawTree(ctx, x + 24, y + 24, b.accent, n);
-        }
-        if (bio === "swamp" && n > 0.7) {
-          ctx.globalAlpha = 0.35;
-          ctx.fillStyle = "#6A9A50";
-          ctx.beginPath();
-          ctx.arc(x + 30, y + 28, 10 + n * 8, 0, Math.PI * 2);
-          ctx.fill();
-        }
-        if (bio === "crystal" && n > 0.75) {
-          this.drawCrystal(ctx, x + 28, y + 26, b.accent, n);
-        }
-        if (bio === "roots" && n > 0.68) {
-          ctx.strokeStyle = b.accent;
-          ctx.globalAlpha = 0.35;
-          ctx.lineWidth = 3;
-          ctx.beginPath();
-          ctx.moveTo(x + 10, y + 40);
-          ctx.quadraticCurveTo(x + 30, y + 10, x + 50, y + 35);
-          ctx.stroke();
         }
       }
     }
     ctx.globalAlpha = 1;
 
-    // nest glow
     var nest = state.world.nest;
     var g = ctx.createRadialGradient(nest.x, nest.y, 10, nest.x, nest.y, 140);
     g.addColorStop(0, "rgba(105,224,190,0.35)");
@@ -164,6 +145,117 @@
     ctx.beginPath();
     ctx.arc(nest.x, nest.y, 140, 0, Math.PI * 2);
     ctx.fill();
+    // nest rest radius ring
+    ctx.strokeStyle = "rgba(105,224,190,0.35)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(nest.x, nest.y, 110, 0, Math.PI * 2);
+    ctx.stroke();
+  };
+
+  FG.Renderer.prototype.drawDecor = function (state, q) {
+    var ctx = this.ctx;
+    var decor = state.world.decor || [];
+    var lim = q === "low" ? 0.55 : (q === "medium" ? 0.35 : 0.15);
+    for (var i = 0; i < decor.length; i++) {
+      var d = decor[i];
+      if (d.n < lim) continue;
+      if (FG.dist(d.x, d.y, this.cam.x, this.cam.y) > 850) continue;
+      if (!FG.isExplored(state.world, d.x, d.y)) continue;
+      var accent = FG.BIOMES[d.biome].accent;
+      if (d.kind === "tree") this.drawTree(ctx, d.x, d.y, accent, d.n * d.scale);
+      else if (d.kind === "mushroom") {
+        ctx.globalAlpha = 0.4;
+        ctx.fillStyle = "#6A9A50";
+        ctx.beginPath();
+        ctx.arc(d.x, d.y, 8 * d.scale, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      } else if (d.kind === "crystal") this.drawCrystal(ctx, d.x, d.y, accent, d.n);
+      else if (d.kind === "root") {
+        ctx.strokeStyle = accent;
+        ctx.globalAlpha = 0.4;
+        ctx.lineWidth = 3 * d.scale;
+        ctx.beginPath();
+        ctx.moveTo(d.x - 20, d.y + 10);
+        ctx.quadraticCurveTo(d.x, d.y - 20, d.x + 24, d.y + 8);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      } else {
+        ctx.strokeStyle = accent;
+        ctx.globalAlpha = 0.3;
+        ctx.beginPath();
+        ctx.moveTo(d.x, d.y);
+        ctx.quadraticCurveTo(d.x + 10, d.y - 12, d.x + 18, d.y);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
+    }
+  };
+
+  FG.Renderer.prototype.drawBarriers = function (state) {
+    var ctx = this.ctx;
+    for (var i = 0; i < state.world.barriers.length; i++) {
+      var b = state.world.barriers[i];
+      if (FG.dist(b.x, b.y, this.cam.x, this.cam.y) > 900) continue;
+      if (!FG.isExplored(state.world, b.x, b.y)) continue;
+      // contact shadow
+      ctx.fillStyle = "rgba(0,0,0,0.35)";
+      ctx.beginPath();
+      ctx.ellipse(b.x, b.y + b.h * 0.35, b.w * 0.55, b.h * 0.28, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = b.kind === "rock" ? "#3A4558" : "#4A3828";
+      ctx.strokeStyle = b.kind === "rock" ? "#8AB4E8" : "#F0B66A";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      roundPatch(ctx, b.x - b.w / 2, b.y - b.h / 2, b.w, b.h, 8);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = "rgba(229,238,232,0.55)";
+      ctx.font = "10px Segoe UI,sans-serif";
+      ctx.textAlign = "center";
+      var needName = (FG.ORGANS[b.needs] || {}).name || b.needs;
+      ctx.fillText(needName, b.x, b.y - b.h / 2 - 6);
+    }
+  };
+
+  FG.Renderer.prototype.drawLocations = function (state) {
+    var ctx = this.ctx;
+    var locs = state.world.locations || [];
+    for (var i = 0; i < locs.length; i++) {
+      var l = locs[i];
+      if (FG.dist(l.x, l.y, this.cam.x, this.cam.y) > 900) continue;
+      if (!FG.isExplored(state.world, l.x, l.y)) continue;
+      ctx.strokeStyle = l.done ? "rgba(120,130,140,0.5)" : FG.COLORS.lilac;
+      ctx.lineWidth = 2;
+      ctx.globalAlpha = 0.7;
+      ctx.beginPath();
+      ctx.arc(l.x, l.y, l.r || 50, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = FG.COLORS.text;
+      ctx.font = "11px Segoe UI,sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(l.name, l.x, l.y - (l.r || 50) - 8);
+    }
+  };
+
+  FG.Renderer.prototype.drawWaypoint = function (state) {
+    if (!state.ui.waypoint) return;
+    var ctx = this.ctx;
+    var w = state.ui.waypoint;
+    var d = FG.dist(state.player.x, state.player.y, w.x, w.y);
+    ctx.strokeStyle = "rgba(240,182,106,0.55)";
+    ctx.setLineDash([8, 6]);
+    ctx.beginPath();
+    ctx.moveTo(state.player.x, state.player.y);
+    ctx.lineTo(w.x, w.y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = FG.COLORS.amber;
+    ctx.font = "12px Segoe UI,sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText((w.label || "ціль") + " · " + Math.round(d) + "м", w.x, w.y - 16);
   };
 
   FG.Renderer.prototype.drawTree = function (ctx, x, y, accent, n) {
@@ -257,30 +349,101 @@
 
   FG.Renderer.prototype.drawBuildings = function (state) {
     var ctx = this.ctx;
+    var pulse = 0.7 + 0.3 * Math.sin((state.world.time || 0) * 2);
     for (var i = 0; i < state.colony.buildings.length; i++) {
       var b = state.colony.buildings[i];
       var def = FG.BUILDINGS[b.type];
-      ctx.fillStyle = "rgba(85,201,219,0.15)";
+      ctx.fillStyle = "rgba(0,0,0,0.3)";
       ctx.beginPath();
-      ctx.arc(b.x, b.y, 22, 0, Math.PI * 2);
+      ctx.ellipse(b.x, b.y + 12, 18, 8, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.strokeStyle = FG.COLORS.teal;
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.arc(b.x, b.y, 16, 0, Math.PI * 2);
-      ctx.stroke();
       if (b.type === "heart") {
+        ctx.fillStyle = "rgba(105,224,190," + (0.15 * pulse) + ")";
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, 28, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = FG.COLORS.mint;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, 14, 0, Math.PI * 2);
+        ctx.stroke();
         ctx.fillStyle = FG.COLORS.mint;
         ctx.beginPath();
-        ctx.arc(b.x, b.y, 6, 0, Math.PI * 2);
+        ctx.arc(b.x, b.y, 5 * pulse, 0, Math.PI * 2);
         ctx.fill();
+        // roots
+        ctx.strokeStyle = "rgba(105,224,190,0.35)";
+        for (var r = 0; r < 4; r++) {
+          var ang = r * Math.PI / 2 + 0.3;
+          ctx.beginPath();
+          ctx.moveTo(b.x, b.y);
+          ctx.quadraticCurveTo(b.x + Math.cos(ang) * 20, b.y + Math.sin(ang) * 20, b.x + Math.cos(ang) * 36, b.y + Math.sin(ang) * 36);
+          ctx.stroke();
+        }
+      } else if (b.type === "incubator") {
+        ctx.fillStyle = "rgba(173,140,222,0.35)";
+        ctx.beginPath();
+        ctx.ellipse(b.x, b.y, 16, 22, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = FG.COLORS.lilac;
+        ctx.stroke();
+      } else if (b.type === "garden") {
+        ctx.fillStyle = "rgba(105,224,190,0.25)";
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, 20, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = FG.COLORS.amber;
+        for (var g2 = 0; g2 < 5; g2++) {
+          ctx.beginPath();
+          ctx.arc(b.x + Math.cos(g2) * 10, b.y + Math.sin(g2) * 10, 3, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      } else if (b.type === "healbay") {
+        ctx.strokeStyle = FG.COLORS.ally;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, 18, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.fillStyle = "rgba(123,207,154,0.35)";
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, 8 * pulse, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (b.type === "turret") {
+        ctx.fillStyle = "#8AB4E8";
+        ctx.beginPath();
+        ctx.moveTo(b.x, b.y - 16);
+        ctx.lineTo(b.x + 12, b.y + 10);
+        ctx.lineTo(b.x - 12, b.y + 10);
+        ctx.closePath();
+        ctx.fill();
+      } else if (b.type === "store") {
+        ctx.fillStyle = "rgba(85,201,219,0.35)";
+        ctx.fillRect(b.x - 14, b.y - 12, 28, 24);
+        ctx.strokeStyle = FG.COLORS.teal;
+        ctx.strokeRect(b.x - 14, b.y - 12, 28, 24);
+      } else if (b.type === "archive") {
+        ctx.strokeStyle = FG.COLORS.lilac;
+        ctx.strokeRect(b.x - 12, b.y - 14, 24, 28);
+        ctx.fillStyle = FG.COLORS.lilac;
+        ctx.fillRect(b.x - 8, b.y - 6, 16, 3);
+      } else {
+        ctx.strokeStyle = FG.COLORS.teal;
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, 16, 0, Math.PI * 2);
+        ctx.stroke();
       }
-      if (state.settings.showNames) {
-        ctx.fillStyle = FG.COLORS.text;
-        ctx.font = "11px Segoe UI, sans-serif";
-        ctx.textAlign = "center";
-        ctx.fillText(def.name, b.x, b.y - 28);
+      if (b.hp < b.hpMax) {
+        ctx.fillStyle = "rgba(0,0,0,0.4)";
+        ctx.fillRect(b.x - 16, b.y - 30, 32, 4);
+        ctx.fillStyle = FG.COLORS.danger;
+        ctx.fillRect(b.x - 16, b.y - 30, 32 * (b.hp / b.hpMax), 4);
       }
+      ctx.fillStyle = FG.COLORS.text;
+      ctx.font = "10px Segoe UI, sans-serif";
+      ctx.textAlign = "center";
+      ctx.globalAlpha = 0.7;
+      ctx.fillText(def.name, b.x, b.y + 28);
+      ctx.globalAlpha = 1;
     }
     if (state.ui.buildGhost) {
       var g = state.ui.buildGhost;
@@ -301,25 +464,83 @@
     if (c.camouflage > 0) ctx.globalAlpha = 0.35;
     if (c.invuln > 0) ctx.globalAlpha = 0.55 + 0.45 * Math.sin(state.world.time * 30);
 
+    var scale = c.boss ? 1.85 : (c.arch === "armorherb" ? 1.35 : (c.arch === "dasher" ? 1.1 : 1));
+    if (c.kind === "ally" && c.role === "guard") scale = 1.15;
+    if (c.kind === "ally" && c.role === "scout") scale = 0.85;
+
     ctx.save();
     ctx.translate(c.x, c.y);
     ctx.rotate(c.angle || 0);
+    ctx.scale(scale, scale);
 
-    // soft shadow
     ctx.fillStyle = "rgba(0,0,0,0.35)";
     ctx.beginPath();
     ctx.ellipse(0, 8, 16, 7, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // body segments
     var phase = c.segmentPhase || 0;
-    for (var s = 2; s >= 0; s--) {
-      var ox = -s * 10;
-      var sway = Math.sin(phase - s * 0.7) * (3 - s);
-      ctx.fillStyle = shade(base, s * 0.12);
+    var silhouette = c.arch || (c.kind === "ally" ? c.role : "player");
+    if (silhouette === "armorherb" || silhouette === "guard") {
+      ctx.fillStyle = shade(base, 0.05);
       ctx.beginPath();
-      ctx.ellipse(ox, sway, 14 - s * 2, 10 - s, 0, 0, Math.PI * 2);
+      ctx.ellipse(0, 0, 18, 14, 0, 0, Math.PI * 2);
       ctx.fill();
+      ctx.strokeStyle = shade(base, -0.1);
+      ctx.lineWidth = 3;
+      ctx.stroke();
+    } else if (silhouette === "dasher" || silhouette === "hunter") {
+      ctx.fillStyle = shade(base, 0.08);
+      ctx.beginPath();
+      ctx.moveTo(18, 0);
+      ctx.lineTo(-14, -10);
+      ctx.lineTo(-8, 0);
+      ctx.lineTo(-14, 10);
+      ctx.closePath();
+      ctx.fill();
+    } else if (silhouette === "spore" || silhouette === "support") {
+      ctx.fillStyle = shade(base, 0.1);
+      ctx.beginPath();
+      ctx.arc(0, 0, 13, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 0.4;
+      ctx.beginPath();
+      ctx.arc(0, 0, 20 + Math.sin(phase) * 2, 0, Math.PI * 2);
+      ctx.strokeStyle = base;
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    } else if (silhouette === "digger") {
+      ctx.fillStyle = shade(base, 0.12);
+      ctx.beginPath();
+      ctx.ellipse(0, 4, 12, 10, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#C8A070";
+      ctx.fillRect(10, -4, 10, 3);
+      ctx.fillRect(10, 2, 10, 3);
+    } else if (silhouette === "tideambush" || silhouette === "scout") {
+      ctx.fillStyle = shade(base, 0.1);
+      ctx.beginPath();
+      ctx.ellipse(2, 0, 16, 7, 0, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      for (var s = 2; s >= 0; s--) {
+        var ox = -s * 10;
+        var sway = Math.sin(phase - s * 0.7) * (3 - s);
+        ctx.fillStyle = shade(base, s * 0.12);
+        ctx.beginPath();
+        ctx.ellipse(ox, sway, 14 - s * 2, 10 - s, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // walking legs for dashlegs
+    if (organs.indexOf("dashlegs") >= 0 || isPlayer) {
+      ctx.strokeStyle = shade(base, 0.2);
+      ctx.lineWidth = 2;
+      var leg = Math.sin(phase * 2) * 5;
+      ctx.beginPath();
+      ctx.moveTo(-4, 8); ctx.lineTo(-8, 16 + leg);
+      ctx.moveTo(4, 8); ctx.lineTo(8, 16 - leg);
+      ctx.stroke();
     }
 
     // organs visuals
@@ -398,8 +619,27 @@
       ctx.quadraticCurveTo(24, Math.sin(phase) * 8, 30, 0);
       ctx.stroke();
     }
+    if (organs.indexOf("regen") >= 0) {
+      ctx.strokeStyle = "#E090A0";
+      ctx.globalAlpha = 0.5 + 0.3 * Math.sin(phase);
+      ctx.beginPath();
+      ctx.arc(-2, 0, 11, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+    if (organs.indexOf("filmshield") >= 0 && (c.filmCharges > 0 || c.kind !== "player")) {
+      ctx.strokeStyle = "rgba(168,224,240,0.7)";
+      ctx.beginPath();
+      ctx.arc(0, 0, 20, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    if (organs.indexOf("pheromone") >= 0) {
+      ctx.fillStyle = "rgba(173,140,222,0.35)";
+      ctx.beginPath();
+      ctx.arc(0, -12, 5, 0, Math.PI * 2);
+      ctx.fill();
+    }
 
-    // eye
     ctx.globalAlpha = 1;
     ctx.fillStyle = FG.COLORS.text;
     ctx.beginPath();
@@ -410,7 +650,6 @@
     ctx.arc(9, -3, 1.4, 0, Math.PI * 2);
     ctx.fill();
 
-    // marker ring for relation
     ctx.restore();
     ctx.globalAlpha = 1;
     if (!isPlayer) {
@@ -418,9 +657,15 @@
       ctx.lineWidth = 1.5;
       ctx.globalAlpha = 0.5;
       ctx.beginPath();
-      ctx.arc(c.x, c.y, 20, 0, Math.PI * 2);
+      ctx.arc(c.x, c.y, 18 * scale, 0, Math.PI * 2);
       ctx.stroke();
       ctx.globalAlpha = 1;
+      if (c.kind === "ally") {
+        ctx.fillStyle = (FG.ROLES[c.role] || {}).color || FG.COLORS.ally;
+        ctx.font = "9px Segoe UI,sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText((FG.ROLES[c.role] || {}).name || "", c.x, c.y + 26);
+      }
     }
 
     // hp bar
@@ -441,8 +686,11 @@
       var c = list[i];
       if (c.hp <= 0) continue;
       if (FG.dist(c.x, c.y, this.cam.x, this.cam.y) > 900) continue;
-      if (c.kind !== "player" && !FG.isExplored(state.world, c.x, c.y) && !(c._vibeVisible)) {
-        if (!(state.player._vibe > 0 && FG.dist(c.x, c.y, state.player.x, state.player.y) < 180)) continue;
+      // Explored = map memory; visibility = near player (or vibe)
+      if (c.kind !== "player") {
+        var visible = FG.isVisibleNow(state, c.x, c.y, 240);
+        if (state.player._vibe > 0 && FG.dist(c.x, c.y, state.player.x, state.player.y) < 200) visible = true;
+        if (!visible) continue;
       }
       this.drawCreature(ctx, c, state, c.kind === "player");
     }

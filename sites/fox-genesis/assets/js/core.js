@@ -68,6 +68,22 @@
     return "e" + FG._uid;
   };
 
+  FG.syncUidFromState = function (state) {
+    var max = FG._uid || 1000;
+    function note(id) {
+      if (!id || typeof id !== "string") return;
+      var m = /^e(\d+)$/.exec(id);
+      if (m) max = Math.max(max, +m[1]);
+    }
+    note(state.player && state.player.id);
+    (state.allies || []).forEach(function (a) { note(a.id); });
+    (state.enemies || []).forEach(function (e) { note(e.id); });
+    (state.colony && state.colony.buildings || []).forEach(function (b) { note(b.id); });
+    (state.colony && state.colony.breeds || []).forEach(function (b) { note(b.id); });
+    (state.world && state.world.resources || []).forEach(function (r) { note(r.id); });
+    FG._uid = max;
+  };
+
   FG.deepClone = function (o) { return JSON.parse(JSON.stringify(o)); };
 
   FG.hasOrgans = function (body, ids) {
@@ -91,17 +107,29 @@
     var form = FG.FORMS[body.form] || FG.FORMS.mobile;
     var load = 0, mass = 0, armor = 4 * form.armor;
     var organs = body.organs || [];
+    var levels = body.levels || {};
+    var heritage = body.heritage || null;
+    var healBonus = 0, atkBonus = 0, speedBonus = 0;
     for (var i = 0; i < organs.length; i++) {
-      var o = FG.ORGANS[organs[i]];
+      var oid = organs[i];
+      var o = FG.ORGANS[oid];
       if (!o) continue;
-      load += o.load || 0;
-      mass += o.mass || 0;
-      if (o.id === "carapace") armor += 6;
-      if (o.id === "filmshield") armor += 2;
+      var lv = levels[oid] || 1;
+      var lvMul = 1 + (lv - 1) * 0.12;
+      load += (o.load || 0) * (lv > 1 ? 1 + (lv - 1) * 0.05 : 1);
+      mass += (o.mass || 0) * lvMul;
+      if (o.id === "carapace") armor += 6 + (lv - 1) * 2;
+      if (o.id === "filmshield") armor += 2 + (lv - 1);
+      if (o.id === "regen") healBonus += 0.15 * lv;
+      if (o.slot === "attack") atkBonus += (lv - 1) * 1.5;
+      if (o.id === "dashlegs" || o.id === "climbers" || o.id === "gasbags") speedBonus += 0.035 * lv;
     }
-    var speed = 110 * form.speed * (1 - Math.min(0.35, mass / 80));
-    var energyMax = 100 + Math.max(0, 20 - load);
-    var hpMax = 80 + mass * 1.2 + (form.armor > 1 ? 20 : 0);
+    if (heritage === "tough") { armor += 3; mass += 4; }
+    if (heritage === "swift") speedBonus += 0.08;
+    if (heritage === "vital") healBonus += 0.2;
+    var speed = 110 * form.speed * (1 - Math.min(0.35, mass / 80)) * (1 + speedBonus);
+    var energyMax = 100 + Math.max(0, 20 - load) + (heritage === "vital" ? 10 : 0);
+    var hpMax = 80 + mass * 1.2 + (form.armor > 1 ? 20 : 0) + (heritage === "tough" ? 15 : 0);
     return {
       load: load,
       mass: mass,
@@ -110,6 +138,8 @@
       energyMax: energyMax,
       hpMax: hpMax,
       form: form,
+      healBonus: healBonus,
+      atkBonus: atkBonus,
       synergies: FG.activeSynergies(body)
     };
   };

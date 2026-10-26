@@ -39,7 +39,7 @@
     var o = FG.ORGANS[geneId];
     if (!o) return { ok: false, why: "Невідомий орган" };
     if (!state.genes[geneId]) return { ok: false, why: "Ген не відкрито" };
-    if (!state.atNest) return { ok: false, why: "Перебудова лише в гнізді" };
+    if (!FG.atNest(state)) return { ok: false, why: "Перебудова лише в гнізді" };
     if (state.player.body.organs.indexOf(geneId) >= 0) return { ok: false, why: "Вже встановлено" };
     if (FG.slotUsed(state.player.body, o.slot) >= FG.slotMax(state.player.body, o.slot)) {
       return { ok: false, why: "Немає вільного слота: " + o.slot };
@@ -58,24 +58,51 @@
     state.player.body.organs.push(geneId);
     state.player.body.levels[geneId] = state.player.body.levels[geneId] || 1;
     FG.refreshCreatureStats(state.player);
+    FG.ensureAbilityBinds(state.player);
+    // Offer free ability slot if active organ installed into empty bind
+    if (FG.ABILITY_DEFS[geneId]) {
+      var binds = state.player.abilityBinds;
+      var free = null;
+      ["rmb", "q", "e"].forEach(function (s) { if (!binds[s] && !free) free = s; });
+      if (free) {
+        binds[free] = geneId;
+        state.ui.toast = "Мутація: " + o.name + " → клавіша " + free.toUpperCase();
+      } else {
+        state.ui.toast = "Мутація: " + o.name + " · признач здібність у панелі M";
+        state.ui.pendingBind = geneId;
+      }
+    } else {
+      state.ui.toast = "Мутація: " + o.name;
+    }
     FG.addJournal(state.world, "Встановлено орган: " + o.name + ".");
-    state.ui.toast = "Мутація: " + o.name;
     state.ui.evolveFlash = 0.8;
     if (state.audio) FG.sfx(state, "mutate");
     return { ok: true };
   };
 
   FG.removeOrgan = function (state, geneId) {
-    if (!state.atNest) return { ok: false, why: "Лише в гнізді" };
+    if (!FG.atNest(state)) return { ok: false, why: "Лише в гнізді" };
     var i = state.player.body.organs.indexOf(geneId);
     if (i < 0) return { ok: false, why: "Немає органа" };
     state.player.body.organs.splice(i, 1);
+    if (state.player.abilityBinds) {
+      ["rmb", "q", "e"].forEach(function (s) {
+        if (state.player.abilityBinds[s] === geneId) state.player.abilityBinds[s] = null;
+      });
+    }
     FG.refreshCreatureStats(state.player);
+    FG.ensureAbilityBinds(state.player);
+    // Partial refund
+    var o = FG.ORGANS[geneId];
+    if (o && o.cost) {
+      state.resources.biomass += Math.floor((o.cost.biomass || 0) * 0.4);
+      state.resources.mineral += Math.floor((o.cost.mineral || 0) * 0.4);
+    }
     return { ok: true };
   };
 
   FG.chooseSpec = function (state, geneId, branch) {
-    if (!state.atNest) return false;
+    if (!FG.atNest(state)) return false;
     if (state.player.body.organs.indexOf(geneId) < 0) return false;
     var lvl = state.player.body.levels[geneId] || 1;
     if (lvl < 2) return false;
@@ -85,7 +112,7 @@
   };
 
   FG.levelOrgan = function (state, geneId) {
-    if (!state.atNest) return { ok: false, why: "Лише в гнізді" };
+    if (!FG.atNest(state)) return { ok: false, why: "Лише в гнізді" };
     if (state.player.body.organs.indexOf(geneId) < 0) return { ok: false, why: "Не встановлено" };
     var lvl = state.player.body.levels[geneId] || 1;
     if (lvl >= 3) return { ok: false, why: "Макс. рівень" };
@@ -119,10 +146,7 @@
         { id: "burst", name: "Швидкий ремонт", desc: "Сильніше самолікування." }
       ]
     };
-    return map[geneId] || [
-      { id: "a", name: "Спеціалізація A", desc: "Альтернативний шлях." },
-      { id: "b", name: "Спеціалізація B", desc: "Інший бойовий акцент." }
-    ];
+    return map[geneId] || [];
   };
 
   FG.refreshCreatureStats = function (c) {

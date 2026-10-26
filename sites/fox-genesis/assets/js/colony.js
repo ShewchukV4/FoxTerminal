@@ -27,7 +27,8 @@
   FG.placeBuilding = function (state, type, x, y) {
     var def = FG.BUILDINGS[type];
     if (!def) return { ok: false, why: "Невідома будівля" };
-    if (!state.atNest && type !== "turret") return { ok: false, why: "Будуй біля гнізда" };
+    if (def.hidden || def.stub) return { ok: false, why: "Ще не реалізовано" };
+    if (!FG.atNest(state) && type !== "turret") return { ok: false, why: "Будуй біля гнізда" };
     if (FG.dist(x, y, state.world.nest.x, state.world.nest.y) > 280) {
       return { ok: false, why: "Занадто далеко від серця" };
     }
@@ -52,7 +53,7 @@
   };
 
   FG.saveBreed = function (state, name, role) {
-    if (!state.atNest) return { ok: false, why: "Лише в гнізді" };
+    if (!FG.atNest(state)) return { ok: false, why: "Лише в гнізді" };
     if (!FG.hasBuilding(state, "incubator") && !FG.hasBuilding(state, "archive")) {
       // allow first breed at heart
     }
@@ -126,12 +127,30 @@
       state._gardenAcc = (state._gardenAcc || 0) + dt;
       if (state._gardenAcc > 8) {
         state._gardenAcc = 0;
-        state.resources.biomass += 2;
+        state.resources.biomass += 2 + (state._drought ? 0 : 1);
       }
     }
 
+    // archive research — slowly unlocks a guaranteed support gene
+    if (FG.hasBuilding(state, "archive")) {
+      state.colony.research = (state.colony.research || 0) + dt;
+      if (state.colony.research > 90 && !state.genes.regen) {
+        FG.unlockGene(state, "regen", "архів");
+        state.colony.research = 0;
+      }
+    }
+
+    // store capacity / logistics
+    if (FG.hasBuilding(state, "store")) {
+      state.colony.storageBonus = 40;
+      state.player.capacity = 40 + state.colony.storageBonus;
+    } else {
+      state.colony.storageBonus = 0;
+      state.player.capacity = 40;
+    }
+
     // healbay
-    if (FG.hasBuilding(state, "healbay") && state.atNest) {
+    if (FG.hasBuilding(state, "healbay") && FG.atNest(state)) {
       state.player.hp = Math.min(state.player.hpMax, state.player.hp + 8 * dt);
       for (var a = 0; a < state.allies.length; a++) {
         if (FG.dist(state.allies[a].x, state.allies[a].y, state.world.nest.x, state.world.nest.y) < 120) {
@@ -160,10 +179,54 @@
     }
   };
 
-  FG.startNewGeneration = function (state, formId, trait) {
-    if (!state.atNest) return { ok: false, why: "Лише в гнізді" };
-    // old body becomes veteran ally if alive enough
-    if (state.player.hp > state.player.hpMax * 0.3 && state.allies.length < state.colony.maxAllies) {
+  FG.canStartGeneration = function (state, formId, trait) {
+    if (!FG.atNest(state)) return { ok: false, why: "Лише в гнізді" };
+    var cost = FG.GENERATION_COST;
+    if ((state.world.time || 0) < cost.minGenTime) {
+      return { ok: false, why: "Зарано: ще " + Math.ceil(cost.minGenTime - state.world.time) + "с дослідження" };
+    }
+    if ((state.progress.kills || 0) < cost.minKills) {
+      return { ok: false, why: "Потрібно хоча б " + cost.minKills + " перемог (зараз " + (state.progress.kills || 0) + ")" };
+    }
+    if (!FG.canAfford(state.resources, cost)) {
+      return { ok: false, why: "Ціна: " + cost.biomass + " біо / " + cost.mineral + " мін / " + cost.sample + " зраз" };
+    }
+    var live = state.allies.filter(function (a) { return a.hp > 0; }).length + state.colony.queue.length;
+    var willVeteran = state.player.hp > state.player.hpMax * 0.3;
+    if (willVeteran && live >= state.colony.maxAllies) {
+      return { ok: false, why: "Ліміт загону — звільни місце або підтвердь без ветерана", needConfirmOverflow: true };
+    }
+    if (!FG.FORMS[formId || "mobile"]) return { ok: false, why: "Невідома форма" };
+    return {
+      ok: true,
+      cost: cost,
+      preview: {
+        loseOrgans: (state.player.body.organs || []).slice(),
+        keepGenes: Object.keys(state.genes),
+        heritage: trait || null,
+        veteran: willVeteran && live < state.colony.maxAllies
+      }
+    };
+  };
+
+  FG.startNewGeneration = function (state, formId, trait, opts) {
+    opts = opts || {};
+    var check = FG.canStartGeneration(state, formId, trait);
+    if (!check.ok) {
+      if (!(opts.skipVeteran && check.needConfirmOverflow)) return check;
+    }
+    if (!opts.confirmed) {
+      return {
+        ok: false, why: "Потрібне підтвердження", needConfirm: true,
+        preview: check.preview || null, cost: check.cost || FG.GENERATION_COST
+      };
+    }
+    var cost = FG.GENERATION_COST;
+    if (!FG.canAfford(state.resources, cost)) return { ok: false, why: "Бракує ресурсів" };
+    FG.pay(state.resources, cost);
+
+    var live = state.allies.filter(function (a) { return a.hp > 0; }).length + state.colony.queue.length;
+    if (!opts.skipVeteran && state.player.hp > state.player.hpMax * 0.3 && live < state.colony.maxAllies) {
       var vet = FG.createAlly({
         name: "Ветеран " + state.generation,
         role: "guard",
@@ -175,14 +238,17 @@
     state.generation += 1;
     state.player.body = FG.defaultBody(formId || "mobile");
     if (trait) state.player.body.heritage = trait;
+    state.player.abilityBinds = { rmb: null, q: null, e: null };
     FG.refreshCreatureStats(state.player);
     state.player.hp = state.player.hpMax;
     state.player.energy = state.player.energyMax;
     state.player.x = state.world.nest.x;
     state.player.y = state.world.nest.y + 50;
+    FG.resetCameraSmooth(state);
     FG.addJournal(state.world, "Покоління " + state.generation + " — форма «" + (FG.FORMS[formId] || FG.FORMS.mobile).name + "».");
     state.ui.toast = "Нове покоління " + state.generation;
     state.ui.panel = null;
+    FG.setPauseReason(state, "panel", false);
     return { ok: true };
   };
 
@@ -224,7 +290,7 @@
   };
 
   FG.depositCargo = function (state) {
-    if (!state.atNest) return;
+    if (!FG.atNest(state)) return;
     state.resources.biomass += state.player.carrying.biomass;
     state.resources.mineral += state.player.carrying.mineral;
     state.resources.sample += state.player.carrying.sample;

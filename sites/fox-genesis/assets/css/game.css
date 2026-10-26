@@ -99,7 +99,63 @@ html, body {
   backdrop-filter: blur(8px);
   font-size: 14px;
 }
+#objective-detail { margin-top: 4px; font-size: 12px; opacity: 0.8; }
 #event-line { margin-top: 6px; font-size: 12px; color: var(--amber); min-height: 16px; }
+.bar .track.low i { background: linear-gradient(90deg, #8a3030, var(--danger)); }
+.heal-link {
+  pointer-events: auto;
+  appearance: none;
+  border: 1px solid var(--line);
+  background: rgba(123,207,154,0.12);
+  color: var(--text);
+  font: 11px var(--font);
+  border-radius: 8px;
+  padding: 4px 8px;
+  cursor: pointer;
+  margin-bottom: 6px;
+}
+.heal-list {
+  pointer-events: auto;
+  background: var(--glass);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px;
+  margin-bottom: 8px;
+  max-width: 260px;
+}
+.heal-item { font-size: 11px; margin-bottom: 6px; opacity: 0.75; }
+.heal-item.ok { opacity: 1; border-left: 2px solid var(--mint); padding-left: 6px; }
+.heal-item b { display: block; }
+.heal-item span, .heal-item em { display: block; font-style: normal; opacity: 0.85; }
+.res-hint { font-size: 10px; opacity: 0.55; margin-top: 4px; max-width: 230px; }
+.body-preview-canvas {
+  width: 100%;
+  max-width: 280px;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: #0A1418;
+  display: block;
+  margin: 0 auto 8px;
+}
+.map-canvas {
+  width: 100%;
+  max-width: 640px;
+  height: auto;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: #050A10;
+  cursor: grab;
+  display: block;
+  margin: 0 auto 8px;
+}
+.path-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 10px; font-size: 13px; }
+.path-row .btn.on { border-color: var(--mint); }
+.sel-box { margin-top: 8px; padding: 10px; border: 1px solid var(--line); border-radius: 12px; }
+.bind-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 8px; font-size: 12px; }
+.syn-hint { color: var(--lilac); font-size: 12px; }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.abil.nest-rest { min-width: 140px; border-color: rgba(105,224,190,0.45); }
 #minimap {
   width: 160px;
   height: 160px;
