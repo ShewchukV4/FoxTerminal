@@ -191,6 +191,7 @@
     else if (state.ui.panel === "expand") el.innerHTML = FS.htmlExpand(state);
     else if (state.ui.panel === "build") el.innerHTML = FS.htmlBuild(state);
     else if (state.ui.panel === "pantry") el.innerHTML = FS.htmlPantry(state);
+    else if (state.ui.panel === "campfire") el.innerHTML = FS.htmlCampfire(state);
     else el.innerHTML = "";
     FS.bindPanel(state);
   };
@@ -410,7 +411,7 @@
   FS.bindPanel = function (state) {
     var el = document.getElementById("panel");
     el.onclick = function (ev) {
-      var t = ev.target.closest("[data-act],[data-talent],[data-offer],[data-offer-yes],[data-offer-no],[data-fork],[data-hire],[data-ally-cmd],[data-ally-all],[data-pantry]");
+      var t = ev.target.closest("[data-act],[data-talent],[data-offer],[data-offer-yes],[data-offer-no],[data-fork],[data-hire],[data-ally-cmd],[data-ally-all],[data-pantry],[data-settle],[data-invite]");
       if (!t) return;
       if (t.dataset.act === "close") {
         state.ui.panel = null;
@@ -564,6 +565,21 @@
         state.ui.toast = tr.ok
           ? (pp[0] === "deposit" ? "Складено " + tr.moved : "Взято " + tr.moved)
           : tr.why;
+        state.ui.panelDirty = true;
+        FS.renderPanel(state);
+        return;
+      }
+      if (t.dataset.settle === "toggle-carry") {
+        FS.ensureSettlement(state);
+        state.settlement.allowCarriedPay = state.settlement.allowCarriedPay === false;
+        state.ui.panelDirty = true;
+        FS.renderPanel(state);
+        return;
+      }
+      if (t.dataset.invite) {
+        var inv = t.dataset.invite.split(":");
+        var ir = FS.hireAlly(state, inv[0], inv[1]);
+        state.ui.toast = ir.ok ? "Союзника запрошено" : ir.why;
         state.ui.panelDirty = true;
         FS.renderPanel(state);
         return;

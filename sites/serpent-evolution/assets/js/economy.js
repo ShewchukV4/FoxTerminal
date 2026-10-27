@@ -121,22 +121,31 @@
   FS.spendNutrition = function (state, cost, applyFn, opts) {
     opts = opts || {};
     if (state._spendLock) return { ok: false, why: "Зачекай" };
-    cost = cost | 0;
-    if (cost < 0) return { ok: false, why: "Погана ціна" };
+    cost = Math.floor(+cost || 0);
+    if (cost < 0 || !isFinite(cost)) return { ok: false, why: "Погана ціна" };
     var prevN = FS.nutritionOf(state);
     var prevBody = FS.cloneBody(state.player);
     var prevDebt = state.player.growthDebt | 0;
     if (prevN < cost) return { ok: false, why: "Бракує поживи (" + prevN + "/" + cost + ")" };
 
     state._spendLock = true;
+    function rollback() {
+      state.nutrition = prevN;
+      state.player.body = prevBody;
+      state.player.growthDebt = prevDebt;
+    }
     try {
       state.nutrition = prevN - cost;
       FS.syncLengthToNutrition(state);
-      var result = applyFn ? applyFn(state) : { ok: true };
+      var result;
+      try {
+        result = applyFn ? applyFn(state) : { ok: true };
+      } catch (err) {
+        rollback();
+        return { ok: false, why: "Помилка: " + (err && err.message ? err.message : err) };
+      }
       if (!result || result.ok === false) {
-        state.nutrition = prevN;
-        state.player.body = prevBody;
-        state.player.growthDebt = prevDebt;
+        rollback();
         return result || { ok: false, why: "Скасовано" };
       }
       if (opts.save !== false) FS.saveGame(state, opts.reason || "spend");

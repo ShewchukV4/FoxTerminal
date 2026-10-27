@@ -8,14 +8,19 @@
     return (h ^ (h >>> 16)) >>> 0;
   };
 
+  /** Canonical shared-edge hash: E(cx,cy) === W(cx+1,cy), S(cx,cy) === N(cx,cy+1). */
   FS.edgeGateHash = function (seed, cx, cy, edge) {
-    // Shared edge between neighbors uses min/max so both sides agree
-    var ax = cx, ay = cy, bx = cx, by = cy;
-    if (edge === "E") { bx = cx + 1; }
-    if (edge === "W") { ax = cx - 1; bx = cx; }
-    if (edge === "S") { by = cy + 1; }
-    if (edge === "N") { ay = cy - 1; by = cy; }
-    return FS.hash2(seed, FS.hash2(ax * 31 + ay, bx * 17 + by + edge.charCodeAt(0)));
+    var ax = cx | 0, ay = cy | 0, bx = ax, by = ay, axis = 1;
+    if (edge === "E") { bx = ax + 1; axis = 1; }
+    else if (edge === "W") { ax = ax - 1; bx = cx | 0; axis = 1; }
+    else if (edge === "S") { by = ay + 1; axis = 2; }
+    else if (edge === "N") { ay = ay - 1; by = cy | 0; axis = 2; }
+    // Normalize endpoint order so both neighbors hash identically
+    if (ax > bx || (ax === bx && ay > by)) {
+      var tx = ax, ty = ay;
+      ax = bx; ay = by; bx = tx; by = ty;
+    }
+    return FS.hash2(seed, FS.hash2(ax * 10007 + ay * 10009, bx * 9173 + by * 9181 + axis));
   };
 
   FS.pickRegionType = function (seed, cx, cy, nOpen, offerIndex, forceSafe) {

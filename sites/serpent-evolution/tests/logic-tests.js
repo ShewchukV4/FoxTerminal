@@ -577,6 +577,94 @@
     assert("guide has pantry scene", FS.GUIDE_STEPS.some(function (g) { return g.scene === "pantry"; }));
   })();
 
+  // Cave enter: safe spawn, no rebuild thrash
+  (function () {
+    var gen = FS.generateCaveGrid(42, "cave_test", "roots");
+    var spawn = FS.findCaveSpawn(gen, gen.exits[0], 12);
+    assert("cave spawn len12", !!spawn && spawn.body.length === 12);
+    var s = fresh();
+    FS.ensureCaves(s);
+    var cave = {
+      id: "cave_t", theme: "roots", gen: gen, surface: [{ x: s.world.nest.x + 3, y: s.world.nest.y }],
+      cx: 0, cy: 0, knownExits: 0
+    };
+    s.caves.list.push(cave);
+    s.caves.byId[cave.id] = cave;
+    var portal = {
+      id: "p0", caveId: cave.id, surface: cave.surface[0],
+      cavePos: gen.exits[0] || { x: 12, y: 8 }, sealed: false
+    };
+    s.portals.push(portal);
+    s.player.body = [
+      { x: portal.surface.x, y: portal.surface.y },
+      { x: portal.surface.x - 1, y: portal.surface.y },
+      { x: portal.surface.x - 2, y: portal.surface.y }
+    ];
+    var t0 = Date.now();
+    var r = FS.enterCave(s, portal);
+    var ms = Date.now() - t0;
+    assert("cave enter ok", r.ok, r.why);
+    assert("cave layer", s.layerId === "cave");
+    assert("cave enter fast", ms < 100, "ms=" + ms);
+    // second enter path via cache shouldn't rebuild
+    var r2 = FS.exitCave(s, portal);
+    assert("cave exit ok", r2.ok, r2.why);
+    assert("back surface", s.layerId === "surface");
+  })();
+
+  // §2 regressions: spendNutrition exception rollback
+  (function () {
+    var s = fresh();
+    FS.initNutrition(s, 5);
+    while (s.player.growthDebt > 0) {
+      var h = FS.snakeHead(s.player);
+      FS.commitSnakeMove(s.player, { x: h.x + 1, y: h.y }, "R");
+    }
+    var bodyLen = s.player.body.length;
+    var r = FS.spendNutrition(s, 3, function () { throw new Error("boom"); }, { save: false });
+    assert("spend exception rolls back ok-flag", !r.ok);
+    assert("spend exception nutrition", FS.nutritionOf(s) === 5);
+    assert("spend exception length", s.player.body.length === bodyLen);
+  })();
+
+  // edgeGateHash shared seams
+  (function () {
+    assert("E/W seam", FS.edgeGateHash(123, 0, 0, "E") === FS.edgeGateHash(123, 1, 0, "W"));
+    assert("S/N seam", FS.edgeGateHash(123, 0, 0, "S") === FS.edgeGateHash(123, 0, 1, "N"));
+    assert("neg E/W", FS.edgeGateHash(99, -2, 3, "E") === FS.edgeGateHash(99, -1, 3, "W"));
+    assert("neg S/N", FS.edgeGateHash(99, 4, -5, "S") === FS.edgeGateHash(99, 4, -4, "N"));
+  })();
+
+  // allies occupancy
+  (function () {
+    var s = fresh();
+    var ally = FS.createSnake({ id: "a1", kind: "ally", x: 3, y: 3, dir: "R", length: 3 });
+    ally.inside = false;
+    s.allies = [ally];
+    var hits = FS.snakeAtCell(s, 3, 3, false);
+    assert("ally occupancy", hits.some(function (h) { return h.snake.id === "a1"; }));
+    ally.inside = true;
+    hits = FS.snakeAtCell(s, 3, 3, false);
+    assert("ally inside no occupancy", !hits.some(function (h) { return h.snake.id === "a1"; }));
+  })();
+
+  // settlement pay from pantry at distance
+  (function () {
+    var s = fresh();
+    FS.ensureSettlement(s);
+    FS.ensurePantry(s);
+    s.pantry.food = 20;
+    FS.initNutrition(s, 0);
+    // move player far from nest
+    s.player.body = [{ x: 20, y: 20 }, { x: 19, y: 20 }, { x: 18, y: 20 }];
+    var q = FS.quoteSettlementSpend(s, 15);
+    assert("settle quote pantry only", q.ok && q.fromPantry === 15 && q.fromCarried === 0);
+    assert("settle len unchanged quote", q.lenAfter === 3);
+    var r = FS.spendSettlement(s, 15, function () { return { ok: true }; }, { save: false });
+    assert("settle spend far", r.ok && s.pantry.food === 5 && FS.nutritionOf(s) === 0);
+    assert("settle length still 3", FS.targetLength(FS.nutritionOf(s)) === 3);
+  })();
+
   // Ally deliver to pantry no XP
   (function () {
     var s = fresh();

@@ -64,10 +64,47 @@
     this.drawFruitArrow(state);
     this.drawForesight(state);
     this.drawPauseDanger(state);
+    this.drawVisionFog(state);
     if (state.ui.heartBreak && state.ui.heartBreak.t > 0) this.drawHeartBreak(state);
     if (state.lastDeath && state.ui.panel === "death") this.drawDeathCell(state);
 
     ctx.restore();
+  };
+
+  FS.Renderer.prototype.drawVisionFog = function (state) {
+    if (!state._fov) return;
+    if (state.layerId !== "cave" && !(state.settlement && state.settlement.phase === "night")) return;
+    var ctx = this.ctx;
+    var cell = FS.CELL;
+    var night = state.settlement && state.settlement.phase === "night";
+    // Only cells near camera — full-map fog every frame caused hitches
+    var viewW = this.canvas.width / this.dpr / this.cam.z;
+    var viewH = this.canvas.height / this.dpr / this.cam.z;
+    var x0 = Math.floor((this.cam.x - viewW / 2) / cell) - 1;
+    var y0 = Math.floor((this.cam.y - viewH / 2) / cell) - 1;
+    var x1 = Math.ceil((this.cam.x + viewW / 2) / cell) + 1;
+    var y1 = Math.ceil((this.cam.y + viewH / 2) / cell) + 1;
+    for (var ty = y0; ty <= y1; ty++) {
+      for (var tx = x0; tx <= x1; tx++) {
+        if (!FS.inBounds(state.world, tx, ty)) continue;
+        var vis = FS.cellVision ? FS.cellVision(state, tx, ty, state._fov) : "visible";
+        if (vis === "visible") continue;
+        var x = tx * cell, y = ty * cell;
+        ctx.fillStyle = vis === "memory"
+          ? (night ? "rgba(8,14,12,0.45)" : "rgba(4,8,12,0.55)")
+          : "rgba(0,0,0,0.92)";
+        ctx.fillRect(x, y, cell, cell);
+      }
+    }
+    if (state.layerId === "cave") {
+      (state.enemies || []).forEach(function (e) { e._hiddenByFog = true; });
+    } else if (state.enemies) {
+      state.enemies.forEach(function (e) {
+        if (e.dead) return;
+        var eh = FS.snakeHead(e);
+        e._hiddenByFog = !state._fov[FS.key(eh.x, eh.y)];
+      });
+    }
   };
 
   FS.Renderer.prototype.drawTiles = function (state) {
@@ -87,6 +124,9 @@
       else if (tt === "bridge") ctx.fillStyle = "#3a4030";
       else if (tt === "plot") ctx.fillStyle = "#2c4028";
       else if (tt === "path") ctx.fillStyle = pathTint;
+      else if (tt === "cave_floor" || tt === "cave_exit") ctx.fillStyle = "#1e2830";
+      else if (tt === "cave_wall") ctx.fillStyle = "#121820";
+      else if (tt === "campfire") ctx.fillStyle = "#2a3020";
       else ctx.fillStyle = base;
       ctx.fillRect(x + 1, y + 1, cell - 2, cell - 2);
       if (tt === "deep" || tt === "shallow") {
@@ -202,8 +242,12 @@
   FS.Renderer.prototype.drawNest = function (state) {
     var ctx = this.ctx;
     var cell = FS.CELL;
-    var n = state.world.nest;
+    var n = (state.settlement && state.settlement.campfire) || state.world.nest;
     var x = (n.x + 0.5) * cell, y = (n.y + 0.5) * cell;
+    if (FS.drawCampfire && state.layerId !== "cave") {
+      FS.drawCampfire(ctx, x, y, cell, state.time || 0, !!(state.settings && state.settings.reducedMotion));
+      return;
+    }
     ctx.fillStyle = "rgba(160,120,80,0.35)";
     ctx.beginPath();
     ctx.arc(x, y, cell * 0.7, 0, Math.PI * 2);
@@ -227,6 +271,16 @@
       if (lm.kind === "drop_pad") {
         ctx.strokeStyle = "rgba(160,120,80,0.7)";
         ctx.strokeRect(lm.x * cell + 6, lm.y * cell + 6, cell - 12, cell - 12);
+        return;
+      }
+      if (lm.kind === "cave_entrance") {
+        if (FS.drawCaveEntrance) FS.drawCaveEntrance(ctx, x, y, cell);
+        else {
+          ctx.fillStyle = "#1a1010";
+          ctx.beginPath();
+          ctx.ellipse(x, y + 4, cell * 0.32, cell * 0.22, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
         return;
       }
       if (lm.kind === "enemy_nest") {
@@ -329,7 +383,14 @@
 
   FS.Renderer.prototype.drawSnakes = function (state) {
     var ctx = this.ctx;
-    state.enemies.forEach(function (e) { this.drawSnake(ctx, e, state); }.bind(this));
+    state.enemies.forEach(function (e) {
+      if (e._hiddenByFog) return;
+      this.drawSnake(ctx, e, state);
+    }.bind(this));
+    (state.allies || []).forEach(function (a) {
+      if (a.inside || a.dead) return;
+      this.drawSnake(ctx, a, state);
+    }.bind(this));
     this.drawSnake(ctx, state.player, state);
   };
 

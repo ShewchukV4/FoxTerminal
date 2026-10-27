@@ -3,13 +3,13 @@ window.FoxSerpent = window.FoxSerpent || {};
 (function (FS) {
   "use strict";
 
-  FS.VERSION = "1.4.0";
+  FS.VERSION = "1.5.0";
   FS.SAVE_SCHEMA = 2;
   FS.SAVE_KEY = "fox_serpent_evo_save_v1";
   FS.SAVE_BAK = "fox_serpent_evo_save_bak_v1";
-  FS.GUIDE_VERSION = 5;
+  FS.GUIDE_VERSION = 6;
   FS.GUIDE_SEEN_KEY = "fox_serpent_evo_guide_v1";
-  FS.MIGRATION_VERSION = 4;
+  FS.MIGRATION_VERSION = 5;
 
   FS.CELL = 36;
   FS.CHUNK = 12;

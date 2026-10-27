@@ -520,6 +520,21 @@ Noir полагодили: шорткати більше не скидали р�
 
 ---
 
+## 2026-10-27 — FOX SERPENT 1.5.0 (поселення, печери, фікси)
+
+| | |
+|--|--|
+| **Фікси §2** | spendNutrition rollback на exception; edgeGateHash E/W+N/S; allies occupancy; scout safety + dt break CD |
+| **Оплата зі складу** | `spendSettlement` / quote — pantry first, здалеку; Tab/hire |
+| **Багаття + день/ніч** | campfire F-панель; ~8 хв цикл; night vision |
+| **Печери** | layers/FOV; входи на expand; enter/exit; теми roots/mushroom/mine… |
+| **Союзник** | чекліст осередку; вихід з дому за орієнтацією дверей; reservation cleanup |
+| **Арт** | багаття, вхід у печеру |
+
+Модулі: `settlement.js`, `layers.js`, `caves.js`. Тести All passed. Без push.
+
+---
+
 ## 2026-10-26 — FOX SERPENT 1.4.0 (склад, арт, AI)
 
 | | |

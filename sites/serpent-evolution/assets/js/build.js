@@ -501,9 +501,15 @@
       state.buildings.push(b);
       if (kind === "hut") {
         FS.ensureAllies(state);
+        var door = { x: x, y: y + 1 };
+        if (FS.isBlockedCell(state, door.x, door.y, { kind: "ally" })) door = { x: x + 1, y: y };
+        if (FS.isBlockedCell(state, door.x, door.y, { kind: "ally" })) door = { x: x - 1, y: y };
+        if (FS.isBlockedCell(state, door.x, door.y, { kind: "ally" })) door = { x: x, y: y - 1 };
+        var homeTile = FS.tileAt(state.world, x, y);
+        FS.setTile(state.world, x, y, FS.makeTile(x, y, "home_door", { biome: (homeTile && homeTile.biome) || "garden" }));
         state.homes.push({
           id: FS.uid(), type: "hut", x: x, y: y,
-          capacity: 1, residents: [], door: { x: x, y: y + 1 }
+          capacity: 1, residents: [], door: door
         });
       }
       // shed / larder capacity is derived via recomputeWoodCap / recomputePantryCap
@@ -590,7 +596,18 @@
   FS.tryInteract = function (state) {
     if (FS.harvestStump(state).ok) return true;
     var h = FS.snakeHead(state.player);
+    if (FS.tryEnterPortal && FS.portalAt && (FS.portalAt(state, h.x, h.y) ||
+        FS.portalAt(state, h.x + 1, h.y) || FS.portalAt(state, h.x - 1, h.y) ||
+        FS.portalAt(state, h.x, h.y + 1) || FS.portalAt(state, h.x, h.y - 1))) {
+      var pr = FS.tryEnterPortal(state);
+      if (!pr.ok) state.ui.toast = pr.why || "Не вдалося увійти";
+      return true; // consume F even on failure — don't fall through to campfire
+    }
     if (FS.toggleGate(state, h.x, h.y)) return true;
+    if (FS.nearCampfire && FS.nearCampfire(state) && FS.openCampfirePanel) {
+      FS.openCampfirePanel(state);
+      return true;
+    }
     if (FS.nearPantry && FS.nearPantry(state) && FS.openPantryPanel) {
       FS.openPantryPanel(state);
       return true;

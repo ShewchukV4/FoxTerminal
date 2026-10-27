@@ -33,7 +33,8 @@
     return count;
   };
 
-  FS.aiChooseDir = function (state, snake) {
+  FS.aiChooseDir = function (state, snake, dt) {
+    dt = dt == null ? 0 : dt;
     var head = FS.snakeHead(snake);
     var dirs = ["U", "D", "L", "R"];
     var best = null;
@@ -49,9 +50,11 @@
     // close always sees
     if (FS.manhattan(head, pHead) <= 3) seesPlayer = true;
 
+    // Food only within detect range — no omniscience
     var food = null, fd = 1e9;
     state.world.foods.forEach(function (f) {
       var d = FS.manhattan(head, f);
+      if (d > (snake.detectRange || 8)) return;
       if (d < fd) { fd = d; food = f; }
     });
 
@@ -187,15 +190,20 @@
       }
     }
 
-    // Scout: circle nest perimeter, remember open gates / gaps, report home
+    // Scout: circle nest perimeter, remember open gates / gaps in vision, report home
     if (snake.arch === "scout" && !snake.loot) {
       snake.intel = snake.intel || { gaps: [], reported: false };
       (state.buildings || []).forEach(function (b) {
         if (b.owner === "enemy") return;
-        if (b.kind === "gate" && b.closed === false) {
-          snake.intel.gaps.push({ x: b.x, y: b.y, kind: "gate" });
+        if (b.kind === "gate" && b.closed === false &&
+            FS.manhattan(head, b) <= (snake.detectRange || 8)) {
+          var gkey = b.x + "," + b.y;
+          if (!snake.intel.gaps.some(function (g) { return g.x === b.x && g.y === b.y; })) {
+            snake.intel.gaps.push({ x: b.x, y: b.y, kind: "gate", key: gkey });
+          }
         }
       });
+      if (snake.intel.gaps.length > 12) snake.intel.gaps = snake.intel.gaps.slice(-12);
       // Prefer path along player nest ring
       if (state.world && state.world.nest && !snake._scoutDone) {
         var nest = state.world.nest;
@@ -294,9 +302,9 @@
       }
     }
 
-    // Elder raider: damage adjacent fence/gate on cooldown (never enter wall)
-    if (snake.arch === "elder" && !snake.loot) {
-      snake._breakCd = (snake._breakCd || 0) - 0.05;
+    // Elder raider: damage adjacent fence/gate — cooldown in real seconds via dt
+    if (snake.arch === "elder" && !snake.loot && dt > 0) {
+      snake._breakCd = Math.max(0, (snake._breakCd || 0) - dt);
       if (snake._breakCd <= 0) {
         var broke = false;
         [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(function (d) {
@@ -317,20 +325,30 @@
       }
     }
 
-    // Scout waypoint preference
+    // Scout waypoint preference — same collision safety as main scoring
     if (snake._scoutWp && snake.arch === "scout" && !snake.loot) {
       var sw = snake._scoutWp;
       var dirs2 = ["U", "D", "L", "R"];
-      var bestS = best, bestSS = -1e9;
+      var bestS = null, bestSS = -1e9;
       dirs2.forEach(function (d) {
         if (FS.wouldEnterNeck(snake, d) || FS.isOpp(snake.dir, d)) return;
         var vv = FS.dirVec(d);
         var nn = { x: head.x + vv.x, y: head.y + vv.y };
         if (FS.isBlockedCell(state, nn.x, nn.y, snake)) return;
+        if (FS.stepWouldCollideSnake(state, snake, nn, true)) return;
         var sc = (FS.manhattan(head, sw) - FS.manhattan(nn, sw)) * 15;
         if (sc > bestSS) { bestSS = sc; bestS = d; }
       });
       if (bestS) best = bestS;
+    }
+
+    // Final safety: never return a dir that enters another snake
+    if (best) {
+      var bv = FS.dirVec(best);
+      var bn = { x: head.x + bv.x, y: head.y + bv.y };
+      if (FS.isBlockedCell(state, bn.x, bn.y, snake) || FS.stepWouldCollideSnake(state, snake, bn, true)) {
+        best = null;
+      }
     }
 
     snake._aiDebug = { options: debug, pick: best, state: snake.stateAI, seesPlayer: seesPlayer };

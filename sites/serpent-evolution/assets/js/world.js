@@ -102,17 +102,23 @@
     }
     var discount = (state.effects && state.effects.expandDiscount) || 0;
     var cost = Math.max(2, (offer.baseCost != null ? offer.baseCost : offer.cost) - discount);
-    var prev = FS.previewSpend(state, cost);
+    var prev = FS.quoteSettlementSpend
+      ? FS.quoteSettlementSpend(state, cost)
+      : FS.previewSpend(state, cost);
     return {
       ok: prev.ok,
       offer: offer,
       cost: cost,
-      now: prev.now,
-      after: prev.after,
+      now: prev.carriedAfter != null ? FS.nutritionOf(state) : prev.now,
+      after: prev.carriedAfter != null ? prev.carriedAfter : prev.after,
       lenNow: prev.lenNow,
       lenAfter: prev.lenAfter,
-      why: prev.ok ? null : ("Потрібно " + cost + " поживи, є " + prev.now),
-      source: "Пожива (довжина = 3 + пожива)",
+      fromPantry: prev.fromPantry || 0,
+      fromCarried: prev.fromCarried || 0,
+      why: prev.ok ? null : (prev.why || ("Потрібно " + cost + ", склад+змійка")),
+      source: prev.fromPantry
+        ? ("Склад " + prev.fromPantry + (prev.fromCarried ? " + змійка " + prev.fromCarried : ""))
+        : "Пожива (довжина = 3 + пожива)",
       spawnsEnemy: !!offer.spawnsEnemy,
       label: offer.name + " (" + offer.cx + "," + offer.cy + ")"
     };
@@ -151,7 +157,8 @@
         state.progress.regionTypes = snap.regionTypes;
         state.tutorial.done.expand = snap.tutorialExpand;
       }
-      var result = FS.spendNutrition(state, quote.cost, function () {
+      var spend = FS.spendSettlement || FS.spendNutrition;
+      var result = spend(state, quote.cost, function () {
         try {
           FS.applyGeneratedChunk(state.world, offer.cx, offer.cy, offer.type, false);
           state.world.openOffers = FS.computeExpandOffers(state.world);
@@ -162,8 +169,10 @@
           if (offer.spawnsEnemy) FS.spawnExpandEnemy(state, offer);
           if (offer.danger >= 2 && FS.spawnEnemyBase) FS.spawnEnemyBase(state, offer);
           if (FS.seedTreeInChunk) FS.seedTreeInChunk(state, offer.cx, offer.cy);
+          if (FS.spawnCaveEntranceOnChunk) FS.spawnCaveEntranceOnChunk(state, offer);
           if (FS.ensureDirector) FS.ensureDirector(state);
-          state.ui.toast = "Відкрито: " + offer.name + " (−" + quote.cost + " поживи)";
+          state.ui.toast = "Відкрито: " + offer.name + " (−" + quote.cost +
+            (quote.fromPantry ? ", зі складу " + quote.fromPantry : "") + ")";
           return { ok: true };
         } catch (err) {
           rollbackWorld();

@@ -2,10 +2,20 @@
 (function (FS) {
   "use strict";
 
+  /** Active snakes on the current world layer (allies inside homes occupy nothing outdoors). */
+  FS.iterActiveSnakes = function (state, fn) {
+    if (state.player) fn(state.player);
+    (state.enemies || []).forEach(fn);
+    (state.allies || []).forEach(function (a) {
+      if (a && !a.inside) fn(a);
+    });
+  };
+
   FS.buildOccupancy = function (state) {
     var map = Object.create(null);
     function mark(snake) {
       if (!snake || snake.dead) return;
+      if (snake.kind === "ally" && snake.inside) return;
       for (var i = 0; i < snake.body.length; i++) {
         var c = snake.body[i];
         var isTail = i === snake.body.length - 1;
@@ -15,8 +25,7 @@
         map[k].push({ snakeId: snake.id, part: i === 0 ? "head" : (isTail ? "tail" : "body"), index: i });
       }
     }
-    mark(state.player);
-    for (var i = 0; i < state.enemies.length; i++) mark(state.enemies[i]);
+    FS.iterActiveSnakes(state, mark);
     return map;
   };
 
@@ -54,6 +63,7 @@
     var hits = [];
     function scan(s) {
       if (!s || s.dead) return;
+      if (s.kind === "ally" && s.inside) return;
       for (var i = 0; i < s.body.length; i++) {
         var c = s.body[i];
         if (c.x === x && c.y === y) {
@@ -63,9 +73,22 @@
         }
       }
     }
-    scan(state.player);
-    state.enemies.forEach(scan);
+    FS.iterActiveSnakes(state, scan);
     return hits;
+  };
+
+  /** Shared safety filter for AI/player step candidates. */
+  FS.stepWouldCollideSnake = function (state, snake, next, ignoreMovingTails) {
+    var hits = FS.snakeAtCell(state, next.x, next.y, ignoreMovingTails !== false);
+    for (var i = 0; i < hits.length; i++) {
+      var h = hits[i];
+      if (h.snake.id === snake.id) {
+        if (!(h.part === "tail" && !snake.standing && snake.growthDebt <= 0)) return true;
+      } else {
+        return true;
+      }
+    }
+    return false;
   };
 
   /**

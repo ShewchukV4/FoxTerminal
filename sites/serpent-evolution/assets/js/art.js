@@ -313,6 +313,86 @@
     ctx.restore();
   };
 
+  FS.drawCampfire = function (ctx, ox, oy, cell, time, reduced) {
+    ctx.save();
+    ctx.translate(ox, oy);
+    // stone ring
+    for (var i = 0; i < 8; i++) {
+      var a = (i / 8) * Math.PI * 2;
+      ctx.fillStyle = i % 2 ? "#6a6870" : "#585860";
+      ctx.beginPath();
+      ctx.ellipse(Math.cos(a) * cell * 0.28, Math.sin(a) * cell * 0.22 + 4, 5, 3.5, a, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // logs
+    ctx.fillStyle = "#5a4030";
+    ctx.save();
+    ctx.rotate(0.4);
+    ctx.fillRect(-10, -2, 20, 4);
+    ctx.restore();
+    ctx.save();
+    ctx.rotate(-0.5);
+    ctx.fillRect(-10, 0, 20, 4);
+    ctx.restore();
+    // coals
+    ctx.fillStyle = "#2a1810";
+    ctx.beginPath();
+    ctx.ellipse(0, 2, 8, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // flame frames
+    var frame = reduced ? 0 : Math.floor((time || 0) * 6) % 4;
+    var flames = [
+      ["#e8a040", "#f0c060", 10],
+      ["#e07030", "#f0a050", 12],
+      ["#d05020", "#e89040", 9],
+      ["#e88838", "#f0b858", 11]
+    ];
+    var f = flames[frame];
+    ctx.fillStyle = f[0];
+    ctx.beginPath();
+    ctx.moveTo(-6, 2);
+    ctx.quadraticCurveTo(-2, -f[2], 0, -f[2] - 4);
+    ctx.quadraticCurveTo(2, -f[2], 6, 2);
+    ctx.fill();
+    ctx.fillStyle = f[1];
+    ctx.beginPath();
+    ctx.moveTo(-3, 2);
+    ctx.quadraticCurveTo(0, -f[2] * 0.6, 3, 2);
+    ctx.fill();
+    // warm glow
+    ctx.fillStyle = "rgba(240,160,60,0.18)";
+    ctx.beginPath();
+    ctx.arc(0, 0, cell * 0.55, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  };
+
+  FS.drawCaveEntrance = function (ctx, ox, oy, cell) {
+    ctx.save();
+    ctx.translate(ox, oy);
+    ctx.fillStyle = "rgba(0,0,0,0.35)";
+    ctx.beginPath();
+    ctx.ellipse(0, cell * 0.2, cell * 0.38, 6, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#3a4248";
+    ctx.beginPath();
+    ctx.moveTo(-cell * 0.36, cell * 0.1);
+    ctx.quadraticCurveTo(-cell * 0.2, -cell * 0.42, 0, -cell * 0.48);
+    ctx.quadraticCurveTo(cell * 0.2, -cell * 0.42, cell * 0.36, cell * 0.1);
+    ctx.lineTo(cell * 0.28, cell * 0.18);
+    ctx.quadraticCurveTo(0, -cell * 0.2, -cell * 0.28, cell * 0.18);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = "#0c1014";
+    ctx.beginPath();
+    ctx.ellipse(0, cell * 0.02, cell * 0.18, cell * 0.22, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#4a6a48";
+    ctx.fillRect(-cell * 0.34, -cell * 0.1, 5, 10);
+    ctx.fillRect(cell * 0.28, -cell * 0.05, 5, 8);
+    ctx.restore();
+  };
+
   FS.drawBlock = function (ctx, ox, oy, cell, dmg) {
     ctx.save();
     ctx.translate(ox, oy);

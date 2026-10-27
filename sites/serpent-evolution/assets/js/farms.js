@@ -50,8 +50,9 @@
     if (!tile) return { ok: false, why: "Немає клітинки" };
     var tt = tile.tt || "meadow";
     if (tt === "deep" || tt === "shallow") return { ok: false, why: "Вода" };
-    if (tt === "stone" || tile.block) return { ok: false, why: "Камінь" };
+    if (tt === "stone" || tt === "cave_wall" || tile.block) return { ok: false, why: "Камінь" };
     if (tt === "bridge") return { ok: false, why: "Міст — не суша для грядки" };
+    if (tt === "campfire" || tt === "cave_exit" || tt === "cave_floor") return { ok: false, why: "Не для грядки" };
     if (!FS.tileWalkable(tile)) return { ok: false, why: "Непрохідно" };
     if (FS.treeAt && FS.treeAt(state, x, y)) return { ok: false, why: "Дерево" };
     if (FS.buildingAt && FS.buildingAt(state, x, y)) return { ok: false, why: "Споруда" };

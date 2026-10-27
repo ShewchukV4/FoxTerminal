@@ -126,7 +126,8 @@ sandbox.globalThis = sandbox;
 const root = path.join(__dirname, "..");
 const files = [
   "data.js", "core.js", "economy.js", "tiles.js", "generate.js", "grid.js", "input.js", "snake.js",
-  "food-director.js", "farms.js", "allies.js", "storage.js", "build.js", "art.js", "world.js", "ai.js",
+  "food-director.js", "farms.js", "allies.js", "storage.js", "settlement.js", "layers.js", "caves.js",
+  "build.js", "art.js", "world.js", "ai.js",
   "talents.js", "progression.js", "audio.js", "save.js", "draw.js", "guide.js", "renderer.js", "ui.js", "main.js"
 ];
 const ctx = vm.createContext(sandbox);

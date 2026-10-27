@@ -28,6 +28,14 @@
     state.woodNodes = [];
     state.buildMode = null;
     state.pantry = { food: 0, cap: FS.PANTRY_BASE_CAP || 12, level: 1, reserve: 0 };
+    state.layerId = FS.LAYER_SURFACE || "surface";
+    state.caveId = null;
+    state.caves = { list: [], byId: Object.create(null) };
+    state.portals = [];
+    state.layers = null;
+    state.settlement = null;
+    if (FS.ensureSettlement) FS.ensureSettlement(state);
+    if (FS.ensureCampfire) FS.ensureCampfire(state);
     state.xp = 0;
     state.talentLevel = 1;
     state.talents = FS.defaultTalents();
@@ -208,6 +216,8 @@
     state.time += dt;
     FS.tickSkills(state, dt);
     FS.tickFoodDirector(state, dt);
+    if (FS.tickDayNight) FS.tickDayNight(state, dt);
+    if (FS.tickVision) FS.tickVision(state);
     if (FS.tickFarms) FS.tickFarms(state, dt);
     if (FS.tickAllies) FS.tickAllies(state, dt);
     if (FS.tickWoodNodes) FS.tickWoodNodes(state, dt);
@@ -267,10 +277,15 @@
     FS.setStanding(state.player, !movers.some(function (m) { return m.snake === state.player; }));
     }
 
-    // --- Enemies: intent only; commit sets dir ---
+    // --- Enemies: frozen while player is underground (surface pack waits) ---
+    if (state.layerId === "cave") {
+      state.enemies.forEach(function (e) {
+        if (!e.dead) FS.setStanding(e, true);
+      });
+    } else
     state.enemies.forEach(function (e) {
       if (e.dead) return;
-      e.intentDir = FS.aiChooseDir(state, e);
+      e.intentDir = FS.aiChooseDir(state, e, dt);
       e.stepAcc += dt * (e.slowMul || 1);
       var period = e.stepPeriod;
       if (e.stepAcc >= period) {

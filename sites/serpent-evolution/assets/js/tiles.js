@@ -52,6 +52,22 @@
     home_door: {
       id: "home_door", name: "Вхід у домівку", walk: true, farm: false, door: true,
       detectMul: 1, desc: "Безпечний прийом/випуск союзника"
+    },
+    campfire: {
+      id: "campfire", name: "Багаття", walk: true, farm: false, campfire: true,
+      detectMul: 1, desc: "Серце поселення · F — стан"
+    },
+    cave_floor: {
+      id: "cave_floor", name: "Печерна підлога", walk: true, farm: false, slowMul: 1.05,
+      detectMul: 1, desc: "Кам’яна підлога підземелля"
+    },
+    cave_wall: {
+      id: "cave_wall", name: "Скеля", walk: false, farm: false, block: true,
+      detectMul: 1, desc: "Непрозора кам’яна стіна"
+    },
+    cave_exit: {
+      id: "cave_exit", name: "Вихід з печери", walk: true, farm: false, portal: true,
+      detectMul: 1, desc: "Перехід на поверхню / між шарами"
     }
   };
 
@@ -87,8 +103,8 @@
       });
     }
     // bridge over deep: walkable
-    if (tt === "bridge") tile.block = false;
-    if (tt === "deep" || tt === "stone") tile.block = true;
+    if (tt === "bridge" || tt === "campfire" || tt === "cave_exit" || tt === "cave_floor") tile.block = false;
+    if (tt === "deep" || tt === "stone" || tt === "cave_wall") tile.block = true;
     return tile;
   };
 

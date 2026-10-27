@@ -16,6 +16,12 @@
       buildings: state.buildings || [],
       woodNodes: state.woodNodes || [],
       pantry: state.pantry || null,
+      settlement: state.settlement || null,
+      layerId: state.layerId || "surface",
+      caveId: state.caveId || null,
+      caves: state.caves || null,
+      portals: state.portals || null,
+      layers: state.layers || null,
       world: {
         tiles: state.world.tiles,
         foods: state.world.foods,
@@ -41,7 +47,15 @@
         return {
           id: e.id, name: e.name, arch: e.arch, body: e.body, dir: e.dir,
           growthDebt: e.growthDebt, stepPeriod: e.stepPeriod, color: e.color,
-          home: e.home, detectRange: e.detectRange
+          home: e.home, detectRange: e.detectRange,
+          loot: e.loot || null,
+          raidTarget: e.raidTarget || null,
+          knowsFarm: !!e.knowsFarm,
+          memoryFarms: e.memoryFarms || null,
+          memoryGaps: e.memoryGaps || null,
+          intel: e.intel || null,
+          _breakCd: e._breakCd || 0,
+          stateAI: e.stateAI || null
         };
       }),
       xp: state.xp,
@@ -108,6 +122,13 @@
     state.buildings = data.buildings || [];
     state.woodNodes = data.woodNodes || [];
     state.pantry = data.pantry || { food: 0, cap: 12, level: 1, reserve: 0 };
+    state.settlement = data.settlement || null;
+    state.layerId = data.layerId || "surface";
+    state.caveId = data.caveId || null;
+    state.caves = data.caves || { list: [], byId: Object.create(null) };
+    state.portals = data.portals || [];
+    state.layers = data.layers || null;
+    if (FS.ensureSettlement) FS.ensureSettlement(state);
     state.buildMode = null;
     state.player = FS.createPlayerSnake(state.world.nest);
     state.player.body = data.player.body;

@@ -69,6 +69,13 @@
     }
   };
 
+  FS.clearAllyFarmReservation = function (state, ally) {
+    if (!ally || !state.farms || !state.farms.list) return;
+    state.farms.list.forEach(function (f) {
+      if (f.reservedBy === ally.id) f.reservedBy = null;
+    });
+  };
+
   FS.hireAlly = function (state, homeId, role) {
     if (state._hireLock) return { ok: false, why: "Зачекай" };
     FS.ensureAllies(state);
@@ -78,11 +85,21 @@
     if (home.residents.length >= home.capacity) return { ok: false, why: "Дім повний" };
     var maxAllies = 1 + (state.effects && state.effects.allyCapAdd || 0);
     if (state.allies.length >= Math.min(4, maxAllies)) return { ok: false, why: "Ліміт союзників" };
-    var prev = FS.previewSpend(state, rdef.cost);
-    if (!prev.ok) return { ok: false, why: "Потрібно " + rdef.cost + " поживи, є " + prev.now };
+    if (FS.evaluateSettlementForHire) {
+      var ev = FS.evaluateSettlementForHire(state, home);
+      if (!ev.ok) {
+        var miss = ev.checks.filter(function (c) { return !c.ok; }).map(function (c) { return c.label; });
+        return { ok: false, why: "Осередок не готовий: " + miss.join("; ") };
+      }
+    }
+    var prev = FS.quoteSettlementSpend
+      ? FS.quoteSettlementSpend(state, rdef.cost)
+      : FS.previewSpend(state, rdef.cost);
+    if (!prev.ok) return { ok: false, why: prev.why || ("Потрібно " + rdef.cost) };
     state._hireLock = true;
     try {
-      return FS.spendNutrition(state, rdef.cost, function () {
+      var spend = FS.spendSettlement || FS.spendNutrition;
+      return spend(state, rdef.cost, function () {
         var ally = FS.createSnake({
           id: FS.uid(), kind: "ally", name: rdef.name,
           x: home.x, y: home.y, dir: "D", length: 3,
@@ -99,7 +116,7 @@
         home.residents.push(ally.id);
         state.allies.push(ally);
         state.tutorial.done.ally = true;
-        state.ui.toast = "Найнято: " + rdef.name + " (вийде, коли двері вільні)";
+        state.ui.toast = "Запрошено: " + rdef.name + " (вийде, коли двері вільні)";
         return { ok: true, ally: ally };
       }, { reason: "hire" });
     } finally {
@@ -110,6 +127,7 @@
   FS.allyCommand = function (state, allyId, cmd) {
     var a = state.allies.filter(function (x) { return x.id === allyId; })[0];
     if (!a) return { ok: false };
+    FS.clearAllyFarmReservation(state, a);
     a.cmd = cmd; // work | home | follow | wait
     if (cmd === "home") a.task = { kind: "go_home" };
     if (cmd === "wait") { a.task = null; a.stateAI = "wait"; }
@@ -128,28 +146,39 @@
     if (!ally.inside) return;
     var home = state.homes.filter(function (h) { return h.id === ally.homeId; })[0];
     if (!home) return;
-    if (!FS.doorFree(state, home)) {
-      ally.stateAI = "wait_door";
+    if (!home.door) home.door = { x: home.x, y: home.y + 1 };
+    // Prefer door orientation from home → door vector
+    var dirs = ["D", "R", "L", "U"];
+    var dx = home.door.x - home.x, dy = home.door.y - home.y;
+    if (dy > 0) dirs = ["D", "R", "L", "U"];
+    else if (dy < 0) dirs = ["U", "R", "L", "D"];
+    else if (dx > 0) dirs = ["R", "D", "U", "L"];
+    else if (dx < 0) dirs = ["L", "D", "U", "R"];
+
+    for (var di = 0; di < dirs.length; di++) {
+      var dir = dirs[di];
+      var v = FS.dirVec(dir);
+      var body = [];
+      var ok = true;
+      for (var i = 0; i < ally.body.length; i++) {
+        var cx = home.door.x - v.x * i, cy = home.door.y - v.y * i;
+        if (FS.isBlockedCell(state, cx, cy, ally) || FS.snakeAtCell(state, cx, cy, false).length) {
+          ok = false;
+          break;
+        }
+        if (FS.treeAt && FS.treeAt(state, cx, cy)) { ok = false; break; }
+        body.push({ x: cx, y: cy });
+      }
+      if (!ok) continue;
+      ally.body = body;
+      ally.dir = dir;
+      ally.requestedDir = dir;
+      ally.inside = false;
+      ally.standing = false;
+      ally.stateAI = "idle";
       return;
     }
-    // place full body along free cells from door
-    var dir = "D";
-    var v = FS.dirVec(dir);
-    var body = [];
-    for (var i = 0; i < ally.body.length; i++) {
-      var cx = home.door.x - v.x * i, cy = home.door.y - v.y * i;
-      if (FS.snakeAtCell(state, cx, cy, false).length) {
-        ally.stateAI = "wait_door";
-        return;
-      }
-      body.push({ x: cx, y: cy });
-    }
-    ally.body = body;
-    ally.dir = dir;
-    ally.requestedDir = dir;
-    ally.inside = false;
-    ally.standing = false;
-    ally.stateAI = "idle";
+    ally.stateAI = "wait_door";
   };
 
   FS.allyStepToward = function (state, ally, tx, ty) {
@@ -289,6 +318,10 @@
           // collect one fruit into carry, deliver to drop pad
           if (farm.store.length && !ally.carry) {
             ally.carry = farm.store.shift();
+            // One fruit — remove world representation too
+            state.world.foods = state.world.foods.filter(function (f) {
+              return !(f.x === farm.x && f.y === farm.y && f.fromFarm);
+            });
             if (!farm.store.length) {
               farm.stage = "recover";
               farm.t = 0;
