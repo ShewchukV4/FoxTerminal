@@ -4,59 +4,59 @@
 
   FS.GUIDE_STEPS = [
     {
-      title: "Рух і зупинка",
-      text: "Натисни — один крок. Утримуй — кілька. Відпусти — повна зупинка. Назад у шию — ні. Стіна або тіло — смерть (або серце).",
-      keys: "WASD / стрілки · Пробіл — пауза світу"
+      title: "Рух і сітка",
+      text: "Клітинки — основа світу. Натисни — крок, відпусти — стоп. Зіткнення смертельні.",
+      keys: "WASD · Пробіл — пауза", scene: "move"
     },
     {
-      title: "Пожива = довжина",
-      text: "Плід → +1 пожива → +1 сегмент. Шкала: пожива 0–9, довжина 3–12. Їжа росте лише на грядках (на старті їх 4).",
-      keys: "3 + пожива = довжина"
+      title: "На змійці / На базі",
+      text: "Carried 0–9 = довжина 3–12. Склад бази — окремий запас. F біля гнізда: скласти/взяти. Перекладання без XP.",
+      keys: "F біля гнізда", scene: "pantry"
     },
     {
-      title: "Жовті позначки",
-      text: "Не все жовте — монета. Плід, урожай, кущ, місце інтересу й гілки мають різні іконки. H — повна легенда. POI не списує поживу само по собі — підтверди F.",
-      keys: "H — легенда"
+      title: "Скласти — коротшаєш",
+      text: "Скласти 3 → хвіст −3 сегменти. Взяти назад → ціль довжини росте на кроках.",
+      keys: "Склад їжі", scene: "pantry"
     },
     {
-      title: "Tab — нова земля",
-      text: "Карта → відкрити територію. Ціна з поживи. Підтвердження в панелі (не системне вікно). При помилці генерації — повний відкат.",
-      keys: "Tab"
+      title: "Грядка на сухій землі",
+      text: "Будь-яка вільна суха клітинка. Червоний preview — вода/камінь/дерево.",
+      keys: "B → грядка", scene: "farm"
     },
     {
-      title: "Дерево талантів",
-      text: "Чотири гілки в колонках. Pan/zoom збережені. «До доступних» центрує вузол. Розвилка A/B — серце одноразове.",
-      keys: "T"
-    },
-    {
-      title: "Деревина ≠ пожива",
-      text: "Шукай дерево: гілки лежать лише під кроною / коло стовбура. Підбери головою або F біля дерева. Витрата не коротшає хвіст.",
-      keys: "HUD: Деревина"
+      title: "Дерево й гілки",
+      text: "Гілки лише під кроною. F біля стовбура — заготівля.",
+      keys: "HUD: Деревина", scene: "tree"
     },
     {
       title: "B — будівництво",
-      text: "Змія стоїть, курсор ставить будь-де на відкритій карті. ЛКМ — поставити, ПКМ / X — знести (−50% деревини). R обертає, Esc/B вихід.",
-      keys: "B · Shift+B — панель бази"
-    },
-    {
-      title: "Грядка",
-      text: "Посадка → ріст → стиглий плід на клітинці. Збери сам або садівником. Урожай — фізичний плід, не «монета в гаманці».",
-      keys: "B → грядка"
+      text: "Змія стоїть. ЛКМ ставити, ПКМ скасувати, X знести. Ряд паркану — увесь або нічого.",
+      keys: "B", scene: "build"
     },
     {
       title: "Паркан і ворота",
-      text: "Паркан блокує ворогів. Ворота: свої проходять, зачинені — для ворогів ні. Дірка в огорожі = шлях для рейду.",
-      keys: "ЛКМ / drag ряду"
+      text: "Автоз’єднання секцій. Зачинені ворота блокують ворогів; свої проходять.",
+      keys: "R обернути", scene: "fence"
     },
     {
-      title: "Союзник",
-      text: "Домівка → найм. Садівник / носій / заготівельник / розвідник. «Усім додому» при небезпеці. Проходять свої ворота.",
-      keys: "Shift+B"
+      title: "Злодій урожаю",
+      text: "Бере один плід і тікає з вантажем. Закрий шлях — перепланує.",
+      keys: "Огорожа", scene: "thief"
     },
     {
-      title: "Чужа база і рейд",
-      text: "На небезпечних землях — чужі гнізда. Змій може помітити грядку й піти красти, якщо є шлях. Закрий огорожею; ремонт дешевий.",
-      keys: "Сигнал у toast"
+      title: "Розвідник",
+      text: "Обходить межу, запам’ятовує відкриті ворота. Після повернення — сигнал «Базу помітили».",
+      keys: "Зачини ворота", scene: "scout"
+    },
+    {
+      title: "Носій → склад",
+      text: "Носій несе урожай у базовий склад, не в гаманець гравця.",
+      keys: "Shift+B", scene: "ally"
+    },
+    {
+      title: "Tab і таланти",
+      text: "Земля за поживу. Дерево T — 4 колонки без overlap. Склад I — місткість бази.",
+      keys: "Tab · T", scene: "move"
     }
   ];
 
@@ -210,6 +210,31 @@
     FS.paintGuide(state, now);
   };
 
+  /** Shared cell board for every guide scene — visible grid. */
+  FS.drawGuideBoard = function (ctx, w, h, cols, rows, cell) {
+    cols = cols || 10;
+    rows = rows || 6;
+    cell = cell || 36;
+    var ox = (w - cols * cell) / 2;
+    var oy = (h - rows * cell) / 2 + 8;
+    ctx.fillStyle = "#1a2a20";
+    ctx.fillRect(0, 0, w, h);
+    for (var y = 0; y < rows; y++) {
+      for (var x = 0; x < cols; x++) {
+        var px = ox + x * cell, py = oy + y * cell;
+        ctx.fillStyle = (x + y) % 2 ? "#243528" : "#203024";
+        ctx.fillRect(px + 1, py + 1, cell - 2, cell - 2);
+        ctx.strokeStyle = "rgba(180,210,160,0.28)";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(px + 0.5, py + 0.5, cell - 1, cell - 1);
+      }
+    }
+    ctx.strokeStyle = "rgba(105,224,190,0.45)";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(ox - 1, oy - 1, cols * cell + 2, rows * cell + 2);
+    return { ox: ox, oy: oy, cell: cell, cols: cols, rows: rows };
+  };
+
   FS.paintGuide = function (state, now) {
     var canvas = document.getElementById("guide-canvas");
     if (!canvas) return;
@@ -218,56 +243,76 @@
     now = now || performance.now();
     var t = (now - state.guide.start) / 1000;
     if (state.settings.reducedMotion) t = 0.5;
-    ctx.fillStyle = "#1c2d22";
-    ctx.fillRect(0, 0, w, h);
-    var step = state.guide.step;
-    var cx = w / 2, cy = h / 2;
-    // Shared demo sprites — never touch real state wallets
-    if (step <= 1) {
-      var body = [{ x: 0, y: 0 }, { x: -1, y: 0 }, { x: -2, y: 0 }];
-      if (!state.settings.reducedMotion) {
-        var phase = Math.floor(t * 2) % 4;
-        if (phase === 1) body = [{ x: 1, y: 0 }, { x: 0, y: 0 }, { x: -1, y: 0 }];
-        if (phase === 2) body = [{ x: 1, y: 0 }, { x: 0, y: 0 }, { x: -1, y: 0 }, { x: -2, y: 0 }];
-      }
-      FS.drawSnakeBody(ctx, body, "R", FS.COLORS.player, { cell: 36, ox: cx, oy: cy });
-      FS.drawFruit(ctx, "apple", cx + 90, cy, 1, { phase: "ripe", time: t });
-    } else if (step === 2) {
-      ctx.fillStyle = "#f2d597";
-      ctx.font = "28px Segoe UI";
-      ctx.textAlign = "center";
-      [["❀ кущ", -180], ["≡ гілки", -60], ["🍎 плід", 60], ["⌂ POI", 180]].forEach(function (p) {
-        ctx.fillText(p[0], cx + p[1], cy);
-      });
-    } else if (step === 5 || step === 6) {
-      ctx.fillStyle = "#8a6a38";
-      ctx.fillRect(cx - 80, cy - 10, 40, 12);
-      ctx.fillStyle = "#c4a060";
-      ctx.fillText("деревина", cx - 60, cy + 40);
-      ctx.strokeStyle = "#69E0BE";
-      ctx.strokeRect(cx + 40, cy - 30, 50, 50);
-      ctx.fillStyle = "#eaf3df";
-      ctx.font = "14px Segoe UI";
-      ctx.fillText("B preview", cx + 65, cy + 50);
-    } else if (step === 8) {
-      ctx.fillStyle = "#8a6a40";
-      for (var i = -2; i <= 2; i++) {
-        if (i === 0) continue;
-        ctx.fillRect(cx + i * 36 - 10, cy - 40, 20, 12);
-      }
-      ctx.strokeStyle = "#69E0BE";
-      ctx.strokeRect(cx - 16, cy - 48, 32, 28);
+    var step = FS.GUIDE_STEPS[state.guide.step] || {};
+    var scene = step.scene || "move";
+    var board = FS.drawGuideBoard(ctx, w, h, 10, 6, 36);
+    var ox = board.ox, oy = board.oy, cell = board.cell;
+
+    function at(gx, gy) {
+      return { x: ox + (gx + 0.5) * cell, y: oy + (gy + 0.5) * cell };
+    }
+
+    if (scene === "move" || scene === "pantry") {
+      var len = scene === "pantry" && t > 1.2 ? 3 : 5;
+      var body = [];
+      for (var i = 0; i < len; i++) body.push({ x: 3 - i, y: 3 });
+      FS.drawSnakeBody(ctx, body, "R", FS.COLORS.player, { cell: cell, ox: ox, oy: oy });
+      if (FS.drawLarder) FS.drawLarder(ctx, at(7, 3).x, at(7, 3).y, cell, scene === "pantry" ? 0.5 : 0.15);
       ctx.fillStyle = "#eaf3df";
       ctx.font = "13px Segoe UI";
       ctx.textAlign = "center";
-      ctx.fillText("ворота відкриті для своїх", cx, cy + 40);
-    } else {
-      FS.drawSnakeBody(ctx, [{ x: 0, y: 0 }, { x: -1, y: 0 }, { x: -2, y: 0 }], "R", FS.COLORS.player, {
-        cell: 36, ox: cx - 40, oy: cy
+      if (scene === "pantry") {
+        ctx.fillText("змійка " + (len === 5 ? "7" : "3") + "/9  →  база", at(5, 1).x, at(5, 1).y);
+      }
+    } else if (scene === "farm") {
+      if (FS.drawFarmPlot) {
+        FS.drawFarmPlot(ctx, at(3, 2).x, at(3, 2).y, cell, "ready", "berry");
+        FS.drawFarmPlot(ctx, at(5, 2).x, at(5, 2).y, cell, "growing", "berry");
+      }
+      ctx.fillStyle = "rgba(224,116,106,0.45)";
+      ctx.fillRect(ox + 7 * cell + 2, oy + 2 * cell + 2, cell - 4, cell - 4);
+      ctx.fillStyle = "#eaf3df";
+      ctx.font = "12px Segoe UI";
+      ctx.textAlign = "center";
+      ctx.fillText("вода — ні", at(7, 4).x, at(7, 4).y);
+    } else if (scene === "tree") {
+      if (FS.drawTreeSprite) FS.drawTreeSprite(ctx, at(4, 3).x, at(4, 3).y, cell, 1, {});
+      if (FS.drawBranchPile) {
+        FS.drawBranchPile(ctx, at(5, 3).x, at(5, 3).y, cell);
+        FS.drawBranchPile(ctx, at(4, 4).x, at(4, 4).y, cell);
+      }
+    } else if (scene === "build" || scene === "fence") {
+      if (FS.drawFence) {
+        FS.drawFence(ctx, at(3, 3).x, at(3, 3).y, cell, 2, 0);
+        FS.drawFence(ctx, at(4, 3).x, at(4, 3).y, cell, 10, 0);
+        FS.drawFence(ctx, at(5, 3).x, at(5, 3).y, cell, 8, 0);
+      }
+      if (FS.drawGate) FS.drawGate(ctx, at(4, 4).x, at(4, 4).y, cell, t % 2 < 1, 0, 0);
+    } else if (scene === "thief") {
+      if (FS.drawFarmPlot) FS.drawFarmPlot(ctx, at(2, 3).x, at(2, 3).y, cell, "ready", "berry");
+      FS.drawSnakeBody(ctx, [{ x: 4, y: 3 }, { x: 5, y: 3 }, { x: 6, y: 3 }], "L", FS.COLORS.enemyCareful, {
+        cell: cell, ox: ox, oy: oy
       });
-      FS.drawSnakeBody(ctx, [{ x: 2, y: 0 }, { x: 3, y: 0 }, { x: 4, y: 0 }], "L", FS.COLORS.enemyCareful, {
-        cell: 36, ox: cx - 40, oy: cy
+      FS.drawFruit(ctx, "berry", at(4, 3).x + 10, at(4, 3).y - 12, 0.5, { phase: "ripe", time: t });
+    } else if (scene === "scout") {
+      if (FS.drawFence) {
+        FS.drawFence(ctx, at(3, 2).x, at(3, 2).y, cell, 10, 0);
+        FS.drawFence(ctx, at(5, 2).x, at(5, 2).y, cell, 10, 0);
+        FS.drawFence(ctx, at(3, 4).x, at(3, 4).y, cell, 10, 0);
+        FS.drawFence(ctx, at(5, 4).x, at(5, 4).y, cell, 10, 0);
+      }
+      if (FS.drawGate) FS.drawGate(ctx, at(4, 2).x, at(4, 2).y, cell, false, 0, 0);
+      FS.drawSnakeBody(ctx, [{ x: 7, y: 2 }, { x: 8, y: 2 }, { x: 8, y: 3 }], "L", FS.COLORS.enemyCareful, {
+        cell: cell, ox: ox, oy: oy
       });
+      ctx.fillStyle = "#eaf3df";
+      ctx.font = "12px Segoe UI";
+      ctx.textAlign = "center";
+      ctx.fillText("відкриті ворота", at(4, 5).x, at(4, 5).y);
+    } else if (scene === "ally") {
+      if (FS.drawHut) FS.drawHut(ctx, at(2, 3).x, at(2, 3).y, cell);
+      if (FS.drawLarder) FS.drawLarder(ctx, at(7, 3).x, at(7, 3).y, cell, 0.6);
+      FS.drawSnakeBody(ctx, [{ x: 4, y: 3 }, { x: 3, y: 3 }], "R", "#c8b878", { cell: cell, ox: ox, oy: oy });
     }
   };
 })(window.FoxSerpent);

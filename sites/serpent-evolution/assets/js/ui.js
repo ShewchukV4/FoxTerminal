@@ -9,6 +9,7 @@
       '  <div class="hud-left">',
       '    <div id="len">Довжина <b>3</b>/12</div>',
       '    <div id="nutrition">Пожива <b>0</b>/9</div>',
+      '    <div id="pantry">База <b>0</b>/12</div>',
       '    <div id="wood">Деревина <b>0</b>/12</div>',
       '    <div id="xp">Досвід <b>0</b></div>',
       '    <div id="points">Очки талантів <b>0</b></div>',
@@ -110,8 +111,13 @@
     document.getElementById("len").innerHTML = "Довжина <b>" + state.player.body.length + "</b>/12" +
       (pending ? " <span class='muted'>(+ " + pending + " росте)</span>" : "") +
       (state.effects.growthHud ? " · ціль " + target : "");
-    var nutLabel = nut >= FS.MAX_NUTRITION ? "Пожива повна · їжа дає лише досвід" : ("Пожива <b>" + nut + "</b>/9");
+    var nutLabel = nut >= FS.MAX_NUTRITION ? "На змійці повна · їжа → XP" : ("На змійці <b>" + nut + "</b>/9");
     document.getElementById("nutrition").innerHTML = nutLabel;
+    if (FS.ensurePantry) FS.ensurePantry(state);
+    var panEl = document.getElementById("pantry");
+    if (panEl && state.pantry) {
+      panEl.innerHTML = "На базі <b>" + state.pantry.food + "</b>/" + state.pantry.cap;
+    }
     if (FS.ensureWood) FS.ensureWood(state);
     var woodEl = document.getElementById("wood");
     if (woodEl) {
@@ -184,6 +190,7 @@
     else if (state.ui.panel === "death") el.innerHTML = FS.htmlDeath(state);
     else if (state.ui.panel === "expand") el.innerHTML = FS.htmlExpand(state);
     else if (state.ui.panel === "build") el.innerHTML = FS.htmlBuild(state);
+    else if (state.ui.panel === "pantry") el.innerHTML = FS.htmlPantry(state);
     else el.innerHTML = "";
     FS.bindPanel(state);
   };
@@ -403,7 +410,7 @@
   FS.bindPanel = function (state) {
     var el = document.getElementById("panel");
     el.onclick = function (ev) {
-      var t = ev.target.closest("[data-act],[data-talent],[data-offer],[data-offer-yes],[data-offer-no],[data-fork],[data-hire],[data-ally-cmd],[data-ally-all]");
+      var t = ev.target.closest("[data-act],[data-talent],[data-offer],[data-offer-yes],[data-offer-no],[data-fork],[data-hire],[data-ally-cmd],[data-ally-all],[data-pantry]");
       if (!t) return;
       if (t.dataset.act === "close") {
         state.ui.panel = null;
@@ -550,6 +557,16 @@
         var partsC = t.dataset.allyCmd.split(":");
         FS.allyCommand(state, partsC[0], partsC[1]);
         state.ui.panelDirty = true; FS.renderPanel(state); return;
+      }
+      if (t.dataset.pantry) {
+        var pp = t.dataset.pantry.split(":");
+        var tr = FS.pantryTransfer(state, pp[0], +pp[1]);
+        state.ui.toast = tr.ok
+          ? (pp[0] === "deposit" ? "Складено " + tr.moved : "Взято " + tr.moved)
+          : tr.why;
+        state.ui.panelDirty = true;
+        FS.renderPanel(state);
+        return;
       }
     };
     var pan = document.getElementById("talent-pan");

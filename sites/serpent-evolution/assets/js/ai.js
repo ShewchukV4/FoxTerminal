@@ -101,11 +101,16 @@
         score += (before - after) * 8;
       }
 
+      // Flee with loot → home
+      if (snake.loot && snake.home) {
+        score += (FS.manhattan(head, snake.home) - FS.manhattan(next, snake.home)) * 14;
+      }
+
       // Raid ripe farms if path exists (no magic protected flag — only walkability)
-      if (state.farms && state.farms.list && snake.raidTarget) {
+      if (!snake.loot && state.farms && state.farms.list && snake.raidTarget) {
         var rt = snake.raidTarget;
         score += (FS.manhattan(head, rt) - FS.manhattan(next, rt)) * 12;
-      } else if (state.farms && state.farms.list && snake.knowsFarm) {
+      } else if (!snake.loot && state.farms && state.farms.list && snake.knowsFarm) {
         var ripe = null, rd = 1e9;
         state.farms.list.forEach(function (f) {
           if (f.stage !== "ready" || !f.store || !f.store.length) return;
@@ -182,7 +187,54 @@
       }
     }
 
-    // Discover farms in vision → memory for raids
+    // Scout: circle nest perimeter, remember open gates / gaps, report home
+    if (snake.arch === "scout" && !snake.loot) {
+      snake.intel = snake.intel || { gaps: [], reported: false };
+      (state.buildings || []).forEach(function (b) {
+        if (b.owner === "enemy") return;
+        if (b.kind === "gate" && b.closed === false) {
+          snake.intel.gaps.push({ x: b.x, y: b.y, kind: "gate" });
+        }
+      });
+      // Prefer path along player nest ring
+      if (state.world && state.world.nest && !snake._scoutDone) {
+        var nest = state.world.nest;
+        var ring = [
+          { x: nest.x + 4, y: nest.y }, { x: nest.x, y: nest.y + 4 },
+          { x: nest.x - 4, y: nest.y }, { x: nest.x, y: nest.y - 4 }
+        ];
+        snake._scoutIdx = snake._scoutIdx || 0;
+        var wp = ring[snake._scoutIdx % ring.length];
+        if (FS.manhattan(head, wp) <= 1) snake._scoutIdx++;
+        else {
+          // boost already applied via food/home; set soft target
+          snake.raidTarget = null;
+          snake._scoutWp = wp;
+        }
+        if (snake._scoutIdx >= ring.length && snake.home) {
+          snake._scoutDone = true;
+          snake.stateAI = "report";
+        }
+      }
+      if (snake._scoutDone && snake.home && FS.manhattan(head, snake.home) <= 1) {
+        // Share intel with pack after return
+        state.enemies.forEach(function (e) {
+          if (e.id === snake.id || e.dead) return;
+          e.memoryGaps = (snake.intel.gaps || []).slice();
+          e.knowsFarm = e.knowsFarm || !!snake.knowsFarm;
+          e.memoryFarms = e.memoryFarms || snake.memoryFarms;
+        });
+        if (snake.intel.gaps.length && !snake.intel.reported) {
+          snake.intel.reported = true;
+          state.ui.toast = "Базу помітили — зачини ворота!";
+          state.ui.raidWarn = 5;
+        }
+        snake._scoutDone = false;
+        snake._scoutIdx = 0;
+      }
+    }
+
+    // Discover farms in vision → memory for raids (no omniscience)
     if (state.farms && state.farms.list) {
       state.farms.list.forEach(function (f) {
         if (FS.manhattan(head, f) <= (snake.detectRange || 8)) {
@@ -197,30 +249,94 @@
         }
       });
     }
-    // Steal when on ripe farm cell
-    if (snake.raidTarget) {
+
+    // Use shared gap memory for raids when available
+    if (!snake.loot && snake.memoryGaps && snake.memoryGaps.length && !snake.raidTarget) {
+      var gap = snake.memoryGaps[0];
+      if (gap && !FS.isBlockedCell(state, gap.x, gap.y, snake)) {
+        // path through known gap toward nearest remembered farm
+        if (snake.memoryFarms) {
+          var mf = Object.keys(snake.memoryFarms)[0];
+          if (mf) snake.raidTarget = snake.memoryFarms[mf];
+        }
+      } else if (gap) {
+        // gap closed — replan
+        snake.memoryGaps.shift();
+        snake.raidTarget = null;
+      }
+    }
+
+    if (snake.loot && snake.home && FS.manhattan(head, snake.home) <= 1) {
+      snake.loot = null;
+      state.ui.toast = "Злодій сховався з урожаєм";
+      snake.stateAI = "patrol";
+    }
+
+    // Steal one physical fruit, then flee (cargo = loot, not length)
+    if (snake.raidTarget && !snake.loot) {
       var rf = FS.farmAt && FS.farmAt(state, snake.raidTarget.x, snake.raidTarget.y);
       if (rf && head.x === rf.x && head.y === rf.y && rf.stage === "ready") {
         if (rf.store && rf.store.length) {
-          rf.store.pop();
-          state.ui.toast = "Рейд: вкрадено урожай з грядки";
+          snake.loot = rf.store.pop();
+          state.ui.toast = "Злодій забрав плід і тікає!";
         }
-        rf.stage = "planted";
+        state.world.foods = state.world.foods.filter(function (f) {
+          return !(f.x === rf.x && f.y === rf.y && f.fromFarm);
+        });
+        rf.stage = "recover";
         rf.t = 0;
         rf.waiting = false;
         snake.raidTarget = null;
         snake._raidWarned = false;
-        if (snake.body.length < FS.MAX_LENGTH) FS.growSnake(snake, 1);
-        FS.capEnemyLength(snake);
       } else if (rf && FS.isBlockedCell(state, rf.x, rf.y, snake) && FS.manhattan(head, rf) <= 1) {
-        // unreachable behind fence — give up
         snake.raidTarget = null;
         snake.stateAI = "patrol";
       }
     }
 
+    // Elder raider: damage adjacent fence/gate on cooldown (never enter wall)
+    if (snake.arch === "elder" && !snake.loot) {
+      snake._breakCd = (snake._breakCd || 0) - 0.05;
+      if (snake._breakCd <= 0) {
+        var broke = false;
+        [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(function (d) {
+          if (broke) return;
+          var bb = FS.buildingAt && FS.buildingAt(state, head.x + d[0], head.y + d[1]);
+          if (bb && bb.owner !== "enemy" && (bb.kind === "fence" || bb.kind === "gate")) {
+            bb.dmg = (bb.dmg || 0) + 1;
+            bb.hp = Math.max(0, (bb.hp || 2) - 1);
+            state.ui.toast = "Огорожу пошкоджено!";
+            snake._breakCd = 8;
+            broke = true;
+            if (bb.hp <= 0) {
+              state.buildings = state.buildings.filter(function (x) { return x.id !== bb.id; });
+              state.ui.toast = "Секцію огорожі зламано!";
+            }
+          }
+        });
+      }
+    }
+
+    // Scout waypoint preference
+    if (snake._scoutWp && snake.arch === "scout" && !snake.loot) {
+      var sw = snake._scoutWp;
+      var dirs2 = ["U", "D", "L", "R"];
+      var bestS = best, bestSS = -1e9;
+      dirs2.forEach(function (d) {
+        if (FS.wouldEnterNeck(snake, d) || FS.isOpp(snake.dir, d)) return;
+        var vv = FS.dirVec(d);
+        var nn = { x: head.x + vv.x, y: head.y + vv.y };
+        if (FS.isBlockedCell(state, nn.x, nn.y, snake)) return;
+        var sc = (FS.manhattan(head, sw) - FS.manhattan(nn, sw)) * 15;
+        if (sc > bestSS) { bestSS = sc; bestS = d; }
+      });
+      if (bestS) best = bestS;
+    }
+
     snake._aiDebug = { options: debug, pick: best, state: snake.stateAI, seesPlayer: seesPlayer };
-    if (snake.raidTarget) snake.stateAI = "raid";
+    if (snake.loot) snake.stateAI = "flee_loot";
+    else if (snake.arch === "scout" && !snake._scoutDone) snake.stateAI = "scout";
+    else if (snake.raidTarget) snake.stateAI = "raid";
     else if (seesPlayer) snake.stateAI = snake.arch === "careful" ? "avoid" : "intercept";
     else if (food) snake.stateAI = "forage";
     else snake.stateAI = "patrol";

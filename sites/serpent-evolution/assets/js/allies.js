@@ -8,8 +8,10 @@
   };
 
   FS.ALLY_ROLES = {
-    gardener: { id: "gardener", name: "Садівник", cost: 3, color: "#9ccc88", desc: "Доглядає й збирає ферми" },
-    carrier: { id: "carrier", name: "Носій", cost: 3, color: "#c8b878", desc: "Несе плоди до майданчика" },
+    gardener: { id: "gardener", name: "Садівник", cost: 3, color: "#9ccc88", desc: "Збирає стиглі грядки" },
+    carrier: { id: "carrier", name: "Носій", cost: 3, color: "#c8b878", desc: "Несе урожай у склад бази" },
+    repairer: { id: "repairer", name: "Ремонтник", cost: 4, color: "#c8a070", desc: "Лагодів огорожу за деревину" },
+    guard: { id: "guard", name: "Сторож", cost: 4, color: "#a0b878", desc: "Патруль і попередження про ворога" },
     scout: { id: "scout", name: "Розвідник", cost: 4, color: "#88b8c8", desc: "Позначає ресурси на відкритій землі" },
     guide: { id: "guide", name: "Провідник", cost: 4, color: "#b898d0", desc: "Попереджає про небезпеку поруч" }
   };
@@ -197,8 +199,22 @@
         return;
       }
 
-      // assign gardener task
-      if (ally.role === "gardener" && ally.cmd === "work" && !ally.task) {
+      // wait_pantry: retry deliver when room appears
+      if (ally.stateAI === "wait_pantry" && ally.carry) {
+        FS.ensurePantry(state);
+        if (state.pantry.food < state.pantry.cap) {
+          var pad0 = FS.pantryAccessPoint ? FS.pantryAccessPoint(state) : FS.dropPadCell(state);
+          ally.task = { kind: "deliver", x: pad0.x, y: pad0.y };
+          ally.stateAI = "deliver";
+          ally.standing = false;
+        } else {
+          ally.standing = true;
+          return;
+        }
+      }
+
+      // gardener + carrier: harvest ripe → deliver to pantry
+      if ((ally.role === "gardener" || ally.role === "carrier") && ally.cmd === "work" && !ally.task && !ally.carry) {
         var ready = state.farms.list.filter(function (f) {
           return f.stage === "ready" && f.store.length && !f.reservedBy;
         })[0];
@@ -210,6 +226,43 @@
           ally.stateAI = "idle";
           ally.standing = true;
         }
+      }
+
+      // repairer: fix damaged player fence/gate (1 wood)
+      if (ally.role === "repairer" && ally.cmd === "work" && !ally.task) {
+        var damaged = (state.buildings || []).filter(function (bb) {
+          return bb.owner !== "enemy" && (bb.kind === "fence" || bb.kind === "gate") && (bb.dmg | 0) > 0;
+        });
+        // prefer gates
+        damaged.sort(function (a, b) {
+          return (b.kind === "gate" ? 1 : 0) - (a.kind === "gate" ? 1 : 0);
+        });
+        damaged = damaged[0];
+        if (damaged && state.wood >= 1) {
+          ally.task = { kind: "repair", x: damaged.x, y: damaged.y, bid: damaged.id };
+          ally.stateAI = "repair";
+        } else {
+          ally.stateAI = "idle";
+          ally.standing = true;
+        }
+      }
+
+      // guard: patrol near nest, warn on enemy
+      if (ally.role === "guard" && ally.cmd === "work" && !ally.task) {
+        var nest = state.world.nest;
+        var gx = nest.x + ((ally.id.charCodeAt(0) || 0) % 5) - 2;
+        var gy = nest.y + 3;
+        ally.task = { kind: "patrol", x: gx, y: gy };
+        ally.stateAI = "patrol";
+        var nearEnemy = state.enemies.some(function (e) {
+          return !e.dead && FS.manhattan(FS.snakeHead(e), nest) <= 10;
+        });
+        if (nearEnemy && !ally._warned) {
+          ally._warned = true;
+          state.ui.toast = "Сторож: ворог біля бази!";
+          state.ui.raidWarn = 3;
+        }
+        if (!nearEnemy) ally._warned = false;
       }
 
       if (ally.cmd === "follow") {
@@ -242,7 +295,7 @@
               farm.waiting = false;
             }
             farm.reservedBy = null;
-            var pad = FS.dropPadCell(state);
+            var pad = FS.pantryAccessPoint ? FS.pantryAccessPoint(state) : FS.dropPadCell(state);
             ally.task = { kind: "deliver", x: pad.x, y: pad.y };
             ally.stateAI = "deliver";
             state.tutorial.done.deliver = true;
@@ -253,24 +306,39 @@
           ally.standing = true;
           return;
         }
-      } else if (ally.task && (ally.task.kind === "deliver" || ally.task.kind === "go_home" || ally.task.kind === "follow")) {
+      } else if (ally.task && (ally.task.kind === "deliver" || ally.task.kind === "go_home" ||
+          ally.task.kind === "follow" || ally.task.kind === "repair" || ally.task.kind === "patrol")) {
         target = { x: ally.task.x, y: ally.task.y };
         h = FS.snakeHead(ally);
         if (FS.manhattan(h, target) <= 1) {
           if (ally.task.kind === "deliver" && ally.carry) {
-            var cell = FS.findDropCell(state, target.x, target.y) || target;
-            state.world.foods.push({
-              id: FS.uid(), x: cell.x, y: cell.y,
-              kind: ally.carry.kind || "berry", phase: "ripe",
-              nutrition: 1, xp: 1, age: 0, fromAlly: ally.id
-            });
-            ally.carry = null;
+            var del = FS.allyDeliverToPantry(state, ally);
+            if (!del.ok) {
+              ally.standing = true;
+              state.ui.toast = del.why || "Склад повний — носій чекає";
+              return;
+            }
+            ally.task = null;
+            state.ui.toast = "Носій: +1 на базу (" + state.pantry.food + "/" + state.pantry.cap + ")";
+          } else if (ally.task.kind === "repair") {
+            var rb = (state.buildings || []).filter(function (bb) { return bb.id === ally.task.bid; })[0];
+            if (rb && state.wood >= 1) {
+              FS.spendWood(state, 1, function () {
+                rb.dmg = 0;
+                rb.hp = rb.kind === "block" ? 3 : 2;
+                return { ok: true };
+              }, { reason: "repair" });
+              state.ui.toast = "Ремонтник: огорожу відновлено";
+            }
             ally.task = null;
             ally.stateAI = "idle";
           } else if (ally.task.kind === "go_home") {
             ally.inside = true;
             ally.task = null;
             ally.standing = true;
+          } else if (ally.task.kind === "patrol") {
+            ally.task.x = state.world.nest.x + (ally.task.x > state.world.nest.x ? -3 : 3);
+            ally.standing = false;
           } else {
             ally.standing = true;
           }

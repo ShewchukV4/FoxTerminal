@@ -3,13 +3,13 @@ window.FoxSerpent = window.FoxSerpent || {};
 (function (FS) {
   "use strict";
 
-  FS.VERSION = "1.3.0";
+  FS.VERSION = "1.4.0";
   FS.SAVE_SCHEMA = 2;
   FS.SAVE_KEY = "fox_serpent_evo_save_v1";
   FS.SAVE_BAK = "fox_serpent_evo_save_bak_v1";
-  FS.GUIDE_VERSION = 4;
+  FS.GUIDE_VERSION = 5;
   FS.GUIDE_SEEN_KEY = "fox_serpent_evo_guide_v1";
-  FS.MIGRATION_VERSION = 3;
+  FS.MIGRATION_VERSION = 4;
 
   FS.CELL = 36;
   FS.CHUNK = 12;
@@ -389,8 +389,8 @@ window.FoxSerpent = window.FoxSerpent || {};
     /* ——— Господарство ——— */
     soil_sense: {
       id: "soil_sense", name: "Відчуття ґрунту", branch: "house", icon: "soil",
-      desc: "Ферма на лузі дозволена (базовий темп).",
-      cost: 1, prereq: ["root"], effect: { kind: "soilFarm", value: true }
+      desc: "Грядки на сухій землі ростуть трохи швидше (посадка вже без таланту).",
+      cost: 1, prereq: ["root"], effect: { kind: "farmSpeedMul", value: 0.9 }
     },
     earth_hand: {
       id: "earth_hand", name: "Землероб", branch: "house", icon: "farm",
@@ -416,9 +416,9 @@ window.FoxSerpent = window.FoxSerpent || {};
       }
     },
     harvest_cap: {
-      id: "harvest_cap", name: "Запас урожаю", branch: "house", icon: "crate",
-      desc: "+1 фізичний плід у місткості майданчика видачі.",
-      cost: 1, prereq: ["fork_garden_care"], effect: { kind: "harvestCapAdd", value: 1 }
+      id: "harvest_cap", name: "Склад I", branch: "house", icon: "crate",
+      desc: "+4 місткості базового складу їжі.",
+      cost: 1, prereq: ["fork_garden_care"], effect: { kind: "pantryCapAdd", value: 4 }
     },
     clear_route: {
       id: "clear_route", name: "Чіткий маршрут", branch: "house", icon: "path",
@@ -584,16 +584,17 @@ window.FoxSerpent = window.FoxSerpent || {};
     block: { wood: 2, name: "Блок" },
     plot: { wood: 2, nutrition: 1, name: "Грядка" },
     hut: { wood: 5, name: "Домівка" },
-    shed: { wood: 4, name: "Склад" }
+    shed: { wood: 4, name: "Склад деревини" },
+    larder: { wood: 4, name: "Склад їжі" }
   };
 
   FS.HELP = [
     "WASD — крок. Відпусти — зупинись. Вороги рухаються далі.",
-    "Пожива 0–9 = довжина 3–12. Їжа росте лише на грядках (на старті — 4).",
-    "Деревина — окремо. Гілки спавняться лише коло / під деревом; F біля дерева — заготівля.",
-    "B — будівництво будь-де на відкритій карті. ЛКМ ставити · ПКМ / X знести (−50% деревини).",
-    "Tab — купівля землі за поживу. Підтвердження в панелі.",
-    "T — дерево · H — гайд/легенда · Пробіл — пауза світу"
+    "Пожива на змійці 0–9 = довжина 3–12. Базовий склад їжі — окремо (F біля гнізда/комори).",
+    "Грядка — на будь-якій сухій вільній землі. Їжа росте лише на грядках.",
+    "Деревина — гілки під деревом; F біля дерева — заготівля.",
+    "B — будівництво. ЛКМ ставити · ПКМ скасувати · X знести. Паркан-ряд = увесь або нічого.",
+    "Tab — земля · T — таланти · H — гайд · Пробіл — пауза"
   ];
 
   FS.LONG_GOALS = [

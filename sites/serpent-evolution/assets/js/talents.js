@@ -77,6 +77,8 @@
     if (state.player) {
       state.player.stepPeriod = 1 / Math.max(2.5, e.playerRate);
     }
+    if (FS.recomputeWoodCap) FS.recomputeWoodCap(state);
+    if (FS.recomputePantryCap) FS.recomputePantryCap(state);
   };
 
   function applyEffect(e, fx) {
@@ -124,6 +126,7 @@
     if (fx.kind === "buildPreview") e.buildPreview = true;
     if (fx.kind === "gardenerRadius") e.gardenerRadius = fx.value || 8;
     if (fx.kind === "harvestCapAdd") e.harvestCapAdd = (e.harvestCapAdd || 0) + (fx.value || 0);
+    if (fx.kind === "pantryCapAdd") e.pantryCapAdd = (e.pantryCapAdd || 0) + (fx.value || 0);
     if (fx.kind === "pathLogistics") e.pathLogistics = true;
     if (fx.kind === "allyCapAdd") e.allyCapAdd = (e.allyCapAdd || 0) + (fx.value || 0);
     if (fx.kind === "allyFlee") e.allyFlee = true;
@@ -326,6 +329,7 @@
     buildPreview: "build panel reasons",
     gardenerRadius: "ally gardener range",
     harvestCapAdd: "farms.dropCap",
+    pantryCapAdd: "pantry.cap",
     pathLogistics: "ally path prefer",
     allyCapAdd: "hireAlly cap",
     allyFlee: "ally flee home",

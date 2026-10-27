@@ -27,6 +27,7 @@
     state.buildings = [];
     state.woodNodes = [];
     state.buildMode = null;
+    state.pantry = { food: 0, cap: FS.PANTRY_BASE_CAP || 12, level: 1, reserve: 0 };
     state.xp = 0;
     state.talentLevel = 1;
     state.talents = FS.defaultTalents();

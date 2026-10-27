@@ -31,6 +31,7 @@
     if (typeof FS.tileWalkable === "function") {
       if (!FS.tileWalkable(t)) return t.tt === "deep" ? "water" : "wall";
     } else if (t.block) return "wall";
+    if (FS.treeAt && FS.treeAt(state, x, y)) return "wall";
     if (FS.buildingAt) {
       var b = FS.buildingAt(state, x, y);
       if (b && FS.buildingBlocksFor(b, mover)) return "wall";

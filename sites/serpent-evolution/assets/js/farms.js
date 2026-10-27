@@ -43,28 +43,32 @@
     return null;
   };
 
-  FS.canPlaceFarm = function (state, x, y, farmType) {
+  /** Any open free dry land — not water/stone/bridge/tree/building. */
+  FS.isFarmableGround = function (state, x, y) {
+    if (!FS.inBounds(state.world, x, y)) return { ok: false, why: "Поза картою" };
     var tile = FS.tileAt(state.world, x, y);
-    if (!tile) return { ok: false, why: "Поза картою" };
-    var def = FS.tileDef(tile);
-    // meadow OK for plots (food only grows on farms); fertile/soil preferred via soilMul
-    if (!def.farm && def.id !== "meadow" && !(state.effects && state.effects.soilFarm && def.id === "meadow")) {
-      return { ok: false, why: "Потрібен ґрунт / луг під грядку" };
-    }
+    if (!tile) return { ok: false, why: "Немає клітинки" };
+    var tt = tile.tt || "meadow";
+    if (tt === "deep" || tt === "shallow") return { ok: false, why: "Вода" };
+    if (tt === "stone" || tile.block) return { ok: false, why: "Камінь" };
+    if (tt === "bridge") return { ok: false, why: "Міст — не суша для грядки" };
+    if (!FS.tileWalkable(tile)) return { ok: false, why: "Непрохідно" };
+    if (FS.treeAt && FS.treeAt(state, x, y)) return { ok: false, why: "Дерево" };
+    if (FS.buildingAt && FS.buildingAt(state, x, y)) return { ok: false, why: "Споруда" };
+    return { ok: true, tile: tile, tt: tt };
+  };
+
+  FS.canPlaceFarm = function (state, x, y, farmType) {
+    var ground = FS.isFarmableGround(state, x, y);
+    if (!ground.ok) return ground;
     if (FS.farmAt(state, x, y)) return { ok: false, why: "Вже є ферма" };
     if (FS.manhattan({ x: x, y: y }, state.world.nest) < 2) return { ok: false, why: "Занадто близько до гнізда" };
     var hits = FS.snakeAtCell(state, x, y, false);
     if (hits.length) return { ok: false, why: "Клітинка зайнята змією" };
-    // keep path: don't block if only corridor
-    var open = 0;
-    [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(function (d) {
-      var t = FS.tileAt(state.world, x + d[0], y + d[1]);
-      if (t && FS.tileWalkable(t)) open++;
-    });
-    if (open < 2) return { ok: false, why: "Перекриє єдиний прохід" };
+    // Plot is walkable — do not treat as wall corridor block
     var fdef = FS.FARM_DEFS[farmType];
     if (!fdef) return { ok: false, why: "Невідомий тип" };
-    return { ok: true, cost: fdef.cost, def: fdef, tile: tile };
+    return { ok: true, cost: fdef.cost, def: fdef, tile: ground.tile };
   };
 
   /** Place farm without charging (used by wood+nutrition B-build). */

@@ -212,25 +212,32 @@
   FS.spawnExpandEnemy = function (state, offer) {
     var baseX = offer.cx * FS.CHUNK + 6;
     var baseY = offer.cy * FS.CHUNK + 6;
-    var archs = ["careful", "intercept", "territory", "elder"];
+    var archs = ["careful", "intercept", "territory", "scout"];
     var arch = offer.type === "elder" ? "elder" : archs[Math.min(offer.danger, 3)];
+    if (offer.danger >= 2 && offer.type !== "elder" && (offer.cx + offer.cy) % 3 === 0) arch = "scout";
     var colors = {
       careful: FS.COLORS.enemyCareful,
       intercept: FS.COLORS.enemyIntercept,
       territory: FS.COLORS.enemyTerritory,
-      elder: FS.COLORS.enemyElder
+      elder: FS.COLORS.enemyElder,
+      scout: FS.COLORS.enemyCareful
+    };
+    var names = {
+      elder: "Доросла змія", scout: "Розвідник", careful: "Обережна змія",
+      intercept: "Перехоплювач", territory: "Сторожова змія"
     };
     var enemy = FS.createSnake({
       kind: "enemy",
-      name: arch === "elder" ? "Доросла змія" : "Дика змія",
+      name: names[arch] || "Дика змія",
       arch: arch,
       x: baseX, y: baseY,
       dir: "L",
-      length: Math.min(FS.MAX_LENGTH, arch === "elder" ? 8 : 5),
-      stepPeriod: arch === "intercept" ? 1 / 4.2 : FS.ENEMY_STEP_BASE,
-      color: colors[arch],
-      detectRange: arch === "elder" ? 11 : 8
+      length: Math.min(FS.MAX_LENGTH, arch === "elder" ? 8 : (arch === "scout" ? 4 : 5)),
+      stepPeriod: arch === "intercept" ? 1 / 4.2 : (arch === "scout" ? 1 / 4.0 : FS.ENEMY_STEP_BASE),
+      color: colors[arch] || FS.COLORS.enemyCareful,
+      detectRange: arch === "elder" ? 11 : (arch === "scout" ? 10 : 8)
     });
+    enemy.home = { x: baseX, y: baseY };
     var ph = FS.snakeHead(state.player);
     var tries = 0;
     while (tries < 30) {

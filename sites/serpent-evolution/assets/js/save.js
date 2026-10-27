@@ -15,6 +15,7 @@
       woodCap: state.woodCap || 12,
       buildings: state.buildings || [],
       woodNodes: state.woodNodes || [],
+      pantry: state.pantry || null,
       world: {
         tiles: state.world.tiles,
         foods: state.world.foods,
@@ -106,6 +107,7 @@
     state.woodCap = data.woodCap || 12;
     state.buildings = data.buildings || [];
     state.woodNodes = data.woodNodes || [];
+    state.pantry = data.pantry || { food: 0, cap: 12, level: 1, reserve: 0 };
     state.buildMode = null;
     state.player = FS.createPlayerSnake(state.world.nest);
     state.player.body = data.player.body;
@@ -141,6 +143,8 @@
     FS.recomputeEffects(state);
     if (FS.migrateWoodIfNeeded) FS.migrateWoodIfNeeded(state);
     if (FS.migrateFarmFoodIfNeeded) FS.migrateFarmFoodIfNeeded(state);
+    if (FS.ensurePantry) FS.ensurePantry(state);
+    if (FS.recomputeWoodCap) FS.recomputeWoodCap(state);
     state.paused = false;
     state.pauseReasons = { manual: false, panel: false, blur: false, guide: false };
   };

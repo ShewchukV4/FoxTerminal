@@ -3,20 +3,37 @@
   "use strict";
 
   FS.WOOD_CAP_BASE = 12;
+  FS.WOOD_PER_SHED = 8;
+
+  FS.countSheds = function (state) {
+    if (!state.buildings) return 0;
+    var n = 0;
+    for (var i = 0; i < state.buildings.length; i++) {
+      if (state.buildings[i].kind === "shed" && state.buildings[i].owner !== "enemy") n++;
+    }
+    return n;
+  };
+
+  /** Derived wood capacity — never mutate permanently in commit. */
+  FS.recomputeWoodCap = function (state) {
+    var talent = (state.effects && state.effects.woodCapAdd) || 0;
+    state.woodCap = FS.WOOD_CAP_BASE + FS.countSheds(state) * FS.WOOD_PER_SHED + talent;
+    return state.woodCap;
+  };
 
   FS.ensureWood = function (state) {
     if (state.wood == null) state.wood = 0;
-    if (state.woodCap == null) state.woodCap = FS.WOOD_CAP_BASE + ((state.effects && state.effects.woodCapAdd) || 0);
-    else state.woodCap = FS.WOOD_CAP_BASE + ((state.effects && state.effects.woodCapAdd) || 0);
     if (!state.buildings) state.buildings = [];
     if (!state.woodNodes) state.woodNodes = [];
+    FS.recomputeWoodCap(state);
   };
 
   FS.gainWood = function (state, n) {
     FS.ensureWood(state);
-    n = Math.max(0, n | 0);
+    n = Math.floor(+n || 0);
+    if (n < 0 || !isFinite(n)) return 0;
     var room = state.woodCap - state.wood;
-    var take = Math.min(n, room);
+    var take = Math.min(n, Math.max(0, room));
     state.wood += take;
     if (take < n) state.ui.toast = "Сховище деревини повне (" + state.wood + "/" + state.woodCap + ")";
     return take;
@@ -26,16 +43,36 @@
     opts = opts || {};
     FS.ensureWood(state);
     if (state._woodLock) return { ok: false, why: "Зачекай" };
-    cost = cost | 0;
+    cost = Math.floor(+cost || 0);
+    if (cost < 0 || !isFinite(cost)) return { ok: false, why: "Погана ціна" };
     if (state.wood < cost) return { ok: false, why: "Потрібно " + cost + " деревини, є " + state.wood };
+    var snapBuildings = state.buildings.slice();
+    var snapFarms = state.farms ? FS.deepClone(state.farms) : null;
+    var snapHomes = state.homes ? state.homes.slice() : null;
+    var snapWood = state.wood;
     state._woodLock = true;
     try {
       state.wood -= cost;
-      var r = applyFn ? applyFn(state) : { ok: true };
+      var r;
+      try {
+        r = applyFn ? applyFn(state) : { ok: true };
+      } catch (err) {
+        state.wood = snapWood;
+        state.buildings = snapBuildings;
+        if (snapFarms) state.farms = snapFarms;
+        if (snapHomes) state.homes = snapHomes;
+        FS.recomputeWoodCap(state);
+        return { ok: false, why: "Помилка: " + (err.message || err) };
+      }
       if (!r || r.ok === false) {
-        state.wood += cost;
+        state.wood = snapWood;
+        state.buildings = snapBuildings;
+        if (snapFarms) state.farms = snapFarms;
+        if (snapHomes) state.homes = snapHomes;
+        FS.recomputeWoodCap(state);
         return r || { ok: false, why: "Скасовано" };
       }
+      FS.recomputeWoodCap(state);
       if (opts.save !== false) FS.saveGame(state, opts.reason || "wood");
       return Object.assign({ ok: true, spent: cost }, r);
     } finally {
@@ -150,15 +187,20 @@
 
   FS.seedTreeInChunk = function (state, cx, cy) {
     FS.ensureWood(state);
-    var baseX = cx * FS.CHUNK + 4, baseY = cy * FS.CHUNK + 4;
+    var baseX = cx * FS.CHUNK, baseY = cy * FS.CHUNK;
     var candidates = [];
     for (var y = 2; y < FS.CHUNK - 2; y++) {
       for (var x = 2; x < FS.CHUNK - 2; x++) {
-        candidates.push({ x: baseX - 4 + x, y: baseY - 4 + y });
+        candidates.push({ x: baseX + x, y: baseY + y });
       }
     }
+    if (!candidates.length) return null;
+    var seed = ((cx * 73856093) ^ (cy * 19349663) ^ (state.world.seed || 0)) >>> 0;
     for (var i = 0; i < candidates.length; i++) {
-      var p = candidates[(i * 7 + cx * 3 + cy * 5) % candidates.length];
+      var idx = (seed + i * 7) % candidates.length;
+      if (idx < 0) idx += candidates.length;
+      var p = candidates[idx];
+      if (!p) continue;
       var t = FS.tileAt(state.world, p.x, p.y);
       if (!t || !FS.tileWalkable(t)) continue;
       if (FS.treeAt(state, p.x, p.y)) continue;
@@ -166,7 +208,8 @@
       if (FS.manhattan(p, state.world.nest) < 4) continue;
       var tree = {
         id: FS.uid(), x: p.x, y: p.y, kind: "tree",
-        amount: 3, cd: 0, maxCd: 26, branchSlots: 3
+        amount: 3, cd: 0, maxCd: 26, branchSlots: 3,
+        variant: seed % 3
       };
       state.woodNodes.push(tree);
       FS.spawnBranchesForTree(state, tree);
@@ -266,7 +309,8 @@
   FS.tickWoodNodes = function (state, dt) {
     if (!state.started) return;
     if (state.guide && state.guide.open) return;
-    if (state.paused && !(state.buildMode && state.buildMode.on)) return;
+    // Manual pause stops resource timers even in B-mode
+    if (state.paused) return;
     FS.ensureWood(state);
     state.woodNodes.forEach(function (n) {
       if (n.cd > 0) n.cd -= dt;
@@ -304,7 +348,7 @@
     };
     FS.clearInput(state.input);
     state.player.standing = true;
-    state.ui.toast = "БУДІВНИЦТВО · ЛКМ ставити · ПКМ знести · X знесення · Esc/B вихід";
+    state.ui.toast = "БУДІВНИЦТВО · ЛКМ ставити · ПКМ скасувати · X знести · Esc/B вихід";
     FS.mountBuildPalette(state);
   };
 
@@ -345,11 +389,11 @@
         (c.nutrition ? "+" + c.nutrition + "п" : "") + "</button>";
     });
     html += '<button type="button" class="btn' + (bm.demolish ? " primary" : " danger") +
-      '" data-btool="demo">Знести · ПКМ / X (−50%)</button>';
+      '" data-btool="demo">Знести (X) −50%</button>';
     html += '<button type="button" class="btn ghost" data-btool="exit">Вихід (B)</button>';
     html += "</div>";
-    html += '<p class="tiny">ЛКМ — поставити будь-де на відкритій землі · ПКМ — знести · ' +
-      "R обернути · X режим знесення · drag = ряд паркану. Пробіл = пауза (ставити після зняття).</p>";
+    html += '<p class="tiny">ЛКМ — поставити · ПКМ — скасувати розміщення · X — знесення (червоний preview) · ' +
+      "R обернути · drag паркану = весь ряд або нічого. Пробіл = пауза всього світу.</p>";
     if (bm.msg) html += '<p class="bp-msg">' + bm.msg + "</p>";
     el.innerHTML = html;
     el.onclick = function (ev) {
@@ -441,6 +485,12 @@
     var cost = check.cost;
 
     function place() {
+      // Farm first — placeFarmAt rejects cells that already have a building.
+      // Pushing plot before it made every грядка fail with «Споруда».
+      if (kind === "plot") {
+        var fr = FS.placeFarmAt(state, x, y, "berry");
+        if (!fr.ok) return fr;
+      }
       var b = {
         id: FS.uid(), kind: kind, x: x, y: y,
         rot: (state.buildMode && state.buildMode.rot) || 0,
@@ -449,13 +499,6 @@
         owner: "player"
       };
       state.buildings.push(b);
-      if (kind === "plot") {
-        var fr = FS.placeFarmAt(state, x, y, "berry");
-        if (!fr.ok) {
-          state.buildings = state.buildings.filter(function (bb) { return bb.id !== b.id; });
-          return fr;
-        }
-      }
       if (kind === "hut") {
         FS.ensureAllies(state);
         state.homes.push({
@@ -463,9 +506,8 @@
           capacity: 1, residents: [], door: { x: x, y: y + 1 }
         });
       }
-      if (kind === "shed") {
-        state.woodCap = (state.woodCap || FS.WOOD_CAP_BASE) + 8;
-      }
+      // shed / larder capacity is derived via recomputeWoodCap / recomputePantryCap
+      if (kind === "larder" && FS.recomputePantryCap) FS.recomputePantryCap(state);
       state.tutorial.done.build = true;
       return { ok: true, building: b };
     }
@@ -488,6 +530,7 @@
   FS.demolishAt = function (state, x, y) {
     FS.ensureWood(state);
     FS.ensureFarms(state);
+    if (FS.ensurePantry) FS.ensurePantry(state);
     var b = FS.buildingAt(state, x, y);
     var farm = FS.farmAt && FS.farmAt(state, x, y);
     // Starter farms may have no building entry — still demolishable
@@ -496,6 +539,22 @@
     }
     if (b && b.owner === "enemy") return { ok: false, why: "Чужа споруда" };
     var kind = b ? b.kind : "plot";
+    // Capacity buildings: refuse if stock would exceed new derived cap (don't destroy overflow)
+    if (kind === "shed") {
+      var talentW = (state.effects && state.effects.woodCapAdd) || 0;
+      var newWoodCap = FS.WOOD_CAP_BASE + Math.max(0, FS.countSheds(state) - 1) * FS.WOOD_PER_SHED + talentW;
+      if (state.wood > newWoodCap) {
+        return { ok: false, why: "Спочатку витрати деревину (" + state.wood + ">" + newWoodCap + ")" };
+      }
+    }
+    if (kind === "larder" && state.pantry) {
+      var talentP = (state.effects && state.effects.pantryCapAdd) || 0;
+      var levelBonus = Math.max(0, ((state.pantry.level || 1) - 1) * 4);
+      var newPantryCap = FS.PANTRY_BASE_CAP + Math.max(0, FS.countLarders(state) - 1) * FS.PANTRY_PER_LARDER + talentP + levelBonus;
+      if (state.pantry.food > newPantryCap) {
+        return { ok: false, why: "Спочатку забери їжу зі складу (" + state.pantry.food + ">" + newPantryCap + ")" };
+      }
+    }
     var cost = FS.BUILD_COSTS[kind] || FS.BUILD_COSTS.plot;
     var refund = cost ? Math.floor((cost.wood || 0) * 0.5) : 0;
     if (b) state.buildings = state.buildings.filter(function (bb) { return bb.id !== b.id; });
@@ -512,6 +571,8 @@
     if (kind === "hut" && state.homes) {
       state.homes = state.homes.filter(function (h) { return !(h.x === x && h.y === y); });
     }
+    FS.recomputeWoodCap(state);
+    if (FS.recomputePantryCap) FS.recomputePantryCap(state);
     if (refund) FS.gainWood(state, refund);
     state.ui.toast = "Знесено" + (refund ? " (+" + refund + " деревини)" : "");
     FS.saveGame(state, "demo");
@@ -530,7 +591,10 @@
     if (FS.harvestStump(state).ok) return true;
     var h = FS.snakeHead(state.player);
     if (FS.toggleGate(state, h.x, h.y)) return true;
-    // pending ruin
+    if (FS.nearPantry && FS.nearPantry(state) && FS.openPantryPanel) {
+      FS.openPantryPanel(state);
+      return true;
+    }
     var pend = state.ui.pendingInteract;
     if (pend && pend.kind === "ruin") {
       var lm = (state.world.landmarks || []).filter(function (l) { return l.id === pend.id; })[0];
@@ -558,7 +622,46 @@
     return false;
   };
 
+  /** All-or-nothing fence row. */
+  FS.commitFenceRow = function (state, cells) {
+    if (state.paused && state.pauseReasons && state.pauseReasons.manual) {
+      return { ok: false, why: "Зніми паузу (Пробіл)" };
+    }
+    if (!cells || !cells.length) return { ok: false, why: "Порожній ряд" };
+    var unit = (FS.BUILD_COSTS.fence && FS.BUILD_COSTS.fence.wood) || 1;
+    var reasons = [];
+    for (var i = 0; i < cells.length; i++) {
+      var chk = FS.canBuildAt(state, cells[i].x, cells[i].y, "fence");
+      if (!chk.ok) reasons.push(cells[i].x + "," + cells[i].y + ": " + chk.why);
+    }
+    if (reasons.length) {
+      return { ok: false, why: "Ряд невалідний (" + reasons.length + "): " + reasons[0], cells: cells.length, cost: cells.length * unit };
+    }
+    var total = cells.length * unit;
+    if (state.wood < total) {
+      return { ok: false, why: "Потрібно " + total + " деревини на " + cells.length + " секцій, є " + state.wood, cells: cells.length, cost: total };
+    }
+    return FS.spendWood(state, total, function () {
+      cells.forEach(function (c) {
+        state.buildings.push({
+          id: FS.uid(), kind: "fence", x: c.x, y: c.y,
+          rot: 0, hp: 2, owner: "player"
+        });
+      });
+      state.tutorial.done.build = true;
+      return { ok: true, count: cells.length };
+    }, { reason: "fence_row" });
+  };
+
+  FS.clearBuildDrag = function (state) {
+    if (state.buildMode) {
+      state.buildMode.drag = null;
+      state.buildMode.msg = state.buildMode.msg || "Скасовано";
+    }
+  };
+
   FS.bindBuildInput = function (state, canvas) {
+    function onCancelDrag() { FS.clearBuildDrag(state); if (FS.refreshBuildPalette) FS.refreshBuildPalette(state); }
     canvas.addEventListener("pointermove", function (ev) {
       if (!state.buildMode || !state.buildMode.on) return;
       state.buildMode.hover = FS.screenToCell(state, ev.clientX, ev.clientY);
@@ -573,9 +676,9 @@
       state.buildMode.hover = cell;
       if (ev.button === 2) {
         ev.preventDefault();
+        // RMB cancels placement / drag — never demolish
         state.buildMode.drag = null;
-        var drR = FS.demolishAt(state, cell.x, cell.y);
-        state.buildMode.msg = drR.ok ? ("Знесено" + (drR.refund ? " +" + drR.refund + "д" : "")) : drR.why;
+        state.buildMode.msg = "Розміщення скасовано";
         FS.refreshBuildPalette(state);
         return;
       }
@@ -589,6 +692,7 @@
       if (!state.buildMode.tool) return;
       if (state.buildMode.tool === "fence") {
         state.buildMode.drag = { from: cell, to: cell };
+        try { canvas.setPointerCapture(ev.pointerId); } catch (e1) {}
         return;
       }
       var now = performance.now();
@@ -603,28 +707,21 @@
       if (ev.button !== 0) return;
       var drag = state.buildMode.drag;
       state.buildMode.drag = null;
+      try { canvas.releasePointerCapture(ev.pointerId); } catch (e2) {}
       var cells = FS.lineCells(drag.from, drag.to || drag.from);
-      var fail = null, ok = 0, totalWood = 0;
-      cells.forEach(function (c) {
-        var chk = FS.canBuildAt(state, c.x, c.y, "fence");
-        if (chk.ok) totalWood += chk.cost.wood;
-        else if (!fail) fail = chk.why;
-      });
-      if (totalWood > state.wood) {
-        state.buildMode.msg = "Ряд: потрібно " + totalWood + " деревини, є " + state.wood;
-        FS.refreshBuildPalette(state);
-        return;
-      }
-      cells.forEach(function (c) {
-        var r = FS.commitBuild(state, c.x, c.y, "fence");
-        if (r.ok) ok++;
-        else if (!fail) fail = r.why;
-      });
-      state.buildMode.msg = ok ? ("Паркан ×" + ok + (fail ? " · " + fail : "")) : (fail || "Нічого");
+      var previewCost = cells.length * ((FS.BUILD_COSTS.fence && FS.BUILD_COSTS.fence.wood) || 1);
+      var row = FS.commitFenceRow(state, cells);
+      state.buildMode.msg = row.ok
+        ? ("Паркан ×" + row.count + " (−" + previewCost + "д)")
+        : row.why;
       FS.refreshBuildPalette(state);
     });
+    canvas.addEventListener("pointercancel", onCancelDrag);
     canvas.addEventListener("contextmenu", function (ev) {
       if (state.buildMode && state.buildMode.on) ev.preventDefault();
+    });
+    window.addEventListener("blur", function () {
+      if (state.buildMode && state.buildMode.on) onCancelDrag();
     });
   };
 

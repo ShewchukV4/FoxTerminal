@@ -110,16 +110,12 @@
     ctx.globalAlpha = 1;
     if (state.farms && state.farms.list) {
       state.farms.list.forEach(function (f) {
-        var fx = f.x * cell, fy = f.y * cell;
-        ctx.fillStyle = "rgba(90,120,70,0.55)";
-        ctx.fillRect(fx + 5, fy + 5, cell - 10, cell - 10);
-        if (f.stage === "ready" && f.store && f.store.length) {
-          FS.drawFruit(ctx, f.kind || "berry", fx + cell / 2, fy + cell / 2, 0.7, {
+        var cx = (f.x + 0.5) * cell, cy = (f.y + 0.5) * cell;
+        if (FS.drawFarmPlot) FS.drawFarmPlot(ctx, cx, cy, cell, f.stage, f.kind);
+        if (f.stage === "ready") {
+          FS.drawFruit(ctx, f.kind || "berry", cx, cy - 2, 0.75, {
             phase: "ripe", time: state.time, reducedMotion: state.settings.reducedMotion
           });
-        } else if (f.stage === "growing" || f.stage === "planted") {
-          ctx.fillStyle = "#6a9a58";
-          ctx.fillRect(fx + cell * 0.42, fy + cell * 0.35, 4, cell * 0.3);
         }
       });
     }
@@ -137,31 +133,24 @@
     if (!state.buildings) return;
     var ctx = this.ctx;
     var cell = FS.CELL;
+    FS.ensurePantry && FS.ensurePantry(state);
     state.buildings.forEach(function (b) {
-      var x = b.x * cell, y = b.y * cell;
-      if (b.kind === "fence") {
-        ctx.fillStyle = b.owner === "enemy" ? "#6a4040" : "#8a6a40";
-        ctx.fillRect(x + 4, y + 10, cell - 8, 8);
-        ctx.fillRect(x + 8, y + 4, 6, cell - 8);
-      } else if (b.kind === "gate") {
-        ctx.strokeStyle = b.closed !== false ? "#c4a060" : "#69E0BE";
-        ctx.lineWidth = 3;
-        ctx.strokeRect(x + 6, y + 6, cell - 12, cell - 12);
-        ctx.fillStyle = b.closed !== false ? "rgba(140,100,50,0.45)" : "rgba(105,224,190,0.2)";
-        ctx.fillRect(x + 8, y + 8, cell - 16, cell - 16);
-      } else if (b.kind === "block") {
-        ctx.fillStyle = "#5a6068";
-        roundRect(ctx, x + 5, y + 5, cell - 10, cell - 10, 4);
-        ctx.fill();
-      } else if (b.kind === "hut" || b.kind === "shed") {
-        ctx.fillStyle = b.kind === "shed" ? "#6a5a38" : "#7a5a40";
-        ctx.fillRect(x + 6, y + 10, cell - 12, cell - 14);
-        ctx.fillStyle = "#503828";
-        ctx.beginPath();
-        ctx.moveTo(x + 4, y + 12);
-        ctx.lineTo(x + cell / 2, y + 4);
-        ctx.lineTo(x + cell - 4, y + 12);
-        ctx.fill();
+      var cx = (b.x + 0.5) * cell, cy = (b.y + 0.5) * cell;
+      var dmg = Math.max(0, (b.hpMax || 2) - (b.hp || 2));
+      if (b.kind === "fence" && FS.drawFence) {
+        FS.drawFence(ctx, cx, cy, cell, FS.fenceMask(state, b.x, b.y), dmg);
+      } else if (b.kind === "gate" && FS.drawGate) {
+        FS.drawGate(ctx, cx, cy, cell, b.closed !== false, b.rot || 0, dmg);
+      } else if (b.kind === "block" && FS.drawBlock) {
+        FS.drawBlock(ctx, cx, cy, cell, dmg);
+      } else if (b.kind === "hut" && FS.drawHut) {
+        FS.drawHut(ctx, cx, cy, cell);
+      } else if (b.kind === "shed" && FS.drawWoodShed) {
+        var wf = state.woodCap ? state.wood / state.woodCap : 0;
+        FS.drawWoodShed(ctx, cx, cy, cell, wf);
+      } else if (b.kind === "larder" && FS.drawLarder) {
+        var pf = state.pantry && state.pantry.cap ? state.pantry.food / state.pantry.cap : 0;
+        FS.drawLarder(ctx, cx, cy, cell, pf);
       }
     });
   };
@@ -170,55 +159,25 @@
     if (!state.woodNodes) return;
     var ctx = this.ctx;
     var cell = FS.CELL;
-    // trees first (behind branch piles)
+    var head = state.player && FS.snakeHead(state.player);
     state.woodNodes.forEach(function (n) {
       if (n.kind !== "tree") return;
-      var x = (n.x + 0.5) * cell, y = (n.y + 0.5) * cell;
-      // canopy shade
-      ctx.fillStyle = "rgba(40,70,40,0.28)";
-      ctx.beginPath();
-      ctx.arc(x, y - 2, cell * 0.72, 0, Math.PI * 2);
-      ctx.fill();
-      // trunk
-      ctx.fillStyle = n.cd > 0 ? "#5a4830" : "#6a5030";
-      ctx.fillRect(x - 4, y - 2, 8, cell * 0.42);
-      // foliage
-      ctx.fillStyle = n.cd > 0 ? "#3a5a38" : "#4a7a48";
-      ctx.beginPath();
-      ctx.arc(x, y - cell * 0.28, cell * 0.38, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = "#5a9a58";
-      ctx.beginPath();
-      ctx.arc(x - 8, y - cell * 0.18, cell * 0.26, 0, Math.PI * 2);
-      ctx.arc(x + 9, y - cell * 0.2, cell * 0.24, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = "#e8d0a0";
-      ctx.font = "10px Segoe UI";
-      ctx.textAlign = "center";
-      ctx.fillText("F", x, y + cell * 0.42);
+      var cx = (n.x + 0.5) * cell, cy = (n.y + 0.5) * cell;
+      var faded = head && FS.manhattan(head, n) === 0;
+      if (FS.drawTreeSprite) {
+        FS.drawTreeSprite(ctx, cx, cy, cell, n.variant || 0, { faded: faded });
+      }
     });
     state.woodNodes.forEach(function (n) {
       if (n.kind === "tree") return;
       if (n.cd > 0 && n.kind === "wood") return;
-      var x = (n.x + 0.5) * cell, y = (n.y + 0.5) * cell;
-      if (n.kind === "stump") {
-        ctx.fillStyle = n.cd > 0 ? "rgba(90,70,40,0.35)" : "#6a5030";
+      var cx = (n.x + 0.5) * cell, cy = (n.y + 0.5) * cell;
+      if (n.kind === "wood" && FS.drawBranchPile) FS.drawBranchPile(ctx, cx, cy, cell);
+      else if (n.kind === "stump") {
+        ctx.fillStyle = "#6a5030";
         ctx.beginPath();
-        ctx.arc(x, y, cell * 0.22, 0, Math.PI * 2);
+        ctx.arc(cx, cy, cell * 0.2, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = "#c4a060";
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
-      } else {
-        // branch pile under / beside tree
-        ctx.fillStyle = "#8a6a38";
-        ctx.fillRect(x - 10, y - 3, 20, 6);
-        ctx.fillRect(x - 6, y - 8, 4, 14);
-        ctx.fillRect(x + 2, y - 6, 4, 12);
-        ctx.fillStyle = "#e8d0a0";
-        ctx.font = "10px Segoe UI";
-        ctx.textAlign = "center";
-        ctx.fillText("≡", x, y + 12);
       }
     });
   };
@@ -323,6 +282,11 @@
       ctx.beginPath();
       ctx.arc(hx, hy, FS.CELL * 0.42, 0, Math.PI * 2);
       ctx.stroke();
+      if (snake.loot) {
+        FS.drawFruit(ctx, snake.loot.kind || "berry", hx + 10, hy - 12, 0.55, {
+          phase: "ripe", time: state.time, reducedMotion: true
+        });
+      }
     }
   };
 

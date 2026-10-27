@@ -520,6 +520,22 @@ Noir полагодили: шорткати більше не скидали р�
 
 ---
 
+## 2026-10-26 — FOX SERPENT 1.4.0 (склад, арт, AI)
+
+| | |
+|--|--|
+| **Склад їжі** | carried 0–9 vs база; F-панель; deposit коротшає; без XP; носій → pantry |
+| **Грядки** | `isFarmableGround` — будь-яка суха вільна земля |
+| **Build фікси** | похідний woodCap/pantryCap; fence-ряд all-or-nothing; ПКМ = cancel; X = demolish; пауза зупиняє таймери |
+| **Арт** | `art.js` — дерева/паркан bitmask/ворота/грядки/комора/склад деревини |
+| **AI** | злодій з loot+втеча; розвідник + intel; elder ламає огорожу з боку |
+| **Союзники** | носій→склад, ремонтник, сторож; wait_pantry |
+| **Гайд** | `drawGuideBoard` + pantry/farm/thief/scout сцени |
+
+Файли: `storage.js`, `art.js`, `build.js`, `farms.js`, `ai.js`, `allies.js`, `guide.js`. Тести: All passed (`node tests/_run-node.js`).
+
+---
+
 ## 2026-10-26 — FOX SERPENT 1.3.0 (бази, деревина, B-курсор)
 
 | | |

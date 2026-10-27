@@ -36,10 +36,13 @@
     state.woodNodes = [];
     state.wood = 0;
     state.woodCap = 12;
+    state.pantry = { food: 0, cap: 12, level: 1, reserve: 0 };
     state.buildMode = null;
     FS.recomputeEffects(state);
     FS.initNutrition(state, 0);
     FS.seedStartFood(state);
+    if (FS.ensurePantry) FS.ensurePantry(state);
+    if (FS.ensureWood) FS.ensureWood(state);
     return state;
   }
 
@@ -413,6 +416,181 @@
       { snake: e, dir: "L", next: { x: 5, y: 5 } }
     ]);
     assert("head swap deaths", res.deaths.length >= 2);
+  })();
+
+  // Pantry deposit/withdraw preserves sum; shortens on deposit
+  (function () {
+    var s = fresh();
+    FS.initNutrition(s, 7);
+    while (s.player.growthDebt > 0) {
+      var h = FS.snakeHead(s.player);
+      FS.commitSnakeMove(s.player, { x: h.x + 1, y: h.y }, "R");
+    }
+    s.player.body = [
+      { x: s.world.nest.x + 1, y: s.world.nest.y },
+      { x: s.world.nest.x, y: s.world.nest.y },
+      { x: s.world.nest.x - 1, y: s.world.nest.y },
+      { x: s.world.nest.x - 2, y: s.world.nest.y },
+      { x: s.world.nest.x - 3, y: s.world.nest.y },
+      { x: s.world.nest.x - 4, y: s.world.nest.y },
+      { x: s.world.nest.x - 5, y: s.world.nest.y },
+      { x: s.world.nest.x - 6, y: s.world.nest.y },
+      { x: s.world.nest.x - 7, y: s.world.nest.y },
+      { x: s.world.nest.x - 8, y: s.world.nest.y }
+    ];
+    assert("near pantry", FS.nearPantry(s));
+    var sum0 = FS.nutritionOf(s) + s.pantry.food;
+    var xp0 = s.xp;
+    var r = FS.pantryTransfer(s, "deposit", 4);
+    assert("deposit ok", r.ok, r.why);
+    assert("deposit sum", FS.nutritionOf(s) + s.pantry.food === sum0);
+    assert("deposit no xp", s.xp === xp0);
+    assert("deposit shortens", FS.targetLength(FS.nutritionOf(s)) === 3 + FS.nutritionOf(s));
+    assert("body synced", s.player.body.length + (s.player.growthDebt | 0) === FS.targetLength(FS.nutritionOf(s)));
+    var sum1 = FS.nutritionOf(s) + s.pantry.food;
+    var w = FS.pantryTransfer(s, "withdraw", 2);
+    assert("withdraw ok", w.ok, w.why);
+    assert("withdraw sum", FS.nutritionOf(s) + s.pantry.food === sum1);
+    assert("withdraw no xp", s.xp === xp0);
+    // partial when full pantry
+    s.pantry.food = s.pantry.cap - 1;
+    FS.initNutrition(s, 5);
+    s.player.body = [
+      { x: s.world.nest.x + 1, y: s.world.nest.y },
+      { x: s.world.nest.x, y: s.world.nest.y },
+      { x: s.world.nest.x - 1, y: s.world.nest.y },
+      { x: s.world.nest.x - 2, y: s.world.nest.y },
+      { x: s.world.nest.x - 3, y: s.world.nest.y },
+      { x: s.world.nest.x - 4, y: s.world.nest.y },
+      { x: s.world.nest.x - 5, y: s.world.nest.y },
+      { x: s.world.nest.x - 6, y: s.world.nest.y }
+    ];
+    var p = FS.previewPantryDeposit(s, 5);
+    assert("partial deposit preview", p.take === 1);
+  })();
+
+  // B-build plot must succeed (farm before building entry)
+  (function () {
+    var s = fresh();
+    s.wood = 10;
+    FS.initNutrition(s, 2);
+    while (s.player.growthDebt > 0) {
+      var h = FS.snakeHead(s.player);
+      FS.commitSnakeMove(s.player, { x: h.x + 1, y: h.y }, "R");
+    }
+    var nest = s.world.nest;
+    var spot = null;
+    for (var dx = 3; dx < 8 && !spot; dx++) {
+      for (var dy = -2; dy <= 3; dy++) {
+        if (FS.canBuildAt(s, nest.x + dx, nest.y + dy, "plot").ok) {
+          spot = { x: nest.x + dx, y: nest.y + dy };
+          break;
+        }
+      }
+    }
+    assert("plot spot", !!spot);
+    var nFarms = s.farms.list.length;
+    var r = spot ? FS.commitBuild(s, spot.x, spot.y, "plot") : { ok: false, why: "no spot" };
+    assert("plot build ok", r.ok, r.why);
+    assert("plot farm added", s.farms.list.length === nFarms + 1);
+    assert("plot building entry", !!FS.buildingAt(s, spot.x, spot.y));
+  })();
+
+  // Farmable dry land; water/stone blocked
+  (function () {
+    var s = fresh();
+    var nest = s.world.nest;
+    var dry = null;
+    for (var dx = 3; dx < 8 && !dry; dx++) {
+      for (var dy = -2; dy <= 2; dy++) {
+        var g = FS.isFarmableGround(s, nest.x + dx, nest.y + dy);
+        if (g.ok && !FS.farmAt(s, nest.x + dx, nest.y + dy)) {
+          dry = { x: nest.x + dx, y: nest.y + dy };
+          break;
+        }
+      }
+    }
+    assert("found dry farmable", !!dry);
+    if (dry) {
+      var c = FS.canPlaceFarm(s, dry.x, dry.y, "berry");
+      assert("can place on dry", c.ok, c.why);
+    }
+    // plant water tile nearby if any
+    var waterHit = false;
+    for (var x = nest.x - 10; x < nest.x + 10; x++) {
+      for (var y = nest.y - 10; y < nest.y + 10; y++) {
+        var t = FS.tileAt(s.world, x, y);
+        if (t && (t.tt === "shallow" || t.tt === "deep")) {
+          var bad = FS.isFarmableGround(s, x, y);
+          assert("water not farmable", !bad.ok);
+          waterHit = true;
+          x = nest.x + 99;
+          break;
+        }
+      }
+    }
+    if (!waterHit) assert("water check skip", true);
+  })();
+
+  // Wood cap derived from sheds; fence row all-or-nothing
+  (function () {
+    var s = fresh();
+    s.wood = 20;
+    FS.ensureWood(s);
+    var cap0 = s.woodCap;
+    var nest = s.world.nest;
+    var spot = null;
+    for (var dx = 2; dx < 6 && !spot; dx++) {
+      for (var dy = 2; dy < 5; dy++) {
+        var chk = FS.canBuildAt(s, nest.x + dx, nest.y + dy, "shed");
+        if (chk.ok) { spot = { x: nest.x + dx, y: nest.y + dy }; break; }
+      }
+    }
+    assert("shed spot", !!spot);
+    var sh = spot ? FS.commitBuild(s, spot.x, spot.y, "shed") : { ok: false };
+    assert("shed build", sh.ok, sh.why);
+    FS.ensureWood(s);
+    assert("shed raises woodCap", s.woodCap === cap0 + FS.WOOD_PER_SHED, "cap=" + s.woodCap);
+    // fence row near nest on open cells
+    var cells = [];
+    for (var fx = nest.x - 2; fx <= nest.x + 2 && cells.length < 3; fx++) {
+      var cy = nest.y + 4;
+      var fc = FS.canBuildAt(s, fx, cy, "fence");
+      if (fc.ok) cells.push({ x: fx, y: cy });
+    }
+    assert("fence cells", cells.length === 3, "n=" + cells.length);
+    function stateBuildCount(st) { return (st.buildings || []).length; }
+    s.wood = 2;
+    var before = stateBuildCount(s);
+    var fr = FS.commitFenceRow(s, cells);
+    assert("fence row refuse", !fr.ok);
+    assert("fence row no partial", stateBuildCount(s) === before);
+    s.wood = 10;
+    fr = FS.commitFenceRow(s, cells);
+    assert("fence row ok", fr.ok, fr.why);
+    assert("fence row all", stateBuildCount(s) === before + 3);
+  })();
+
+  // Guide board helper exists
+  (function () {
+    assert("drawGuideBoard", typeof FS.drawGuideBoard === "function");
+    assert("guide has pantry scene", FS.GUIDE_STEPS.some(function (g) { return g.scene === "pantry"; }));
+  })();
+
+  // Ally deliver to pantry no XP
+  (function () {
+    var s = fresh();
+    FS.ensurePantry(s);
+    var ally = { carry: { kind: "berry" }, stateAI: "deliver" };
+    var xp0 = s.xp;
+    var food0 = s.pantry.food;
+    var r = FS.allyDeliverToPantry(s, ally);
+    assert("ally deliver", r.ok && s.pantry.food === food0 + 1 && !ally.carry);
+    assert("ally deliver no xp", s.xp === xp0);
+    s.pantry.food = s.pantry.cap;
+    ally.carry = { kind: "berry" };
+    r = FS.allyDeliverToPantry(s, ally);
+    assert("ally wait full", !r.ok && ally.carry && ally.stateAI === "wait_pantry");
   })();
 
   var el = document.getElementById("out");
