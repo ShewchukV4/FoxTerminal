@@ -367,6 +367,64 @@
     ctx.restore();
   };
 
+  FS.drawStation = function (ctx, ox, oy, cell, kind, time) {
+    ctx.save();
+    ctx.translate(ox, oy);
+    if (kind === "workbench") {
+      ctx.fillStyle = "#5a4030";
+      ctx.fillRect(-cell * 0.35, -cell * 0.08, cell * 0.7, cell * 0.28);
+      ctx.fillStyle = "#3a3020";
+      ctx.fillRect(-cell * 0.32, cell * 0.12, 6, cell * 0.18);
+      ctx.fillRect(cell * 0.22, cell * 0.12, 6, cell * 0.18);
+      ctx.fillStyle = "#7a6848";
+      ctx.fillRect(-cell * 0.2, -cell * 0.18, cell * 0.18, 4);
+      ctx.strokeStyle = "#4a4030";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(cell * 0.05, -cell * 0.2);
+      ctx.lineTo(cell * 0.22, -cell * 0.05);
+      ctx.stroke();
+    } else if (kind === "loom") {
+      ctx.strokeStyle = "#8a7a60";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(-cell * 0.28, -cell * 0.28, cell * 0.56, cell * 0.5);
+      ctx.strokeStyle = "#d8d0c0";
+      for (var i = -2; i <= 2; i++) {
+        ctx.beginPath();
+        ctx.moveTo(i * 5, -cell * 0.22);
+        ctx.lineTo(i * 5, cell * 0.18);
+        ctx.stroke();
+      }
+    } else if (kind === "mason") {
+      ctx.fillStyle = "#6a6870";
+      ctx.fillRect(-cell * 0.3, -cell * 0.05, cell * 0.6, cell * 0.22);
+      ctx.fillStyle = "#4a4848";
+      ctx.fillRect(-cell * 0.18, -cell * 0.2, cell * 0.36, cell * 0.16);
+      ctx.fillStyle = "#8a8580";
+      ctx.fillRect(cell * 0.1, cell * 0.08, 8, 6);
+    } else if (kind === "kiln") {
+      ctx.fillStyle = "#5a5048";
+      ctx.beginPath();
+      ctx.arc(0, cell * 0.05, cell * 0.28, Math.PI, 0);
+      ctx.lineTo(cell * 0.28, cell * 0.25);
+      ctx.lineTo(-cell * 0.28, cell * 0.25);
+      ctx.fill();
+      ctx.fillStyle = "#1a1010";
+      ctx.beginPath();
+      ctx.ellipse(0, cell * 0.08, 8, 6, 0, 0, Math.PI * 2);
+      ctx.fill();
+      var glow = 0.15 + 0.05 * Math.sin((time || 0) * 3);
+      ctx.fillStyle = "rgba(220,100,40," + glow + ")";
+      ctx.beginPath();
+      ctx.arc(0, 0, cell * 0.35, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      ctx.fillStyle = "#5a5040";
+      ctx.fillRect(-cell * 0.25, -cell * 0.1, cell * 0.5, cell * 0.25);
+    }
+    ctx.restore();
+  };
+
   FS.drawCaveEntrance = function (ctx, ox, oy, cell) {
     ctx.save();
     ctx.translate(ox, oy);

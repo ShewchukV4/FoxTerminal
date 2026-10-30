@@ -38,6 +38,13 @@
     state.woodCap = 12;
     state.pantry = { food: 0, cap: 12, level: 1, reserve: 0 };
     state.buildMode = null;
+    state.materials = FS.defaultMaterials ? FS.defaultMaterials() : { stone: 0 };
+    state.stations = [];
+    state.caves = { list: [], byId: Object.create(null) };
+    state.portals = [];
+    state.layerId = "surface";
+    state.caveId = null;
+    if (FS.bindSurfaceWorld) FS.bindSurfaceWorld(state, state.world);
     FS.recomputeEffects(state);
     FS.initNutrition(state, 0);
     FS.seedStartFood(state);
@@ -679,6 +686,127 @@
     ally.carry = { kind: "berry" };
     r = FS.allyDeliverToPantry(s, ally);
     assert("ally wait full", !r.ok && ally.carry && ally.stateAI === "wait_pantry");
+  })();
+
+  // Cave gen: same-length ids differ; stable for same id
+  (function () {
+    var a = FS.generateCaveGrid(42, "cave_1_0", "mine");
+    var b = FS.generateCaveGrid(42, "cave_2_0", "mine");
+    var a2 = FS.generateCaveGrid(42, "cave_1_0", "mine");
+    var same = true;
+    for (var y = 0; y < a.h && same; y++) {
+      for (var x = 0; x < a.w; x++) {
+        if (a.grid[y][x] !== b.grid[y][x]) { same = false; break; }
+      }
+    }
+    assert("caves differ by id", !same);
+    var stable = true;
+    for (y = 0; y < a.h && stable; y++) {
+      for (x = 0; x < a.w; x++) {
+        if (a.grid[y][x] !== a2.grid[y][x]) { stable = false; break; }
+      }
+    }
+    assert("cave gen stable", stable);
+  })();
+
+  // Cave enter → serialize → apply → exit keeps surface
+  (function () {
+    var s = fresh();
+    s.buildings.push({ id: "f1", kind: "fence", x: s.world.nest.x + 5, y: s.world.nest.y, owner: "player" });
+    FS.ensureCaves(s);
+    var gen = FS.generateCaveGrid(s.world.seed, "cave_sv", "roots");
+    var cave = {
+      id: "cave_sv", theme: "roots", gen: gen,
+      surface: [{ x: s.world.nest.x + 2, y: s.world.nest.y }],
+      cx: 0, cy: 0, knownExits: 0
+    };
+    s.caves.list.push(cave);
+    s.caves.byId[cave.id] = cave;
+    var portal = {
+      id: "psv", caveId: cave.id, surface: cave.surface[0],
+      cavePos: gen.exits[0] || { x: 12, y: 8 }, sealed: false
+    };
+    s.portals.push(portal);
+    s.player.body = [
+      { x: portal.surface.x, y: portal.surface.y },
+      { x: portal.surface.x - 1, y: portal.surface.y },
+      { x: portal.surface.x - 2, y: portal.surface.y }
+    ];
+    var er = FS.enterCave(s, portal);
+    assert("sv enter", er.ok, er.why);
+    var snap = FS.serializeState(s);
+    assert("sv has worlds.surface", !!(snap.worlds && snap.worlds.surface));
+    assert("sv surface has fence", (snap.worlds.surface.buildings || []).some(function (b) {
+      return b.kind === "fence";
+    }));
+    var s2 = fresh();
+    FS.applySave(s2, snap);
+    assert("sv load in cave or surface ok", !!s2.worlds && !!s2.worlds.surface);
+    if (s2.layerId === "cave" || s2.activeWorldId === "cave_sv") {
+      var xr = FS.exitCave(s2, portal);
+      assert("sv exit after load", xr.ok, xr.why);
+    }
+    assert("sv surface buildings survive", (s2.worlds.surface.buildings || s2.buildings || [])
+      .some(function (b) { return b.kind === "fence"; }));
+  })();
+
+  // Surface buildings do not block cave cells
+  (function () {
+    var s = fresh();
+    var fx = 5, fy = 5;
+    s.buildings.push({ id: "sf", kind: "fence", x: fx, y: fy, owner: "player", worldId: "surface" });
+    FS.ensureCaves(s);
+    var gen = FS.generateCaveGrid(7, "cave_blk", "mine");
+    var cave = { id: "cave_blk", theme: "mine", gen: gen, surface: [{ x: 3, y: 3 }], cx: 0, cy: 0 };
+    s.caves.byId[cave.id] = cave; s.caves.list.push(cave);
+    var portal = { id: "pb", caveId: cave.id, surface: cave.surface[0], cavePos: { x: fx, y: fy }, sealed: false };
+    FS.enterCave(s, portal);
+    // After enter, buildings pointer is cave's (empty) — surface fence must not block
+    var blocked = FS.isBlockedCell(s, fx, fy, { kind: "player" });
+    assert("cave ignores surface fence", blocked !== "wall" || !FS.buildingAt(s, fx, fy));
+  })();
+
+  // Hire validator: no auto campfire; food pay separate from pantry capacity
+  (function () {
+    var s = fresh();
+    FS.ensureSettlement(s);
+    FS.ensurePantry(s);
+    s.pantry.food = 0;
+    s.pantry.cap = 12;
+    s.homes = [{
+      id: "h1", x: 4, y: 4, capacity: 1, residents: [],
+      door: { x: 4, y: 5 }, worldId: "surface"
+    }];
+    var ev = FS.evaluateSettlementForHire(s, s.homes[0], { roleCost: 3 });
+    var fire = ev.checks.filter(function (c) { return c.id === "fire"; })[0];
+    var pay = ev.checks.filter(function (c) { return c.id === "food_pay"; })[0];
+    assert("hire no magic fire", fire && !fire.ok);
+    assert("hire empty pantry fails pay", pay && !pay.ok);
+    assert("ensure did not invent fire bldg", !FS.findCampfireBuilding(s));
+  })();
+
+  // Base spacing rules
+  (function () {
+    var s = fresh();
+    FS.ensureEnemyBases(s);
+    s.enemyBases.push({ id: "b0", cx: 5, cy: 5, chunks: [{ cx: 5, cy: 5 }] });
+    assert("base too close start", !FS.canPlaceEnemyBaseAtChunk(s, 0, 0).ok);
+    assert("base diagonal neighbor blocked", !FS.canPlaceEnemyBaseAtChunk(s, 6, 6).ok);
+    assert("base sep ok", FS.canPlaceEnemyBaseAtChunk(s, 8, 5).ok);
+  })();
+
+  // Craft planks recipe
+  (function () {
+    var s = fresh();
+    FS.ensureMaterials(s);
+    s.wood = 4;
+    var st = FS.registerStation(s, { id: "wb1", kind: "workbench", x: 1, y: 1, worldId: "surface" });
+    var r = FS.startCraft(s, st, "planks");
+    assert("craft start", r.ok, r.why);
+    assert("craft spent wood", s.wood === 2);
+    st.current.t = 0;
+    FS.tickStations(s, 0.1);
+    assert("craft planks out", s.materials.planks === 2);
   })();
 
   var el = document.getElementById("out");

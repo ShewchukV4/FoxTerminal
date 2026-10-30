@@ -3,40 +3,80 @@
   "use strict";
 
   FS.serializeState = function (state) {
+    // Keep surface mirrors in sync before pack
+    if (FS.ensureWorlds) {
+      FS.ensureWorlds(state);
+      if (state.worlds.surface) {
+        if (state.activeWorldId === "surface" || state.layerId !== "cave") {
+          state.worlds.surface.buildings = state.buildings || state.worlds.surface.buildings;
+          state.worlds.surface.woodNodes = state.woodNodes || state.worlds.surface.woodNodes;
+        }
+      } else if (state.world) {
+        FS.bindSurfaceWorld(state, state.world);
+      }
+    }
+    var worlds = FS.serializeWorlds ? FS.serializeWorlds(state) : null;
+    var surface = worlds && worlds.surface;
+    // Legacy `world` field = surface always (never the active cave)
+    var worldPack = surface || {
+      tiles: state.world.tiles,
+      foods: state.world.foods,
+      landmarks: state.world.landmarks || [],
+      nest: state.world.nest,
+      chunks: state.world.chunks,
+      minX: state.world.minX, maxX: state.world.maxX,
+      minY: state.world.minY, maxY: state.world.maxY,
+      openOffers: state.world.openOffers
+    };
     return {
       schema: FS.SAVE_SCHEMA,
       migrationVersion: FS.MIGRATION_VERSION,
       rev: (state.saveRev || 0) + 1,
       version: FS.VERSION,
-      seed: state.world.seed,
+      seed: (surface && surface.seed) || state.world.seed,
       time: state.time,
       nutrition: FS.nutritionOf(state),
       wood: state.wood || 0,
       woodCap: state.woodCap || 12,
-      buildings: state.buildings || [],
-      woodNodes: state.woodNodes || [],
+      materials: state.materials || null,
+      specialization: state.specialization || null,
+      buildings: (surface && surface.buildings) || state.buildings || [],
+      woodNodes: (surface && surface.woodNodes) || state.woodNodes || [],
       pantry: state.pantry || null,
       settlement: state.settlement || null,
       layerId: state.layerId || "surface",
       caveId: state.caveId || null,
-      caves: state.caves || null,
+      activeWorldId: state.activeWorldId || "surface",
+      cavesMeta: state.caves ? { list: state.caves.list.map(function (c) {
+        return {
+          id: c.id, theme: c.theme, cx: c.cx, cy: c.cy,
+          surface: c.surface, gen: c.gen, knownExits: c.knownExits || 0,
+          genVersion: (c.gen && c.gen.genVersion) || FS.CAVE_GEN_VERSION || 2
+        };
+      }) } : null,
+      enemyBases: state.enemyBases || null,
+      mine: state.mine || null,
+      weapons: state.weapons || null,
       portals: state.portals || null,
       layers: state.layers || null,
+      worlds: worlds,
       world: {
-        tiles: state.world.tiles,
-        foods: state.world.foods,
+        tiles: worldPack.tiles,
+        foods: worldPack.foods || [],
         materials: [],
-        landmarks: state.world.landmarks || [],
-        nest: state.world.nest,
-        chunks: state.world.chunks,
-        minX: state.world.minX, maxX: state.world.maxX,
-        minY: state.world.minY, maxY: state.world.maxY,
-        openOffers: state.world.openOffers
+        landmarks: worldPack.landmarks || [],
+        nest: worldPack.nest,
+        chunks: worldPack.chunks,
+        minX: worldPack.minX, maxX: worldPack.maxX,
+        minY: worldPack.minY, maxY: worldPack.maxY,
+        openOffers: worldPack.openOffers || [],
+        seed: worldPack.seed
       },
       foodDirector: FS.serializeFoodDirector ? FS.serializeFoodDirector(state) : null,
       farms: FS.serializeFarms ? FS.serializeFarms(state) : null,
       alliesData: FS.serializeAllies ? FS.serializeAllies(state) : null,
-      generatorVersion: state.world.generatorVersion || FS.GENERATOR_VERSION,
+      stations: state.stations || null,
+      generatorVersion: (surface && surface.generatorVersion) || state.world.generatorVersion || FS.GENERATOR_VERSION,
       player: {
         body: state.player.body,
         dir: state.player.dir,
@@ -47,7 +87,7 @@
         return {
           id: e.id, name: e.name, arch: e.arch, body: e.body, dir: e.dir,
           growthDebt: e.growthDebt, stepPeriod: e.stepPeriod, color: e.color,
-          home: e.home, detectRange: e.detectRange,
+          home: e.home, detectRange: e.detectRange, worldId: e.worldId || "surface",
           loot: e.loot || null,
           raidTarget: e.raidTarget || null,
           knowsFarm: !!e.knowsFarm,
@@ -113,23 +153,66 @@
 
     state.saveRev = data.rev || 1;
     state.time = data.time || 0;
-    state.world = data.world;
-    state.world.seed = data.seed;
-    state.world.landmarks = state.world.landmarks || [];
-    state.world.materials = [];
     state.wood = data.wood != null ? data.wood : 0;
     state.woodCap = data.woodCap || 12;
-    state.buildings = data.buildings || [];
-    state.woodNodes = data.woodNodes || [];
+    state.materials = data.materials || (FS.defaultMaterials ? FS.defaultMaterials() : {});
+    if (FS.ensureMaterials) FS.ensureMaterials(state);
+    state.specialization = data.specialization || null;
+    state.stations = data.stations || [];
+    state.enemyBases = data.enemyBases || [];
+    state.mine = data.mine || null;
+    state.weapons = data.weapons || null;
     state.pantry = data.pantry || { food: 0, cap: 12, level: 1, reserve: 0 };
     state.settlement = data.settlement || null;
-    state.layerId = data.layerId || "surface";
-    state.caveId = data.caveId || null;
-    state.caves = data.caves || { list: [], byId: Object.create(null) };
     state.portals = data.portals || [];
     state.layers = data.layers || null;
+    state.caves = { list: [], byId: Object.create(null) };
+    if (data.cavesMeta && data.cavesMeta.list) {
+      data.cavesMeta.list.forEach(function (c) {
+        state.caves.list.push(c);
+        state.caves.byId[c.id] = c;
+      });
+    } else if (data.caves && data.caves.list) {
+      // 1.5 legacy caves object
+      data.caves.list.forEach(function (c) {
+        state.caves.list.push(c);
+        state.caves.byId[c.id] = c;
+      });
+    }
+    // Worlds: prefer multi-world pack; migrate 1.5 cave-stuck saves
+    if (data.worlds && data.worlds.surface) {
+      FS.applyWorlds(state, data.worlds);
+    } else {
+      state.world = data.world;
+      state.world.seed = data.seed;
+      state.world.landmarks = state.world.landmarks || [];
+      state.buildings = data.buildings || [];
+      state.woodNodes = data.woodNodes || [];
+      if (FS.bindSurfaceWorld) FS.bindSurfaceWorld(state, state.world);
+      if ((data.layerId === "cave" || data.activeWorldId && data.activeWorldId !== "surface") && !data.worlds) {
+        state._surfaceMissing = true;
+        state.ui.toast = "Увага: сейв у печері без окремої поверхні — відновлено з доступного знімка";
+        // Force surface; player may be misplaced but progress kept
+        if (FS.setActiveWorld) FS.setActiveWorld(state, "surface");
+      }
+    }
+    state.layerId = state.layerId || data.layerId || "surface";
+    state.caveId = state.caveId || data.caveId || null;
+    state.activeWorldId = state.activeWorldId || data.activeWorldId || "surface";
     if (FS.ensureSettlement) FS.ensureSettlement(state);
+    if (FS.migrateCampfireIfNeeded) FS.migrateCampfireIfNeeded(state);
+    // Rehydrate cave.gen if missing (deterministic from seed+id+theme)
+    if (state.caves && state.caves.list && FS.generateCaveGrid) {
+      var surfSeed = (state.worlds && state.worlds.surface && state.worlds.surface.seed) || data.seed;
+      state.caves.list.forEach(function (c) {
+        if (!c.gen && c.theme) {
+          c.gen = FS.generateCaveGrid(surfSeed, c.id, c.theme);
+        }
+        state.caves.byId[c.id] = c;
+      });
+    }
     state.buildMode = null;
+    if (!state.world) state.world = data.world;
     state.player = FS.createPlayerSnake(state.world.nest);
     state.player.body = data.player.body;
     state.player.growthDebt = data.player.growthDebt || 0;
@@ -162,12 +245,19 @@
     if (FS.applyFarms) FS.applyFarms(state, data.farms);
     if (FS.applyAllies) FS.applyAllies(state, data.alliesData);
     FS.recomputeEffects(state);
+    if (FS.applySpecEffects) FS.applySpecEffects(state);
+    if (FS.hydrateStationsFromBuildings) FS.hydrateStationsFromBuildings(state);
     if (FS.migrateWoodIfNeeded) FS.migrateWoodIfNeeded(state);
     if (FS.migrateFarmFoodIfNeeded) FS.migrateFarmFoodIfNeeded(state);
     if (FS.ensurePantry) FS.ensurePantry(state);
     if (FS.recomputeWoodCap) FS.recomputeWoodCap(state);
     state.paused = false;
     state.pauseReasons = { manual: false, panel: false, blur: false, guide: false };
+    // One-time specialization for old saves (defer UI to avoid pause during tests)
+    if (!state.specialization && FS.openSpecPicker && typeof document !== "undefined" &&
+        document.getElementById && document.getElementById("panel")) {
+      state._needSpecPick = true;
+    }
   };
 
   FS.saveGame = function (state, reason) {

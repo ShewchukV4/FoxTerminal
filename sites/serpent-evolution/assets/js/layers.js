@@ -93,10 +93,12 @@
       return;
     }
     var h = FS.snakeHead(state.player);
-    var key = state.layerId + ":" + h.x + ":" + h.y + ":" + (state.settlement && state.settlement.phase);
+    var r = FS.visionRadius(state);
+    var geom = (state.world && state.world._geomRev) || 0;
+    var key = (state.activeWorldId || state.layerId) + ":" + (state.caveId || "") + ":" +
+      h.x + ":" + h.y + ":" + r + ":" + geom + ":" + (state.settlement && state.settlement.phase);
     if (state._fovCell === key && state._fov) return;
     state._fovCell = key;
-    var r = FS.visionRadius(state);
     state._fov = FS.computeFOV(state, h.x, h.y, r);
     FS.markExplored(state, state._fov);
   };

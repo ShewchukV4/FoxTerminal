@@ -74,6 +74,10 @@
       }
       state.started = true;
       document.getElementById("overlay").classList.add("hidden");
+      if (state._needSpecPick && FS.openSpecPicker) {
+        state._needSpecPick = false;
+        FS.openSpecPicker(state);
+      }
     };
     document.getElementById("btn-import").onclick = function () {
       document.getElementById("import-file").click();
@@ -192,6 +196,8 @@
     else if (state.ui.panel === "build") el.innerHTML = FS.htmlBuild(state);
     else if (state.ui.panel === "pantry") el.innerHTML = FS.htmlPantry(state);
     else if (state.ui.panel === "campfire") el.innerHTML = FS.htmlCampfire(state);
+    else if (state.ui.panel === "spec" && FS.htmlSpecPicker) el.innerHTML = FS.htmlSpecPicker(state);
+    else if (state.ui.panel === "station" && FS.htmlStation) el.innerHTML = FS.htmlStation(state);
     else el.innerHTML = "";
     FS.bindPanel(state);
   };
@@ -411,7 +417,7 @@
   FS.bindPanel = function (state) {
     var el = document.getElementById("panel");
     el.onclick = function (ev) {
-      var t = ev.target.closest("[data-act],[data-talent],[data-offer],[data-offer-yes],[data-offer-no],[data-fork],[data-hire],[data-ally-cmd],[data-ally-all],[data-pantry],[data-settle],[data-invite]");
+      var t = ev.target.closest("[data-act],[data-talent],[data-offer],[data-offer-yes],[data-offer-no],[data-fork],[data-hire],[data-ally-cmd],[data-ally-all],[data-pantry],[data-settle],[data-invite],[data-spec],[data-craft]");
       if (!t) return;
       if (t.dataset.act === "close") {
         state.ui.panel = null;
@@ -580,6 +586,28 @@
         var inv = t.dataset.invite.split(":");
         var ir = FS.hireAlly(state, inv[0], inv[1]);
         state.ui.toast = ir.ok ? "Союзника запрошено" : ir.why;
+        state.ui.panelDirty = true;
+        FS.renderPanel(state);
+        return;
+      }
+      if (t.dataset.spec) {
+        var sr = FS.chooseSpecialization(state, t.dataset.spec);
+        state.ui.toast = sr.ok ? state.ui.toast : sr.why;
+        state.ui.panelDirty = true;
+        if (state.ui.panel) FS.renderPanel(state);
+        else {
+          document.getElementById("panel").classList.add("hidden");
+          FS.setPauseReason(state, "panel", false);
+        }
+        return;
+      }
+      if (t.dataset.craft) {
+        var stn = null;
+        for (var si = 0; si < (state.stations || []).length; si++) {
+          if (state.stations[si].id === state.ui.stationId) stn = state.stations[si];
+        }
+        var cr = FS.startCraft(state, stn, t.dataset.craft);
+        state.ui.toast = cr.ok ? state.ui.toast : cr.why;
         state.ui.panelDirty = true;
         FS.renderPanel(state);
         return;

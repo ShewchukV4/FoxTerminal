@@ -170,6 +170,7 @@
           if (offer.danger >= 2 && FS.spawnEnemyBase) FS.spawnEnemyBase(state, offer);
           if (FS.seedTreeInChunk) FS.seedTreeInChunk(state, offer.cx, offer.cy);
           if (FS.spawnCaveEntranceOnChunk) FS.spawnCaveEntranceOnChunk(state, offer);
+          if (FS.trySpawnEnemyBaseOnChunk) FS.trySpawnEnemyBaseOnChunk(state, offer);
           if (FS.ensureDirector) FS.ensureDirector(state);
           state.ui.toast = "Відкрито: " + offer.name + " (−" + quote.cost +
             (quote.fromPantry ? ", зі складу " + quote.fromPantry : "") + ")";

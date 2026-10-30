@@ -86,11 +86,13 @@
     var maxAllies = 1 + (state.effects && state.effects.allyCapAdd || 0);
     if (state.allies.length >= Math.min(4, maxAllies)) return { ok: false, why: "Ліміт союзників" };
     if (FS.evaluateSettlementForHire) {
-      var ev = FS.evaluateSettlementForHire(state, home);
+      var ev = FS.evaluateSettlementForHire(state, home, { roleCost: rdef.cost });
       if (!ev.ok) {
-        var miss = ev.checks.filter(function (c) { return !c.ok; }).map(function (c) { return c.label; });
+        var miss = ev.checks.filter(function (c) { return !c.ok && c.severity !== "warn"; })
+          .map(function (c) { return c.label; });
         return { ok: false, why: "Осередок не готовий: " + miss.join("; ") };
       }
+      if (ev.busyDoor) return { ok: false, why: "Осередок придатний, очікує вільного виходу" };
     }
     var prev = FS.quoteSettlementSpend
       ? FS.quoteSettlementSpend(state, rdef.cost)

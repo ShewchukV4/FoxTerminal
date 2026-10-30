@@ -14,6 +14,7 @@
   };
 
   FS.recomputeEffects = function (state) {
+    // Spec passives applied after talent fold (see end of function via applySpecEffects)
     var prevSkills = (state.effects && state.effects.skills) ? state.effects.skills : {};
     var e = {
       turnBuffer: 2,
@@ -74,6 +75,7 @@
     }
 
     state.effects = e;
+    if (FS.applySpecEffects) FS.applySpecEffects(state);
     if (state.player) {
       state.player.stepPeriod = 1 / Math.max(2.5, e.playerRate);
     }

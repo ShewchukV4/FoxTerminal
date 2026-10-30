@@ -15,27 +15,48 @@
     } else {
       seed = (+seed || FS.hash2(String(seed).length, String(seed).charCodeAt(0) || 1)) >>> 0;
     }
+    if (FS.clearWorldRuntime) FS.clearWorldRuntime(state);
     state.world = FS.buildStartWorld(seed);
+    state.buildings = [];
+    state.woodNodes = [];
+    if (FS.bindSurfaceWorld) FS.bindSurfaceWorld(state, state.world);
     state.player = FS.createPlayerSnake(state.world.nest);
     state.enemies = [];
     state.allies = [];
     state.homes = [];
     state.farms = FS.createFarmsState();
     state.nutrition = 0;
-    state.wood = 0;
+    state.wood = 3; // starter for first campfire
     state.woodCap = FS.WOOD_CAP_BASE || 12;
-    state.buildings = [];
-    state.woodNodes = [];
+    state.materials = FS.defaultMaterials ? FS.defaultMaterials() : {
+      stone: 2, fiber: 0, resin: 0, clay: 0, copper_ore: 0, copper_ingot: 0,
+      mycelium: 0, planks: 0, rope: 0, coal: 0, crystal: 0
+    };
+    if (state.materials.stone == null) state.materials.stone = 2;
+    state.stations = [];
+    state.specialization = null;
+    state.enemyBases = [];
+    state.weapons = null;
     state.buildMode = null;
     state.pantry = { food: 0, cap: FS.PANTRY_BASE_CAP || 12, level: 1, reserve: 0 };
     state.layerId = FS.LAYER_SURFACE || "surface";
     state.caveId = null;
+    state.activeWorldId = FS.WORLD_SURFACE || "surface";
     state.caves = { list: [], byId: Object.create(null) };
     state.portals = [];
     state.layers = null;
     state.settlement = null;
     if (FS.ensureSettlement) FS.ensureSettlement(state);
-    if (FS.ensureCampfire) FS.ensureCampfire(state);
+    // Mark nest as campfire site hint — do NOT auto-build campfire
+    if (state.world.nest) {
+      var nest = state.world.nest;
+      var nt = FS.tileAt(state.world, nest.x, nest.y);
+      if (nt && nt.tt !== "campfire") {
+        FS.setTile(state.world, nest.x, nest.y, FS.makeTile(nest.x, nest.y, "campfire_site", {
+          biome: (nt && nt.biome) || "garden"
+        }));
+      }
+    }
     state.xp = 0;
     state.talentLevel = 1;
     state.talents = FS.defaultTalents();
@@ -50,14 +71,16 @@
     state.ui.build = null;
     state.ui.expandConfirm = null;
     state.ui.expandError = "";
-    state.ui.toast = "Seed " + seed + " · Пожива ≠ деревина · B = будівництво";
+    state.ui.toast = "Seed " + seed + " · Побудуй багаття (B) · оберіть спеціалізацію";
     state.input = FS.createInput();
     FS.recomputeEffects(state);
     FS.initNutrition(state, 0);
     FS.seedStartFood(state);
     if (FS.seedWoodNodes) FS.seedWoodNodes(state);
+    if (FS.seedSurfaceStones) FS.seedSurfaceStones(state);
     FS.saveGame(state, "new");
-    if (FS.shouldAutoOpenGuide(state)) FS.openGuide(state, { firstRun: true });
+    if (!state.specialization && FS.openSpecPicker) FS.openSpecPicker(state, { firstRun: true });
+    else if (FS.shouldAutoOpenGuide(state)) FS.openGuide(state, { firstRun: true });
   };
 
   FS.createState = function (canvas) {
@@ -118,6 +141,16 @@
       if (e.code === "KeyH") {
         if (e.repeat) return;
         FS.togglePanel(state, "help");
+        return;
+      }
+      if (e.code === "KeyQ") {
+        if (e.repeat) return;
+        if (FS.startAttack) FS.startAttack(state);
+        return;
+      }
+      if (e.code === "KeyE") {
+        if (e.repeat) return;
+        if (FS.startParry) FS.startParry(state);
         return;
       }
 
@@ -221,6 +254,10 @@
     if (FS.tickFarms) FS.tickFarms(state, dt);
     if (FS.tickAllies) FS.tickAllies(state, dt);
     if (FS.tickWoodNodes) FS.tickWoodNodes(state, dt);
+    if (FS.tickStations) FS.tickStations(state, dt);
+    if (FS.tickMineJobs) FS.tickMineJobs(state, dt);
+    if (FS.tickWeapons) FS.tickWeapons(state, dt);
+    if (FS.tickCapture) FS.tickCapture(state, dt);
     (function () {
       var h = FS.snakeHead(state.player);
       var k = FS.key(h.x, h.y);

@@ -57,6 +57,18 @@
       id: "campfire", name: "Багаття", walk: true, farm: false, campfire: true,
       detectMul: 1, desc: "Серце поселення · F — стан"
     },
+    campfire_site: {
+      id: "campfire_site", name: "Місце для багаття", walk: true, farm: false,
+      detectMul: 1, desc: "Побудуй багаття (B) — стартове завдання"
+    },
+    pit: {
+      id: "pit", name: "Яма", walk: false, farm: false, block: true,
+      detectMul: 1, desc: "Вирита суха яма"
+    },
+    reservoir: {
+      id: "reservoir", name: "Резервуар", walk: false, farm: false, block: true,
+      detectMul: 1, desc: "Облицьований резервуар (ще без води)"
+    },
     cave_floor: {
       id: "cave_floor", name: "Печерна підлога", walk: true, farm: false, slowMul: 1.05,
       detectMul: 1, desc: "Кам’яна підлога підземелля"
@@ -103,7 +115,9 @@
       });
     }
     // bridge over deep: walkable
-    if (tt === "bridge" || tt === "campfire" || tt === "cave_exit" || tt === "cave_floor") tile.block = false;
+    if (tt === "bridge" || tt === "campfire" || tt === "campfire_site" ||
+        tt === "cave_exit" || tt === "cave_floor") tile.block = false;
+    if (tt === "pit" || tt === "reservoir") tile.block = true;
     if (tt === "deep" || tt === "stone" || tt === "cave_wall") tile.block = true;
     return tile;
   };

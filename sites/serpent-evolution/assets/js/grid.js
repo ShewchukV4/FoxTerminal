@@ -4,10 +4,21 @@
 
   /** Active snakes on the current world layer (allies inside homes occupy nothing outdoors). */
   FS.iterActiveSnakes = function (state, fn) {
+    var wid = state.activeWorldId || FS.WORLD_SURFACE || "surface";
     if (state.player) fn(state.player);
-    (state.enemies || []).forEach(fn);
+    (state.enemies || []).forEach(function (e) {
+      if (!e || e.dead) return;
+      var ew = e.worldId || FS.WORLD_SURFACE || "surface";
+      // Surface snakes do not collide while player is in a cave
+      if (wid !== (FS.WORLD_SURFACE || "surface") && ew === (FS.WORLD_SURFACE || "surface")) return;
+      if (ew !== wid && ew !== "any") return;
+      fn(e);
+    });
     (state.allies || []).forEach(function (a) {
-      if (a && !a.inside) fn(a);
+      if (!a || a.inside) return;
+      var aw = a.worldId || FS.WORLD_SURFACE || "surface";
+      if (aw !== wid && aw !== "any") return;
+      fn(a);
     });
   };
 
@@ -50,7 +61,13 @@
 
   FS.buildingBlocksFor = function (b, mover) {
     if (!b) return false;
-    if (b.kind === "fence" || b.kind === "block" || b.kind === "shed" || b.kind === "hut") return true;
+    // Campfire / stations / plots are walkable interaction cells
+    if (b.kind === "campfire" || b.kind === "plot" || b.kind === "larder" ||
+        b.kind === "workbench" || b.kind === "loom" || b.kind === "mason" ||
+        b.kind === "kiln" || b.kind === "forge" || b.kind === "alchemy" ||
+        b.kind === "hydro" || b.kind === "geo") return false;
+    if (b.kind === "fence" || b.kind === "block" || b.kind === "shed" || b.kind === "hut" ||
+        b.kind === "support") return true;
     if (b.kind === "gate") {
       var friendly = mover && (mover.kind === "player" || mover.kind === "ally");
       if (friendly) return false;

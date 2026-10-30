@@ -3,13 +3,13 @@ window.FoxSerpent = window.FoxSerpent || {};
 (function (FS) {
   "use strict";
 
-  FS.VERSION = "1.5.0";
+  FS.VERSION = "1.6.0";
   FS.SAVE_SCHEMA = 2;
   FS.SAVE_KEY = "fox_serpent_evo_save_v1";
   FS.SAVE_BAK = "fox_serpent_evo_save_bak_v1";
-  FS.GUIDE_VERSION = 6;
+  FS.GUIDE_VERSION = 7;
   FS.GUIDE_SEEN_KEY = "fox_serpent_evo_guide_v1";
-  FS.MIGRATION_VERSION = 5;
+  FS.MIGRATION_VERSION = 6;
 
   FS.CELL = 36;
   FS.CHUNK = 12;
@@ -579,13 +579,25 @@ window.FoxSerpent = window.FoxSerpent || {};
   ];
 
   FS.BUILD_COSTS = {
+    campfire: { wood: 3, stone: 2, name: "Багаття" },
     fence: { wood: 1, name: "Паркан" },
     gate: { wood: 2, name: "Ворота" },
     block: { wood: 2, name: "Блок" },
     plot: { wood: 2, nutrition: 1, name: "Грядка" },
     hut: { wood: 5, name: "Домівка" },
     shed: { wood: 4, name: "Склад деревини" },
-    larder: { wood: 4, name: "Склад їжі" }
+    larder: { wood: 4, name: "Склад їжі" },
+    workbench: { wood: 4, stone: 1, name: "Верстак" },
+    loom: { wood: 3, fiber: 2, name: "Ткацький стіл" },
+    mason: { wood: 2, stone: 3, name: "Каменярський стіл" },
+    kiln: { wood: 2, stone: 4, clay: 2, name: "Піч" },
+    support: { wood: 2, planks: 1, name: "Опора" }
+  };
+
+  FS.MATERIAL_NAMES = {
+    stone: "Камінь", fiber: "Волокно", resin: "Смола", clay: "Глина",
+    copper_ore: "Мідна руда", copper_ingot: "Мідний злиток", mycelium: "Грибниця",
+    planks: "Дошки", rope: "Мотузка", coal: "Вугілля", crystal: "Світний кристал"
   };
 
   FS.HELP = [

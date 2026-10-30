@@ -325,10 +325,13 @@
     });
   };
 
-  FS.buildingAt = function (state, x, y) {
+  FS.buildingAt = function (state, x, y, worldId) {
     FS.ensureWood(state);
-    for (var i = 0; i < state.buildings.length; i++) {
-      if (state.buildings[i].x === x && state.buildings[i].y === y) return state.buildings[i];
+    var list = FS.buildingsOf
+      ? FS.buildingsOf(state, worldId || state.activeWorldId)
+      : (state.buildings || []);
+    for (var i = 0; i < list.length; i++) {
+      if (list[i].x === x && list[i].y === y) return list[i];
     }
     return null;
   };
@@ -378,15 +381,19 @@
     FS.ensureWood(state);
     var bm = state.buildMode;
     var html = '<div class="bp-title">БУДІВНИЦТВО · змія стоїть</div>';
+    if (FS.ensureMaterials) FS.ensureMaterials(state);
     html += '<div class="bp-wood">Деревина <b>' + state.wood + "</b>/" + state.woodCap +
+      " · Камінь <b>" + (state.materials.stone || 0) + "</b>" +
       " · Пожива <b>" + FS.nutritionOf(state) + "</b>/9</div>";
     html += '<div class="bp-tools">';
     Object.keys(FS.BUILD_COSTS).forEach(function (k) {
       var c = FS.BUILD_COSTS[k];
       var active = !bm.demolish && bm.tool === k;
+      var costStr = (c.wood ? c.wood + "д" : "") +
+        (c.stone ? (c.wood ? "+" : "") + c.stone + "к" : "") +
+        (c.nutrition ? "+" + c.nutrition + "п" : "");
       html += '<button type="button" class="btn' + (active ? " primary" : "") +
-        '" data-btool="' + k + '">' + c.name + " · " + c.wood + "д" +
-        (c.nutrition ? "+" + c.nutrition + "п" : "") + "</button>";
+        '" data-btool="' + k + '">' + c.name + (costStr ? " · " + costStr : "") + "</button>";
     });
     html += '<button type="button" class="btn' + (bm.demolish ? " primary" : " danger") +
       '" data-btool="demo">Знести (X) −50%</button>';
@@ -429,6 +436,7 @@
     if (!tile) return { ok: false, why: "Клітинка ще не відкрита" };
     if (kind !== "plot" && tile.tt === "deep") return { ok: false, why: "Вода" };
     if (kind !== "plot" && tile.tt === "stone" && tile.block) return { ok: false, why: "Камінь" };
+    if (kind === "campfire" && tile.tt === "campfire") return { ok: false, why: "Вже багаття" };
     if (FS.treeAt(state, x, y)) return { ok: false, why: "Дерево" };
     if (FS.buildingAt(state, x, y)) return { ok: false, why: "Вже є споруда" };
     if (FS.farmAt && FS.farmAt(state, x, y) && kind !== "plot") return { ok: false, why: "Ферма" };
@@ -449,7 +457,7 @@
       var ev = FS.dirVec(ed);
       if (eh.x + ev.x === x && eh.y + ev.y === y) return { ok: false, why: "Наступний крок ворога" };
     }
-    if (FS.manhattan({ x: x, y: y }, state.world.nest) < 1 && kind !== "shed") {
+    if (FS.manhattan({ x: x, y: y }, state.world.nest) < 1 && kind !== "shed" && kind !== "campfire") {
       return { ok: false, why: "Гніздо" };
     }
     var cost = FS.BUILD_COSTS[kind];
@@ -457,6 +465,23 @@
     if ((cost.wood || 0) > state.wood) return { ok: false, why: "Потрібно " + cost.wood + " деревини, є " + state.wood };
     if ((cost.nutrition || 0) > FS.nutritionOf(state)) {
       return { ok: false, why: "Потрібно ще " + cost.nutrition + " поживи" };
+    }
+    if (FS.ensureMaterials) FS.ensureMaterials(state);
+    var matKeys = ["stone", "fiber", "resin", "clay", "planks", "rope", "copper_ingot", "mycelium"];
+    for (var mi = 0; mi < matKeys.length; mi++) {
+      var mk = matKeys[mi];
+      if ((cost[mk] || 0) > 0 && ((state.materials && state.materials[mk]) || 0) < cost[mk]) {
+        var label = (FS.MATERIAL_NAMES && FS.MATERIAL_NAMES[mk]) || mk;
+        return { ok: false, why: "Потрібно " + cost[mk] + " × " + label };
+      }
+    }
+    if (kind === "campfire") {
+      var existingFire = (state.buildings || []).some(function (bb) {
+        return bb.kind === "campfire" && bb.owner !== "enemy" &&
+          (bb.worldId || "surface") === (state.activeWorldId || "surface");
+      });
+      // Multiple campfires OK in different cells; no hard block
+      void existingFire;
     }
     if (kind === "plot") {
       var pc = FS.canPlaceFarm(state, x, y, "berry");
@@ -491,30 +516,61 @@
         var fr = FS.placeFarmAt(state, x, y, "berry");
         if (!fr.ok) return fr;
       }
+      if (FS.ensureMaterials) FS.ensureMaterials(state);
+      ["stone", "fiber", "resin", "clay", "planks", "rope", "copper_ingot", "mycelium"].forEach(function (mk) {
+        if (cost[mk]) state.materials[mk] = Math.max(0, (state.materials[mk] || 0) - cost[mk]);
+      });
       var b = {
         id: FS.uid(), kind: kind, x: x, y: y,
         rot: (state.buildMode && state.buildMode.rot) || 0,
         closed: kind === "gate" ? true : undefined,
         hp: kind === "block" ? 3 : (kind === "fence" ? 2 : 1),
-        owner: "player"
+        owner: "player",
+        worldId: state.activeWorldId || "surface"
       };
+      if (kind === "campfire") {
+        b.fuelBonus = 0;
+        b.light = 1;
+        state.settlement = state.settlement || {};
+        state.settlement.campfire = { x: x, y: y, fuelBonus: 0, light: 1, kind: "campfire", buildingId: b.id };
+        var cfTile = FS.tileAt(state.world, x, y);
+        FS.setTile(state.world, x, y, FS.makeTile(x, y, "campfire", {
+          biome: (cfTile && cfTile.biome) || "garden"
+        }));
+        state.tutorial.done.campfire = true;
+      }
+      if (kind === "workbench" || kind === "loom" || kind === "mason" || kind === "kiln") {
+        if (FS.registerStation) FS.registerStation(state, b);
+      }
       state.buildings.push(b);
+      if (state.world && state.world.buildings === state.buildings) { /* synced */ }
+      else if (FS.buildingsOf && state.worlds) {
+        var blist = FS.buildingsOf(state, state.activeWorldId);
+        if (blist !== state.buildings) blist.push(b);
+      }
       if (kind === "hut") {
         FS.ensureAllies(state);
-        var door = { x: x, y: y + 1 };
-        if (FS.isBlockedCell(state, door.x, door.y, { kind: "ally" })) door = { x: x + 1, y: y };
-        if (FS.isBlockedCell(state, door.x, door.y, { kind: "ally" })) door = { x: x - 1, y: y };
-        if (FS.isBlockedCell(state, door.x, door.y, { kind: "ally" })) door = { x: x, y: y - 1 };
+        var doorDir = (state.buildMode && state.buildMode.rot) || 0;
+        var doorOffsets = [{ x: 0, y: 1 }, { x: 1, y: 0 }, { x: 0, y: -1 }, { x: -1, y: 0 }];
+        var door = { x: x + doorOffsets[doorDir % 4].x, y: y + doorOffsets[doorDir % 4].y };
+        var di;
+        for (di = 0; di < 4; di++) {
+          var cand = { x: x + doorOffsets[(doorDir + di) % 4].x, y: y + doorOffsets[(doorDir + di) % 4].y };
+          if (!FS.isBlockedCell(state, cand.x, cand.y, { kind: "ally" })) { door = cand; break; }
+        }
         var homeTile = FS.tileAt(state.world, x, y);
         FS.setTile(state.world, x, y, FS.makeTile(x, y, "home_door", { biome: (homeTile && homeTile.biome) || "garden" }));
         state.homes.push({
           id: FS.uid(), type: "hut", x: x, y: y,
-          capacity: 1, residents: [], door: door
+          capacity: 1, residents: [], door: door,
+          worldId: state.activeWorldId || "surface",
+          doorRot: doorDir % 4
         });
       }
       // shed / larder capacity is derived via recomputeWoodCap / recomputePantryCap
       if (kind === "larder" && FS.recomputePantryCap) FS.recomputePantryCap(state);
       state.tutorial.done.build = true;
+      if (state.world) state.world._geomRev = (state.world._geomRev || 0) + 1;
       return { ok: true, building: b };
     }
 
@@ -577,6 +633,17 @@
     if (kind === "hut" && state.homes) {
       state.homes = state.homes.filter(function (h) { return !(h.x === x && h.y === y); });
     }
+    if (kind === "campfire") {
+      if (state.settlement && state.settlement.campfire &&
+          state.settlement.campfire.x === x && state.settlement.campfire.y === y) {
+        state.settlement.campfire = null;
+      }
+      var cft = FS.tileAt(state.world, x, y);
+      if (cft && (cft.tt === "campfire" || cft.tt === "campfire_site")) {
+        FS.setTile(state.world, x, y, FS.makeTile(x, y, "meadow", { biome: cft.biome }));
+      }
+    }
+    if (state.world) state.world._geomRev = (state.world._geomRev || 0) + 1;
     FS.recomputeWoodCap(state);
     if (FS.recomputePantryCap) FS.recomputePantryCap(state);
     if (refund) FS.gainWood(state, refund);
@@ -594,8 +661,18 @@
   };
 
   FS.tryInteract = function (state) {
+    if (FS.tryGatherLandmark && FS.tryGatherLandmark(state).ok) return true;
     if (FS.harvestStump(state).ok) return true;
     var h = FS.snakeHead(state.player);
+    var stNear = FS.stationAt && (
+      FS.stationAt(state, h.x, h.y) ||
+      FS.stationAt(state, h.x + 1, h.y) || FS.stationAt(state, h.x - 1, h.y) ||
+      FS.stationAt(state, h.x, h.y + 1) || FS.stationAt(state, h.x, h.y - 1)
+    );
+    if (stNear && FS.openStationPanel) {
+      FS.openStationPanel(state, stNear);
+      return true;
+    }
     if (FS.tryEnterPortal && FS.portalAt && (FS.portalAt(state, h.x, h.y) ||
         FS.portalAt(state, h.x + 1, h.y) || FS.portalAt(state, h.x - 1, h.y) ||
         FS.portalAt(state, h.x, h.y + 1) || FS.portalAt(state, h.x, h.y - 1))) {

@@ -60,6 +60,7 @@
     this.drawLandmarks(state);
     this.drawItems(state);
     this.drawBuildPreview(state);
+    this.markFogHidden(state);
     this.drawSnakes(state);
     this.drawFruitArrow(state);
     this.drawForesight(state);
@@ -69,6 +70,21 @@
     if (state.lastDeath && state.ui.panel === "death") this.drawDeathCell(state);
 
     ctx.restore();
+  };
+
+  FS.Renderer.prototype.markFogHidden = function (state) {
+    if (!state.enemies) return;
+    if (!state._fov) {
+      state.enemies.forEach(function (e) { e._hiddenByFog = false; });
+      return;
+    }
+    var cave = state.layerId === "cave" || (state.activeWorldId && state.activeWorldId !== "surface");
+    state.enemies.forEach(function (e) {
+      if (e.dead) { e._hiddenByFog = true; return; }
+      var eh = FS.snakeHead(e);
+      var vis = state._fov[FS.key(eh.x, eh.y)];
+      e._hiddenByFog = cave ? !vis : !vis;
+    });
   };
 
   FS.Renderer.prototype.drawVisionFog = function (state) {
@@ -95,15 +111,6 @@
           : "rgba(0,0,0,0.92)";
         ctx.fillRect(x, y, cell, cell);
       }
-    }
-    if (state.layerId === "cave") {
-      (state.enemies || []).forEach(function (e) { e._hiddenByFog = true; });
-    } else if (state.enemies) {
-      state.enemies.forEach(function (e) {
-        if (e.dead) return;
-        var eh = FS.snakeHead(e);
-        e._hiddenByFog = !state._fov[FS.key(eh.x, eh.y)];
-      });
     }
   };
 
@@ -191,6 +198,18 @@
       } else if (b.kind === "larder" && FS.drawLarder) {
         var pf = state.pantry && state.pantry.cap ? state.pantry.food / state.pantry.cap : 0;
         FS.drawLarder(ctx, cx, cy, cell, pf);
+      } else if (b.kind === "campfire" && FS.drawCampfire) {
+        FS.drawCampfire(ctx, cx, cy, cell, state.time || 0, !!(state.settings && state.settings.reducedMotion));
+      } else if ((b.kind === "workbench" || b.kind === "loom" || b.kind === "mason" || b.kind === "kiln") && FS.drawStation) {
+        FS.drawStation(ctx, cx, cy, cell, b.kind, state.time || 0);
+      } else if (b.kind === "support") {
+        ctx.strokeStyle = "#6a5030";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(cx - cell * 0.25, cy + cell * 0.35);
+        ctx.lineTo(cx, cy - cell * 0.35);
+        ctx.lineTo(cx + cell * 0.25, cy + cell * 0.35);
+        ctx.stroke();
       }
     });
   };
@@ -242,21 +261,24 @@
   FS.Renderer.prototype.drawNest = function (state) {
     var ctx = this.ctx;
     var cell = FS.CELL;
-    var n = (state.settlement && state.settlement.campfire) || state.world.nest;
+    // Campfire is drawn as a building; nest marker only if no campfire yet
+    var hasFire = FS.findCampfireBuilding && FS.findCampfireBuilding(state);
+    var n = state.world.nest;
+    if (!n) return;
     var x = (n.x + 0.5) * cell, y = (n.y + 0.5) * cell;
-    if (FS.drawCampfire && state.layerId !== "cave") {
-      FS.drawCampfire(ctx, x, y, cell, state.time || 0, !!(state.settings && state.settings.reducedMotion));
-      return;
-    }
-    ctx.fillStyle = "rgba(160,120,80,0.35)";
-    ctx.beginPath();
-    ctx.arc(x, y, cell * 0.7, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = FS.COLORS.nest;
+    if (hasFire) return;
+    // Site hint ring
+    ctx.strokeStyle = "rgba(220,160,70,0.55)";
     ctx.lineWidth = 2;
+    ctx.setLineDash([4, 4]);
     ctx.beginPath();
-    ctx.arc(x, y, cell * 0.45, 0, Math.PI * 2);
+    ctx.arc(x, y, cell * 0.4, 0, Math.PI * 2);
     ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = "rgba(160,120,80,0.25)";
+    ctx.beginPath();
+    ctx.arc(x, y, cell * 0.28, 0, Math.PI * 2);
+    ctx.fill();
   };
 
   FS.Renderer.prototype.drawLandmarks = function (state) {
