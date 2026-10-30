@@ -26,11 +26,15 @@
 
   /** LOS ray on current world grid (blocked by non-walkable / trees / solid buildings). */
   FS.hasLineOfSight = function (state, x0, y0, x1, y1) {
+    if (![x0, y0, x1, y1].every(Number.isSafeInteger)) return false;
     var dx = Math.abs(x1 - x0), dy = Math.abs(y1 - y0);
+    if (Math.max(dx, dy) > 64) return false;
+    var budget = dx + dy + 1;
     var sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1;
     var err = dx - dy;
     var x = x0, y = y0;
     while (!(x === x1 && y === y1)) {
+      if (--budget < 0) return false;
       var e2 = err * 2;
       if (e2 > -dy) { err -= dy; x += sx; }
       if (e2 < dx) { err += dx; y += sy; }
@@ -41,8 +45,11 @@
   };
 
   FS.computeFOV = function (state, ox, oy, radius) {
-    radius = radius || FS.visionRadius(state);
     var visible = Object.create(null);
+    if (!Number.isSafeInteger(ox) || !Number.isSafeInteger(oy)) return visible;
+    if (radius == null) radius = FS.visionRadius(state);
+    radius = typeof radius === "number" && Number.isFinite(radius)
+      ? Math.max(0, Math.min(32, Math.floor(radius))) : 5;
     for (var dy = -radius; dy <= radius; dy++) {
       for (var dx = -radius; dx <= radius; dx++) {
         if (dx * dx + dy * dy > radius * radius + radius) continue;
