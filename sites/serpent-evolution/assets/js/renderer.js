@@ -21,7 +21,39 @@
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   };
 
+  /** Instant camera + fit for current world (call on layer/world change). */
+  FS.Renderer.prototype.snapToPlayer = function (state) {
+    if (!state.player || !state.world) return;
+    var h = FS.snakeHead(state.player);
+    var cell = FS.CELL;
+    var viewW = this.canvas.width / this.dpr;
+    var viewH = this.canvas.height / this.dpr;
+    var worldW = (state.world.maxX - state.world.minX + 1) * cell;
+    var worldH = (state.world.maxY - state.world.minY + 1) * cell;
+    var fit = Math.min(viewW / (worldW + 80), viewH / (worldH + 80), 1.35);
+    if (worldW > viewW * 1.2 || worldH > viewH * 1.2) fit = Math.min(1.05, fit);
+    // Caves are small — don't keep surface "fit whole map" zoom (that made fog iterate 100k+ cells)
+    if (state.world.isCave || state.layerId === "cave") {
+      fit = Math.max(fit, 0.85);
+      fit = Math.min(fit, 1.35);
+    }
+    if (!isFinite(fit) || fit <= 0) fit = 1;
+    this.cam.baseFit = fit;
+    if (this.cam.userZoom == null || !isFinite(this.cam.userZoom)) this.cam.userZoom = 1;
+    this.cam.z = Math.max(0.5, Math.min(2.4, this.cam.baseFit * this.cam.userZoom));
+    this.cam.x = (h.x + 0.5) * cell;
+    this.cam.y = (h.y + 0.5) * cell;
+    if (!isFinite(this.cam.x)) this.cam.x = 0;
+    if (!isFinite(this.cam.y)) this.cam.y = 0;
+    this._camWorldId = state.activeWorldId || state.layerId;
+  };
+
   FS.Renderer.prototype.follow = function (state) {
+    var wid = state.activeWorldId || state.layerId;
+    if (this._camWorldId !== wid) {
+      this.snapToPlayer(state);
+      return;
+    }
     var h = FS.snakeHead(state.player);
     var cell = FS.CELL;
     var tx = (h.x + 0.5) * cell;
@@ -33,12 +65,17 @@
     // baseFit for small maps only; large maps stay readable with camera follow
     var fit = Math.min(viewW / (worldW + 80), viewH / (worldH + 80), 1.35);
     if (worldW > viewW * 1.2 || worldH > viewH * 1.2) fit = Math.min(1.05, fit);
-    var vision = 1 - Math.min(0.2, (state.effects.vision || 0) * 0.015);
+    if (state.world.isCave || state.layerId === "cave") {
+      fit = Math.max(Math.min(fit, 1.35), 0.85);
+    }
+    var vision = 1 - Math.min(0.2, ((state.effects && state.effects.vision) || 0) * 0.015);
+    if (!isFinite(fit) || fit <= 0) fit = 1;
     this.cam.baseFit = FS.lerp(this.cam.baseFit || fit, fit * vision, 0.08);
-    if (this.cam.userZoom == null) this.cam.userZoom = 1;
-    this.cam.z = this.cam.baseFit * this.cam.userZoom;
-    this.cam.x = FS.lerp(this.cam.x, tx, 0.12);
-    this.cam.y = FS.lerp(this.cam.y, ty, 0.12);
+    if (!isFinite(this.cam.baseFit) || this.cam.baseFit <= 0) this.cam.baseFit = fit;
+    if (this.cam.userZoom == null || !isFinite(this.cam.userZoom)) this.cam.userZoom = 1;
+    this.cam.z = Math.max(0.5, Math.min(2.4, this.cam.baseFit * this.cam.userZoom));
+    this.cam.x = FS.lerp(isFinite(this.cam.x) ? this.cam.x : tx, tx, 0.12);
+    this.cam.y = FS.lerp(isFinite(this.cam.y) ? this.cam.y : ty, ty, 0.12);
   };
 
   FS.Renderer.prototype.draw = function (state) {
@@ -93,22 +130,44 @@
     var ctx = this.ctx;
     var cell = FS.CELL;
     var night = state.settlement && state.settlement.phase === "night";
-    // Only cells near camera — full-map fog every frame caused hitches
-    var viewW = this.canvas.width / this.dpr / this.cam.z;
-    var viewH = this.canvas.height / this.dpr / this.cam.z;
+    var z = Math.max(0.35, this.cam.z || 1);
+    var viewW = this.canvas.width / this.dpr / z;
+    var viewH = this.canvas.height / this.dpr / z;
     var x0 = Math.floor((this.cam.x - viewW / 2) / cell) - 1;
     var y0 = Math.floor((this.cam.y - viewH / 2) / cell) - 1;
     var x1 = Math.ceil((this.cam.x + viewW / 2) / cell) + 1;
     var y1 = Math.ceil((this.cam.y + viewH / 2) / cell) + 1;
+    // Clamp to world — never iterate the surface-sized viewport while in a tiny cave
+    if (state.world) {
+      x0 = Math.max(x0, state.world.minX | 0);
+      y0 = Math.max(y0, state.world.minY | 0);
+      x1 = Math.min(x1, state.world.maxX | 0);
+      y1 = Math.min(y1, state.world.maxY | 0);
+    }
+    if (x1 < x0 || y1 < y0) return;
+    // Hard cap cells/frame (safety if zoom/world glitch)
+    if ((x1 - x0 + 1) * (y1 - y0 + 1) > 2500) {
+      var cx = Math.floor(this.cam.x / cell);
+      var cy = Math.floor(this.cam.y / cell);
+      x0 = Math.max(x0, cx - 24); x1 = Math.min(x1, cx + 24);
+      y0 = Math.max(y0, cy - 16); y1 = Math.min(y1, cy + 16);
+    }
+    FS.ensureLayer(state);
+    var explored = null;
+    if (state.layerId === "cave" && state.caveId && state.layers.caves[state.caveId]) {
+      explored = state.layers.caves[state.caveId].explored;
+    } else if (state.layers.surface) {
+      explored = state.layers.surface.explored;
+    }
+    var fov = state._fov;
+    var memCol = night ? "rgba(8,14,12,0.45)" : "rgba(4,8,12,0.55)";
+    var darkCol = "rgba(0,0,0,0.92)";
     for (var ty = y0; ty <= y1; ty++) {
       for (var tx = x0; tx <= x1; tx++) {
-        if (!FS.inBounds(state.world, tx, ty)) continue;
-        var vis = FS.cellVision ? FS.cellVision(state, tx, ty, state._fov) : "visible";
-        if (vis === "visible") continue;
+        var k = FS.key(tx, ty);
+        if (fov[k]) continue;
         var x = tx * cell, y = ty * cell;
-        ctx.fillStyle = vis === "memory"
-          ? (night ? "rgba(8,14,12,0.45)" : "rgba(4,8,12,0.55)")
-          : "rgba(0,0,0,0.92)";
+        ctx.fillStyle = (explored && explored[k]) ? memCol : darkCol;
         ctx.fillRect(x, y, cell, cell);
       }
     }
@@ -120,8 +179,16 @@
     // Calm base field: soft green soil; water/stone/plot as clear exceptions — not a 12-color mosaic
     var base = FS.COLORS.soil || "#243528";
     var pathTint = "#2a3a2e";
+    var z = Math.max(0.35, this.cam.z || 1);
+    var viewW = this.canvas.width / this.dpr / z;
+    var viewH = this.canvas.height / this.dpr / z;
+    var vx0 = Math.floor((this.cam.x - viewW / 2) / cell) - 1;
+    var vy0 = Math.floor((this.cam.y - viewH / 2) / cell) - 1;
+    var vx1 = Math.ceil((this.cam.x + viewW / 2) / cell) + 1;
+    var vy1 = Math.ceil((this.cam.y + viewH / 2) / cell) + 1;
     for (var key in state.world.tiles) {
       var t = state.world.tiles[key];
+      if (t.x < vx0 || t.x > vx1 || t.y < vy0 || t.y > vy1) continue;
       var x = t.x * cell, y = t.y * cell;
       var tt = t.tt || (t.block ? "stone" : "meadow");
       ctx.globalAlpha = 0.95;

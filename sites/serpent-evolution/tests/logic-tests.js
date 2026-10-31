@@ -809,6 +809,48 @@
     assert("craft planks out", s.materials.planks === 2);
   })();
 
+  // Cave enter keeps FOV cheap + snaps camera world id
+  (function () {
+    var s = fresh();
+    FS.ensureCaves(s);
+    var gen = FS.generateCaveGrid(9, "cave_lag", "roots");
+    var cave = {
+      id: "cave_lag", theme: "roots", gen: gen,
+      surface: [{ x: s.world.nest.x + 2, y: s.world.nest.y }], cx: 0, cy: 0
+    };
+    s.caves.list.push(cave); s.caves.byId[cave.id] = cave;
+    var portal = {
+      id: "pl", caveId: cave.id, surface: cave.surface[0],
+      cavePos: gen.exits[0] || { x: 12, y: 8 }, sealed: false
+    };
+    s.portals.push(portal);
+    s.player.body = [
+      { x: portal.surface.x, y: portal.surface.y },
+      { x: portal.surface.x - 1, y: portal.surface.y },
+      { x: portal.surface.x - 2, y: portal.surface.y }
+    ];
+    // Fake surface-sized camera zoom leftover
+    s.renderer = {
+      canvas: { width: 1920, height: 1080 },
+      dpr: 1,
+      cam: { x: 4000, y: 4000, z: 0.08, baseFit: 0.08, userZoom: 1 },
+      snapToPlayer: FS.Renderer.prototype.snapToPlayer
+    };
+    var t0 = Date.now();
+    var er = FS.enterCave(s, portal);
+    var ms = Date.now() - t0;
+    assert("lagfix enter", er.ok, er.why);
+    assert("lagfix enter fast", ms < 80, "ms=" + ms);
+    assert("lagfix cam near head", Math.abs(s.renderer.cam.x - (FS.snakeHead(s.player).x + 0.5) * FS.CELL) < 1);
+    assert("lagfix zoom sane", s.renderer.cam.z >= 0.35);
+    var h = FS.snakeHead(s.player);
+    var fovT0 = Date.now();
+    var fov = FS.computeFOV(s, h.x, h.y, FS.visionRadius(s));
+    var fovMs = Date.now() - fovT0;
+    assert("lagfix fov fast", fovMs < 30, "ms=" + fovMs);
+    assert("lagfix fov has cells", Object.keys(fov).length > 0);
+  })();
+
   var el = document.getElementById("out");
   if (el) {
     el.innerHTML = out.map(function (l) {

@@ -187,6 +187,8 @@
       if (state.paused && state.ui.panel) return;
 
       if (e.code === "KeyF") {
+        e.preventDefault();
+        if (e.repeat) return; // hold-F must not thrash cave enter/exit
         if (FS.tryInteract && FS.tryInteract(state)) return;
         FS.activatePhaseSelf(state);
         return;
@@ -248,16 +250,20 @@
 
     state.time += dt;
     FS.tickSkills(state, dt);
-    FS.tickFoodDirector(state, dt);
+    var inCave = FS.isInCave ? FS.isInCave(state) : state.layerId === "cave";
+    // Surface systems stay frozen underground — they use surface coords/world
+    if (!inCave) {
+      FS.tickFoodDirector(state, dt);
+      if (FS.tickFarms) FS.tickFarms(state, dt);
+      if (FS.tickAllies) FS.tickAllies(state, dt);
+      if (FS.tickWoodNodes) FS.tickWoodNodes(state, dt);
+      if (FS.tickStations) FS.tickStations(state, dt);
+      if (FS.tickCapture) FS.tickCapture(state, dt);
+    }
     if (FS.tickDayNight) FS.tickDayNight(state, dt);
     if (FS.tickVision) FS.tickVision(state);
-    if (FS.tickFarms) FS.tickFarms(state, dt);
-    if (FS.tickAllies) FS.tickAllies(state, dt);
-    if (FS.tickWoodNodes) FS.tickWoodNodes(state, dt);
-    if (FS.tickStations) FS.tickStations(state, dt);
     if (FS.tickMineJobs) FS.tickMineJobs(state, dt);
     if (FS.tickWeapons) FS.tickWeapons(state, dt);
-    if (FS.tickCapture) FS.tickCapture(state, dt);
     (function () {
       var h = FS.snakeHead(state.player);
       var k = FS.key(h.x, h.y);
@@ -315,7 +321,7 @@
     }
 
     // --- Enemies: frozen while player is underground (surface pack waits) ---
-    if (state.layerId === "cave") {
+    if (inCave) {
       state.enemies.forEach(function (e) {
         if (!e.dead) FS.setStanding(e, true);
       });

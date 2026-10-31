@@ -158,9 +158,14 @@
     return cave;
   };
 
+  FS.isInCave = function (state) {
+    return state.layerId === FS.LAYER_CAVE ||
+      !!(state.activeWorldId && state.activeWorldId !== FS.WORLD_SURFACE && state.activeWorldId !== "surface");
+  };
+
   FS.portalAt = function (state, x, y) {
     FS.ensureCaves(state);
-    var inCave = state.layerId === FS.LAYER_CAVE || state.activeWorldId !== FS.WORLD_SURFACE;
+    var inCave = FS.isInCave(state);
     for (var i = 0; i < state.portals.length; i++) {
       var p = state.portals[i];
       if (inCave) {
@@ -175,6 +180,10 @@
   FS.tryEnterPortal = function (state) {
     FS.ensureLayer(state);
     FS.ensureCaves(state);
+    var now = (typeof performance !== "undefined" && performance.now) ? performance.now() : Date.now();
+    if (state._portalLockT && now < state._portalLockT) {
+      return { ok: false, why: "Зачекай…" };
+    }
     var h = FS.snakeHead(state.player);
     var p = FS.portalAt(state, h.x, h.y);
     if (!p) {
@@ -184,13 +193,17 @@
       });
     }
     if (!p) return { ok: false, why: "Немає входу" };
-    if (p.sealed && state.layerId !== FS.LAYER_CAVE) {
+    if (p.sealed && !FS.isInCave(state)) {
       return { ok: false, why: "Завал — відкрий іншу територію або знайди зв’язок зсередини" };
     }
-    if (state.layerId !== FS.LAYER_CAVE && state.activeWorldId === FS.WORLD_SURFACE) {
-      return FS.enterCave(state, p);
+    var result;
+    if (!FS.isInCave(state)) {
+      result = FS.enterCave(state, p);
+    } else {
+      result = FS.exitCave(state, p);
     }
-    return FS.exitCave(state, p);
+    if (result && result.ok) state._portalLockT = now + 450;
+    return result;
   };
 
   FS.caveCellWalkable = function (gen, x, y) {
@@ -200,7 +213,10 @@
   };
 
   FS.findCaveSpawn = function (gen, prefer, len) {
-    len = Math.max(3, len | 0);
+    if (!gen || !gen.grid) return null;
+    var gw = Math.min(64, Math.max(0, gen.w | 0));
+    var gh = Math.min(64, Math.max(0, gen.h | 0));
+    len = Math.max(3, Math.min(12, len | 0));
     var dirs = [
       { dir: "R", dx: -1, dy: 0 },
       { dir: "L", dx: 1, dy: 0 },
@@ -224,13 +240,14 @@
     var candidates = [];
     if (prefer) candidates.push(prefer);
     (gen.rooms || []).forEach(function (r) { candidates.push({ x: r.x, y: r.y }); });
-    candidates.push({ x: 12, y: 8 });
+    candidates.push({ x: (gw / 2) | 0, y: (gh / 2) | 0 });
     for (var c = 0; c < candidates.length; c++) {
-      var spot = tryAt(candidates[c].x, candidates[c].y);
+      var spot = tryAt(candidates[c].x | 0, candidates[c].y | 0);
       if (spot) return spot;
     }
-    for (var y = 0; y < gen.h; y++) {
-      for (var x = 0; x < gen.w; x++) {
+    // Bounded full scan — never walk unbounded gen sizes from a bad save
+    for (var y = 0; y < gh; y++) {
+      for (var x = 0; x < gw; x++) {
         if (!FS.caveCellWalkable(gen, x, y)) continue;
         var s2 = tryAt(x, y);
         if (s2) return s2;
@@ -324,7 +341,14 @@
 
     state.ui.toast = "Ти в печері («" + cave.theme + "»). F — вихід.";
     state.tutorial.done.cave = true;
-    if (FS.tickVision) FS.tickVision(state);
+    if (state.player.visualFrom) state.player.visualFrom = null;
+    state.player.visualT = 1;
+    state._fov = null;
+    state._fovCell = null;
+    // Defer FOV to next tick — keep F handler light
+    if (state.renderer && state.renderer.snapToPlayer) {
+      try { state.renderer.snapToPlayer(state); } catch (err) {}
+    }
     state._saveTimer = 15;
     if (state.settings && state.settings.devCaveTiming) {
       state.ui.toast += " [" + Math.round((performance.now() - t0)) + "ms]";
@@ -401,7 +425,10 @@
     state.player.dir = chosen.dir;
     state.player.requestedDir = chosen.dir;
     state.player.standing = true;
+    if (state.player.visualFrom) state.player.visualFrom = null;
+    state.player.visualT = 1;
     state.ui.toast = "Повернення на поверхню";
+    if (state.renderer && state.renderer.snapToPlayer) state.renderer.snapToPlayer(state);
     state._saveTimer = 15;
     return { ok: true };
   };

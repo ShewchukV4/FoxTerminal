@@ -24,11 +24,27 @@
     return (a.layerId || FS.LAYER_SURFACE) === (b.layerId || FS.LAYER_SURFACE);
   };
 
+  /** Cheap FOV blocker: tiles/trees/solid buildings (no snake occupancy). */
+  FS.blocksVisionAt = function (state, x, y) {
+    if (!FS.inBounds(state.world, x, y)) return true;
+    var t = FS.tileAt(state.world, x, y);
+    if (!t) return true;
+    if (typeof FS.tileWalkable === "function") {
+      if (!FS.tileWalkable(t)) return true;
+    } else if (t.block) return true;
+    if (FS.treeAt && FS.treeAt(state, x, y)) return true;
+    if (FS.buildingAt) {
+      var b = FS.buildingAt(state, x, y);
+      if (b && FS.buildingBlocksFor(b, null)) return true;
+    }
+    return false;
+  };
+
   /** LOS ray on current world grid (blocked by non-walkable / trees / solid buildings). */
   FS.hasLineOfSight = function (state, x0, y0, x1, y1) {
-    if (![x0, y0, x1, y1].every(Number.isSafeInteger)) return false;
+    x0 = x0 | 0; y0 = y0 | 0; x1 = x1 | 0; y1 = y1 | 0;
     var dx = Math.abs(x1 - x0), dy = Math.abs(y1 - y0);
-    if (Math.max(dx, dy) > 64) return false;
+    if (Math.max(dx, dy) > 32) return false;
     var budget = dx + dy + 1;
     var sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1;
     var err = dx - dy;
@@ -39,17 +55,18 @@
       if (e2 > -dy) { err -= dy; x += sx; }
       if (e2 < dx) { err += dx; y += sy; }
       if (x === x1 && y === y1) break;
-      if (FS.isBlockedCell(state, x, y, null)) return false;
+      if (FS.blocksVisionAt(state, x, y)) return false;
     }
     return true;
   };
 
   FS.computeFOV = function (state, ox, oy, radius) {
     var visible = Object.create(null);
-    if (!Number.isSafeInteger(ox) || !Number.isSafeInteger(oy)) return visible;
+    ox = ox | 0; oy = oy | 0;
+    if (!isFinite(ox) || !isFinite(oy)) return visible;
     if (radius == null) radius = FS.visionRadius(state);
     radius = typeof radius === "number" && Number.isFinite(radius)
-      ? Math.max(0, Math.min(32, Math.floor(radius))) : 5;
+      ? Math.max(0, Math.min(12, Math.floor(radius))) : 5;
     for (var dy = -radius; dy <= radius; dy++) {
       for (var dx = -radius; dx <= radius; dx++) {
         if (dx * dx + dy * dy > radius * radius + radius) continue;
