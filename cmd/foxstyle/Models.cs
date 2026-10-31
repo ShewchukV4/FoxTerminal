@@ -1,4 +1,5 @@
 using System;
+using FoxOs.Sdk;
 
 namespace FoxOs.Style {
 
@@ -162,9 +163,90 @@ namespace FoxOs.Style {
         public int pressScale = 97;
     }
 
+    // Maps 1:1 onto style.json "motion". Legacy scale/med kept; new fields drive Fox System UI.
     public class MotionMod {
         public string scale = "full"; // full | reduced | off
         public int med = 280;
+
+        public bool enabled = true;
+        public string preset = "balanced"; // off | economy | balanced | smooth | custom
+        public int speedPercent = 100;
+        public int intensityPercent = 100;
+        public string fps = "auto"; // 30 | 60 | auto
+        public bool reducedMotion = false;
+        public string battery = "auto"; // auto | economy | full
+        public int requestId = 1;
+
+        public FoxAnimCategory launcher = FoxAnimCategory.Defaults("launcher");
+        public FoxAnimCategory studio = FoxAnimCategory.Defaults("studio");
+        public FoxAnimCategory dock = FoxAnimCategory.Defaults("dock");
+        public FoxAnimCategory altTab = FoxAnimCategory.Defaults("alttab");
+        public FoxAnimCategory foxos = FoxAnimCategory.Defaults("foxos");
+        public FoxAnimCategory hover = FoxAnimCategory.Defaults("hover");
+        public FoxAnimCategory press = FoxAnimCategory.Defaults("press");
+
+        public void Ensure() {
+            if (launcher == null) launcher = FoxAnimCategory.Defaults("launcher");
+            if (studio == null) studio = FoxAnimCategory.Defaults("studio");
+            if (dock == null) dock = FoxAnimCategory.Defaults("dock");
+            if (altTab == null) altTab = FoxAnimCategory.Defaults("alttab");
+            if (foxos == null) foxos = FoxAnimCategory.Defaults("foxos");
+            if (hover == null) hover = FoxAnimCategory.Defaults("hover");
+            if (press == null) press = FoxAnimCategory.Defaults("press");
+        }
+
+        public void ApplyPreset(string id) {
+            FoxMotionConfig bridge = ToConfig();
+            bridge.ApplyPreset(id);
+            FromConfig(bridge);
+        }
+
+        public FoxMotionConfig ToConfig() {
+            Ensure();
+            FoxMotionConfig m = new FoxMotionConfig();
+            m.scale = scale;
+            m.med = med;
+            m.enabled = enabled;
+            m.preset = preset;
+            m.speedPercent = speedPercent;
+            m.intensityPercent = intensityPercent;
+            m.fps = fps;
+            m.reducedMotion = reducedMotion;
+            m.battery = battery;
+            m.requestId = requestId;
+            m.launcher = launcher;
+            m.studio = studio;
+            m.dock = dock;
+            m.altTab = altTab;
+            m.foxos = foxos;
+            m.hover = hover;
+            m.press = press;
+            m.ClampAll();
+            return m;
+        }
+
+        public void FromConfig(FoxMotionConfig m) {
+            if (m == null) return;
+            m.EnsureCategories();
+            m.ClampAll();
+            scale = m.scale;
+            med = m.med;
+            enabled = m.enabled;
+            preset = m.preset;
+            speedPercent = m.speedPercent;
+            intensityPercent = m.intensityPercent;
+            fps = m.fps;
+            reducedMotion = m.reducedMotion;
+            battery = m.battery;
+            requestId = m.requestId;
+            launcher = m.launcher;
+            studio = m.studio;
+            dock = m.dock;
+            altTab = m.altTab;
+            foxos = m.foxos;
+            hover = m.hover;
+            press = m.press;
+        }
     }
 
     public class TypeMod {

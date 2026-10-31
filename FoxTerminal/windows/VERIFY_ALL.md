@@ -20,6 +20,23 @@
 
 ---
 
+## 0b) Анімації та перенесення (Система Фокс)
+
+| # | Перевірка | Як | PASS якщо |
+|---|-----------|-----|-----------|
+| M1 | FOXSTYLE → Анімації | `foxstyle` → розділ | Пресеті, повзунки, локальний preview грає й зупиняється при зміні розділу |
+| M2 | Вимкнути все | preset `off` → Apply | Меню/dock/Alt+Tab миттєві, без таймерів після дії |
+| M3 | Зменшений рух | toggle / Windows MinAnimate | Коротші переходи |
+| M4 | Apply ack | Apply з запущеним `foxnodes` | «Застосовано» лише після ack; без overlay — «Збережено» |
+| M5 | Швидкі Tab | Alt+Tab кілька разів | Немає черги анімацій |
+| R1 | foxdoctor | `foxdoctor` | root/runtime/Ghostty/csc без error (warn OK з поясненням) |
+| R2 | Профіль | `foxpack -Profile export` → import на тест-копії | manifest, план змін, `.bak`, без скриптів у zip |
+| R3 | Перенесення репо | інша папка + `install.ps1 -Force` | overlay вказує на новий root |
+
+Деталі: [`TRANSFER_NEW_PC.md`](TRANSFER_NEW_PC.md).
+
+---
+
 ## 1) Автопрогін foxtest
 
 ```powershell

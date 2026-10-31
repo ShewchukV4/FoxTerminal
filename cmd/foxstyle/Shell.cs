@@ -98,7 +98,7 @@ namespace FoxOs.Style {
 
         void BuildNav() {
             string[] ids = new[] { "themes", "colors", "dock", "windows", "buttons", "motion", "nodes", "assistant", "labs" };
-            string[] titles = new[] { "Modes", "Colors", "Dock / Wall", "Windows", "Buttons", "Motion", "Node Launcher", "Помічник", "Labs" };
+            string[] titles = new[] { "Modes", "Colors", "Dock / Wall", "Windows", "Buttons", "Анімації", "Node Launcher", "Помічник", "Labs" };
             string[] glyphs = new[] { "\uE8F1", "\uE790", "\uE8A1", "\uE8A7", "\uE8FD", "\uE916", "\uE8EF", "\uE13D", "\uE950" };
             for (int i = 0; i < ids.Length; i++) {
                 StyleNav n = new StyleNav(theme, ids[i], titles[i], glyphs[i]);
@@ -258,8 +258,16 @@ namespace FoxOs.Style {
         }
 
         void Apply() {
+            if (store.Doc.motion == null) store.Doc.motion = new MotionMod();
+            store.Doc.motion.Ensure();
+            store.Doc.motion.requestId = Math.Max(1, store.Doc.motion.requestId) + 1;
+            if (store.Doc.nodeLauncher != null)
+                store.Doc.nodeLauncher.revision = Math.Max(store.Doc.nodeLauncher.revision, store.Doc.motion.requestId);
             store.Save();
             if (editor != null) editor.SaveAssistant();
+            int req = store.Doc.motion.requestId;
+            bool overlay = FoxNodesSync.OverlayRunning();
+            if (overlay) FoxNodesSync.RequestReload(req);
             applyBtn.Enabled = false;
             applyBtn.Text = "Applying…";
             status.Text = "пише wallpaper + accent + dock + Ghostty…";
@@ -269,6 +277,17 @@ namespace FoxOs.Style {
                 Exception err = null;
                 try { SystemBridge.ApplyToSystem(snap); }
                 catch (Exception ex) { err = ex; }
+                bool acked = false;
+                if (overlay) {
+                    DateTime until = DateTime.UtcNow.AddMilliseconds(1600);
+                    while (DateTime.UtcNow < until) {
+                        int got; string utc;
+                        if (FoxNodesSync.TryReadApplied(out got, out utc) && got >= req) {
+                            acked = true; break;
+                        }
+                        System.Threading.Thread.Sleep(40);
+                    }
+                }
                 BeginInvoke(new Action(delegate {
                     isDirty = false;
                     UpdateDirty();
@@ -277,14 +296,24 @@ namespace FoxOs.Style {
                         applyBtn.Text = "Apply failed";
                         status.Text = err.Message;
                         status.ForeColor = theme.Warn;
-                    } else {
-                        applyBtn.Text = "Applied ✓";
+                    } else if (overlay && acked) {
+                        applyBtn.Text = "Застосовано ✓";
                         applyBtn.BackColor = theme.Good;
-                        status.Text = "на системі: " + SystemBridge.MapSwName(store.Doc) + " · wall+accent+dock+Ghostty";
+                        status.Text = "на системі + overlay ack rev " + req;
+                        status.ForeColor = theme.Good;
+                    } else if (overlay && !acked) {
+                        applyBtn.Text = "Збережено";
+                        applyBtn.BackColor = theme.Warn;
+                        status.Text = "збережено rev " + req + " · overlay без ack";
+                        status.ForeColor = theme.Warn;
+                    } else {
+                        applyBtn.Text = "Збережено ✓";
+                        applyBtn.BackColor = theme.Good;
+                        status.Text = "збережено · overlay не запущений · wall+dock+Ghostty";
                         status.ForeColor = theme.Good;
                     }
                     Timer t = new Timer();
-                    t.Interval = 1400;
+                    t.Interval = 1600;
                     t.Tick += delegate {
                         t.Stop(); t.Dispose();
                         applyBtn.Text = "Apply to FoxOS";
@@ -357,7 +386,7 @@ namespace FoxOs.Style {
                 case "texture": return "Dock / Wallpaper";
                 case "windows": return "Вікна";
                 case "buttons": return "Кнопки";
-                case "motion": return "Motion";
+                case "motion": return "Анімації";
                 case "labs": return "Labs";
                 case "nodes": return "Редактор меню";
                 case "assistant": return "Помічник";

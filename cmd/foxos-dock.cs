@@ -194,6 +194,13 @@ namespace FoxOsLive {
         int lastWinSig;
         int bounceKind;
         float bounce = 1f;
+        DateTime bounceAt = DateTime.MinValue;
+        float hoverEase;
+        int lastHoverKind;
+        float collapseT = 1f; // 1 = expanded, 0 = collapsed strip
+        float collapseTarget = 1f;
+        DateTime collapseAt = DateTime.MinValue;
+        FoxOs.Sdk.FoxMotionConfig motionCfg;
         int dragPin = -1;
         Point dragStart;
         bool dragging;
@@ -224,10 +231,12 @@ namespace FoxOsLive {
             LoadPins();
             Place(false);
             HideWinBar();
+            motionCfg = FoxOs.Sdk.FoxMotionHost.LoadFromStyleJson();
             timer = new System.Windows.Forms.Timer();
             timer.Interval = 250;
             timer.Tick += delegate {
                 bool dirty = false;
+                bool animating = false;
                 if ((DateTime.UtcNow - lastEnum).TotalMilliseconds > 800) {
                     int sig = lastWinSig;
                     EnumWins();
@@ -244,6 +253,11 @@ namespace FoxOsLive {
                         lastNetDraw = net;
                         dirty = true;
                     } else volPct = v;
+                    try {
+                        FoxOs.Sdk.FoxMotionConfig fresh = FoxOs.Sdk.FoxMotionHost.LoadFromStyleJson();
+                        if (fresh != null && (motionCfg == null || fresh.requestId != motionCfg.requestId))
+                            motionCfg = fresh;
+                    } catch { }
                 }
                 if ((DateTime.UtcNow - lastHideBar).TotalMilliseconds > 1200) {
                     lastHideBar = DateTime.UtcNow;
@@ -254,15 +268,54 @@ namespace FoxOsLive {
                 int min = DateTime.Now.Minute;
                 if (min != lastClockMin) { lastClockMin = min; dirty = true; }
                 TickPanelFocus();
-                if (bounce != 1f) {
-                    bounce += (1f - bounce) * 0.32f;
-                    if (Math.Abs(bounce - 1f) < 0.02f) {
-                        bounce = 1f;
-                        timer.Interval = 50;
-                    } else timer.Interval = 16;
+
+                float hoverTarget = hoverKind != 0 ? 1f : 0f;
+                if (Math.Abs(hoverEase - hoverTarget) > 0.01f) {
+                    int hoverMs = 90;
+                    if (motionCfg != null && motionCfg.hover != null)
+                        hoverMs = motionCfg.ScaleDuration(motionCfg.hover.openMs);
+                    float step = 16f / Math.Max(40f, hoverMs);
+                    hoverEase += (hoverTarget - hoverEase) * Math.Min(1f, step);
+                    if (Math.Abs(hoverEase - hoverTarget) < 0.02f) hoverEase = hoverTarget;
+                    animating = true;
                     dirty = true;
-                } else if (timer.Interval != 50) timer.Interval = 50;
-                dirty = true; // desk breathe
+                }
+
+                if (Math.Abs(collapseT - collapseTarget) > 0.01f) {
+                    int ms = 140;
+                    if (motionCfg != null && motionCfg.dock != null)
+                        ms = motionCfg.ScaleDuration(
+                            collapseTarget > 0.5f ? motionCfg.dock.openMs : motionCfg.dock.closeMs);
+                    float p = (float)((DateTime.UtcNow - collapseAt).TotalMilliseconds / Math.Max(1, ms));
+                    if (p >= 1f) collapseT = collapseTarget;
+                    else {
+                        string ease = motionCfg != null && motionCfg.dock != null
+                            ? motionCfg.dock.easing : "easeOut";
+                        float e = FoxOs.Sdk.FoxEase.Apply(ease, p);
+                        float from = collapseTarget > 0.5f ? 0f : 1f;
+                        collapseT = from + (collapseTarget - from) * e;
+                        animating = true;
+                    }
+                    dirty = true;
+                }
+
+                if (bounce != 1f) {
+                    int punchMs = 90;
+                    if (motionCfg != null && motionCfg.press != null)
+                        punchMs = motionCfg.ScaleDuration(motionCfg.press.openMs);
+                    float p = (float)((DateTime.UtcNow - bounceAt).TotalMilliseconds / Math.Max(1, punchMs));
+                    if (p >= 1f) bounce = 1f;
+                    else {
+                        float e = FoxOs.Sdk.FoxEase.EaseOutCubic(p);
+                        bounce = 0.78f + 0.22f * e;
+                        animating = true;
+                    }
+                    dirty = true;
+                }
+
+                if (animating) timer.Interval = (motionCfg != null &&
+                    string.Equals(motionCfg.fps, "30", StringComparison.OrdinalIgnoreCase)) ? 33 : 16;
+                else if (timer.Interval != 120) timer.Interval = 120;
                 if (dirty) Invalidate();
             };
             Shown += delegate {
@@ -663,6 +716,8 @@ namespace FoxOsLive {
             bool edgeHit = TopBar() ? (c.Y <= edge) : (c.Y >= edge);
             bool want = !(over || edgeHit);
             if (want != collapsed) {
+                collapseTarget = want ? 0f : 1f;
+                collapseAt = DateTime.UtcNow;
                 collapsed = want;
                 Place(false);
             }
@@ -1031,8 +1086,11 @@ namespace FoxOsLive {
 
         void Punch(int k) {
             if (k == 0) return;
+            if (motionCfg != null && (!motionCfg.EffectiveEnabled() ||
+                (motionCfg.press != null && !motionCfg.press.enabled))) return;
             bounceKind = k;
             bounce = 0.78f;
+            bounceAt = DateTime.UtcNow;
             timer.Interval = 16;
             Invalidate();
         }

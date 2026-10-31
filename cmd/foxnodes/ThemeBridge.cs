@@ -20,6 +20,17 @@ namespace FoxOs.Nodes {
     sealed class FoxStyleMotion {
         public string scale = "full";
         public int med = 280;
+        public bool enabled = true;
+        public string preset = "balanced";
+        public int speedPercent = 100;
+        public int intensityPercent = 100;
+        public string fps = "auto";
+        public bool reducedMotion = false;
+        public string battery = "auto";
+        public int requestId = 1;
+        public FoxAnimCategory launcher = null;
+        public FoxAnimCategory hover = null;
+        public FoxAnimCategory press = null;
     }
 
     sealed class FoxStyleNodes {
@@ -79,6 +90,7 @@ namespace FoxOs.Nodes {
         public string AnimationStyle = "smooth";
         public int Revision = 1;
         public DateTime SourceStampUtc;
+        public FoxMotionConfig Motion = FoxMotionConfig.CreateDefault();
     }
 
     static class ThemeBridge {
@@ -127,12 +139,34 @@ namespace FoxOs.Nodes {
             p.TextScale = Clamp(n.textScale, 80, 140);
             p.Spacing = Clamp(n.spacing, 75, 150);
             p.LineContrast = Clamp(n.lineContrast, 50, 180);
-            p.Animations = n.animations &&
-                !string.Equals(doc.motion.scale, "off", StringComparison.OrdinalIgnoreCase);
-            p.AnimationSpeed = Clamp(n.animationSpeed, 40, 180);
-            if (string.Equals(doc.motion.scale, "reduced", StringComparison.OrdinalIgnoreCase))
+            FoxMotionConfig mc = new FoxMotionConfig();
+            mc.scale = doc.motion.scale;
+            mc.med = doc.motion.med;
+            mc.enabled = doc.motion.enabled;
+            mc.preset = doc.motion.preset;
+            mc.speedPercent = doc.motion.speedPercent > 0 ? doc.motion.speedPercent : 100;
+            mc.intensityPercent = doc.motion.intensityPercent > 0 ? doc.motion.intensityPercent : n.motionIntensity;
+            mc.fps = doc.motion.fps;
+            mc.reducedMotion = doc.motion.reducedMotion;
+            mc.battery = doc.motion.battery;
+            mc.requestId = doc.motion.requestId;
+            mc.launcher = doc.motion.launcher;
+            mc.hover = doc.motion.hover;
+            mc.press = doc.motion.press;
+            mc.EnsureCategories();
+            mc.ClampAll();
+            if (n.respectSystemMotion && FoxMotionHost.SystemPrefersReducedMotion()) {
+                mc.reducedMotion = true;
+                if (mc.scale == "full") mc.scale = "reduced";
+            }
+            p.Motion = mc;
+            p.Animations = n.animations && mc.EffectiveEnabled() &&
+                (mc.launcher == null || mc.launcher.enabled);
+            p.AnimationSpeed = Clamp(n.animationSpeed * mc.speedPercent / 100, 40, 180);
+            if (string.Equals(mc.scale, "reduced", StringComparison.OrdinalIgnoreCase) || mc.reducedMotion)
                 p.AnimationSpeed = Math.Min(p.AnimationSpeed, 75);
-            p.MotionIntensity = Clamp(n.motionIntensity, 0, 150);
+            p.MotionIntensity = Clamp(
+                (n.motionIntensity > 0 ? n.motionIntensity : 100) * mc.intensityPercent / 100, 0, 150);
             p.RespectSystemMotion = n.respectSystemMotion;
             p.PocketEnabled = n.pocketEnabled;
             p.PocketEdge = NormalizeEdge(n.pocketEdge);

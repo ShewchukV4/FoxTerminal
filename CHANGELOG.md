@@ -699,6 +699,30 @@ Noir полагодили: шорткати більше не скидали р�
 
 ---
 
+## 2026-10-31 — Система Фокс: анімації + перенесення
+
+Продуктова назва для користувача: **Система Фокс / Fox System** (команди й runtime без масового rename).
+
+### Додано
+
+| Що | Навіщо |
+|----|--------|
+| **`cmd/fox-anim.cs`** | спільний рух: `FoxEase`, `FoxTween` (переривання з поточного стану), `FoxAnimClock` (один таймер на процес, stop коли idle), `FoxMotionConfig` + категорії |
+| **FOXSTYLE → «Анімації»** | пресети off/economy/balanced/smooth/custom; швидкість, інтенсивність, FPS, зменшений рух, батарея; per-category open/close/easing/offset/scale/opacity/stagger; локальний preview |
+| **`style.json` → `motion.*`** | безпечні defaults + міграція старих конфігів; `requestId` на Apply |
+| **Інтеграція** | foxnodes (тривалість/easing), dock (hover/bounce/collapse), Alt+Tab (час + без черги), SoftOut (реальний час) |
+| **`foxdoctor`** | діагностика root/runtime/Ghostty/csc/fonts/configs/дублікатів; `-Fix` |
+| **`foxsetup`** | майстер 8 кроків: середовище, компоненти, deps, профіль, бінди, екрани/анімації, запуск |
+| **`foxpack -Profile export/import`** | allowlist профіль + manifest; без секретів/STT/exe; імпорт з планом і `.bak` |
+| **`FoxTerminal/windows/TRANSFER_NEW_PC.md`** | коротка інструкція перенесення |
+
+### Змінено
+
+- Apply у FOXSTYLE: «Застосовано» лише після overlay ack; інакше «Збережено».
+- `foxos-live` збирається з `foxos-sdk` + `fox-anim` (для motion prefs).
+
+---
+
 ## 2026-10-25 — FOX GENESIS
 
 ### Додано

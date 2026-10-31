@@ -4,6 +4,7 @@
 Читай це першим, потім гайди нижче.
 
 **Мова з користувачем:** українська (за замовчуванням).  
+**Продукт:** Система Фокс / Fox System (FoxTerminal = термінал, FoxOS = desktop, FOXSTYLE = студія).  
 **Репо:** `https://github.com/ShewchukV4/FoxTerminal` і дзеркало `https://github.com/shew4uk/FoxTerminal`.
 
 ---
@@ -79,7 +80,8 @@ bash ./FoxTerminal/install.sh
 - Node Launcher меню: `foxnodes`; візуальний редактор — `foxstyle` → Node Launcher або `foxstyle -NodeEditor`. «Застосувати» пише `launcher.json` + `style.json`, потім сигнал; статус «Застосовано» лише після ack overlay.
 - Alt+Tab (foxos-live + foxhotkeys): **E** / Del закриває вікно
 - Гайди / історія: `foxdocs` (↑↓ список, ← Terminal, → Explorer, Enter; Back внизу), `changelog`
-- Знімки: `build <name>`, `foxpack`
+- Знімки / перенесення: `build <name>`, `foxpack`, `foxpack -Profile export|import`, `foxdoctor`, `FoxTerminal/windows/TRANSFER_NEW_PC.md`
+- Анімації: FOXSTYLE → «Анімації» (`style.json` → `motion.*`, код `cmd/fox-anim.cs`)
 
 ---
 

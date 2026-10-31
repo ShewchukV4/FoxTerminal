@@ -37,7 +37,10 @@ namespace FoxOs.Style {
         }
 
         public void ReplayOpen() {
-            openT = 0f;
+            openFrom = openT;
+            if (openFrom > 0.95f) openFrom = 0f;
+            openT = openFrom;
+            openStarted = DateTime.UtcNow;
             if (!anim.Enabled) anim.Start();
         }
 
@@ -86,9 +89,29 @@ namespace FoxOs.Style {
                 lerp.Stop();
         }
 
+        DateTime openStarted = DateTime.MinValue;
+        float openFrom = 0f;
+
         void OnAnim(object sender, EventArgs e) {
-            openT += 0.05f;
-            if (openT >= 1f) { openT = 1f; anim.Stop(); }
+            int ms = 180;
+            string ease = "easeOut";
+            if (doc != null && doc.motion != null) {
+                FoxMotionConfig m = doc.motion.ToConfig();
+                if (!m.EffectiveEnabled() || (m.studio != null && !m.studio.enabled)) {
+                    openT = 1f; anim.Stop(); Invalidate(); return;
+                }
+                if (m.studio != null) {
+                    ms = m.ScaleDuration(m.studio.openMs);
+                    ease = m.studio.easing;
+                }
+                if (string.Equals(m.fps, "30", StringComparison.OrdinalIgnoreCase))
+                    anim.Interval = 33;
+                else anim.Interval = 16;
+            }
+            if (openStarted == DateTime.MinValue) openStarted = DateTime.UtcNow;
+            float t = (float)((DateTime.UtcNow - openStarted).TotalMilliseconds / Math.Max(1, ms));
+            if (t >= 1f) { openT = 1f; anim.Stop(); openStarted = DateTime.MinValue; }
+            else openT = openFrom + (1f - openFrom) * FoxEase.Apply(ease, t);
             Invalidate();
         }
 

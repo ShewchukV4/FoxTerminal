@@ -72,7 +72,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\FoxTerminal\install.ps1
 chek                  # чи це справді Ghostty
 term -Doctor          # діагностика конфіга / шрифту / shell
 foxdeps -Install      # Firefox, Nerd Font, Oh My Posh, AHK, .NET…
-foxsetup              # майстер: юзер, тема, FoxOS, hotkeys, idle lock
+foxsetup              # майстер Системи Фокс: середовище, компоненти, профіль, екрани
+foxdoctor             # діагностика шляхів / Ghostty / configs
 ```
 
 Або вручну:
@@ -310,7 +311,8 @@ foxstt -Stop
 
 **Як застосовується вигляд.** У FOXSTYLE «Застосувати» пише `launcher.json` (структура меню) і `style.json` (вигляд), потім сигнал `foxnodes.signal`. Overlay перечитує обидва файли і відповідає `foxnodes.applied`. Статус «Застосовано» з’являється лише після цього ack. Якщо `foxnodes` не запущено — «Збережено. Буде застосовано після запуску меню».
 
-Профілі вигляду (компактний / м’яке скло / контрастний / за темою) не чіпають дерево меню. Анімації меню: Стриманий / Плавний / Пружний / Мінімальний рух.
+Профілі вигляду (компактний / м’яке скло / контрастний / за темою) не чіпають дерево меню.  
+**Анімації** — окремий розділ FOXSTYLE («Анімації»): майстер-перемикач, пресети (off / economy / balanced / smooth / custom), FPS, зменшений рух, поведінка на батареї, окремі категорії для Node Launcher / студії / dock / Alt+Tab / FoxOS / hover / press. Локальний preview не перезапускає desktop. Спільний код: `cmd/fox-anim.cs`. У Node Launcher лишаються пресети руху вузлів (стриманий / плавний / пружний / мінімальний).
 
 **Помічник** (FOXSTYLE → Помічник, або з Node Launcher): текст + push-to-talk, локальна Ollama. Відкриває пошук / програми / нотатки / таймер. Повне речення йде в модель, якщо це не коротка однозначна команда. Слово «YouTube» саме по собі не відкриває сайт — потрібен майданчик («на YouTube») або явна команда. Діагностика: `FOXASSIST_TRACE=1` або журнал у FOXSTYLE.
 
@@ -322,9 +324,10 @@ foxstt -Stop
 
 ## 6) home · lock · settings · foxsetup
 
-### `foxsetup` — перший запуск
+### `foxsetup` — майстер налаштування
 
-Майстер: користувач, тема, FoxOS, logon autostart, hotkeys, idle lock. Запускається автоматично на свіжій машині або вручну: `foxsetup`.
+Кроки: середовище (`foxdoctor`) → компоненти → залежності → новий профіль або імпорт → перевірка біндів → екрани / пресет анімацій → запуск шарів → підсумок. AI/STT не обов’язкові. `foxlook shell on` з майстра **не** вмикається.  
+Перенесення на інший ПК: [`windows/TRANSFER_NEW_PC.md`](windows/TRANSFER_NEW_PC.md) · `foxpack -Profile export` / `-ImportProfile`.
 
 ### `home` — системний дім
 
@@ -395,7 +398,9 @@ foxdocs               # або foxdocs -List — інтерактивний сп
 | `home` | `home` | дім після логіну |
 | `lock` | `lock [-Status\|-Unlock]` | блокування сесії |
 | `settings` | `settings [-Status\|-Gui\|-StopGui]` | налаштування |
-| `foxsetup` | `foxsetup` | first-boot wizard |
+| `foxsetup` | `foxsetup` | майстер Системи Фокс |
+| `foxdoctor` | `foxdoctor [-Fix]` | діагностика встановлення |
+| `foxpack` | `foxpack [-Profile export\|import]` | zip коду або профіль вигляду |
 | `changelog` | `changelog` | історія змін |
 | `foxdocs` | `foxdocs` | усі гайди/історія (стрілки; ← термінал, → Explorer) |
 | `off` / `shutdown` | `off` | вимкнути ПК (Yes/No, default No) |

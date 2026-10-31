@@ -291,6 +291,13 @@ namespace FoxOsLive {
         int sel;
         int restY;
         float slide; // 0..1 entrance
+        float slideFrom;
+        DateTime slideStarted = DateTime.MinValue;
+        int slideOpenMs = 160;
+        int slideOffsetPx = 40;
+        string slideEasing = "easeOut";
+        bool slideAnimOn = true;
+        int motionRequestSeen;
         bool closing;
         const int ThumbW = 148;
         const int ThumbH = 90;
@@ -321,6 +328,28 @@ namespace FoxOsLive {
             slideTimer = new System.Windows.Forms.Timer();
             slideTimer.Interval = 16;
             slideTimer.Tick += TickSlide;
+            soft.Configure(110, 10, "easeOut", false); // no Form.Opacity — DWM thumbs
+            ReloadMotionPrefs();
+        }
+
+        void ReloadMotionPrefs() {
+            try {
+                FoxOs.Sdk.FoxMotionConfig m = FoxOs.Sdk.FoxMotionHost.LoadFromStyleJson();
+                if (m == null) return;
+                motionRequestSeen = m.requestId;
+                slideAnimOn = m.EffectiveEnabled() && m.altTab != null && m.altTab.enabled;
+                if (m.altTab != null) {
+                    slideOpenMs = m.ScaleDuration(m.altTab.openMs);
+                    slideOffsetPx = (int)m.ScaleIntensity(Math.Max(6, m.altTab.offsetDip * 4));
+                    slideEasing = m.altTab.easing;
+                    soft.Configure(m.ScaleDuration(m.altTab.closeMs),
+                        Math.Max(6, (int)m.ScaleIntensity(m.altTab.offsetDip)),
+                        m.altTab.easing, false);
+                }
+                if (string.Equals(m.fps, "30", StringComparison.OrdinalIgnoreCase))
+                    slideTimer.Interval = 33;
+                else slideTimer.Interval = 16;
+            } catch { }
         }
 
         protected override CreateParams CreateParams {
@@ -340,7 +369,7 @@ namespace FoxOsLive {
                 }
                 return;
             }
-            if (slide >= 1f) {
+            if (!slideAnimOn) {
                 slide = 1f;
                 Top = restY;
                 slideTimer.Stop();
@@ -348,10 +377,20 @@ namespace FoxOsLive {
                 Invalidate();
                 return;
             }
-            slide += (1f - slide) * 0.34f + 0.05f;
-            if (slide > 0.995f) slide = 1f;
-            float ease = 1f - (1f - slide) * (1f - slide);
-            Top = restY + (int)((1f - ease) * 48f);
+            double elapsed = (DateTime.UtcNow - slideStarted).TotalMilliseconds;
+            float t = (float)(elapsed / Math.Max(1, slideOpenMs));
+            if (t >= 1f) {
+                slide = 1f;
+                Top = restY;
+                slideTimer.Stop();
+                PlaceThumbs();
+                Invalidate();
+                return;
+            }
+            // Interruptible: progress from slideFrom → 1
+            float ease = FoxOs.Sdk.FoxEase.Apply(slideEasing, t);
+            slide = slideFrom + (1f - slideFrom) * ease;
+            Top = restY + (int)((1f - slide) * slideOffsetPx);
             PlaceThumbs();
             Invalidate();
         }
@@ -387,6 +426,7 @@ namespace FoxOsLive {
                 closing = false;
                 Opacity = BoardOpacity;
             }
+            ReloadMotionPrefs();
             bool first = !Visible;
             if (first) EnumWins();
             if (wins.Count == 0) { Hide(); SetAltTabFlag(false); return; }
@@ -394,20 +434,29 @@ namespace FoxOsLive {
                 sel = wins.Count > 1 ? 1 : 0;
                 if (!forward) sel = wins.Count - 1;
             } else {
+                // Fast re-selection: no queued open animations — snap selection only.
                 sel = (sel + (forward ? 1 : wins.Count - 1)) % wins.Count;
             }
             LayoutBoard();
             if (first) {
                 restY = Top;
-                Top = restY + 48;
-                slide = 0f;
+                if (slideAnimOn) {
+                    slideFrom = 0f;
+                    slide = 0f;
+                    Top = restY + slideOffsetPx;
+                    slideStarted = DateTime.UtcNow;
+                } else {
+                    slideFrom = slide = 1f;
+                    Top = restY;
+                }
                 Opacity = BoardOpacity;
                 Show();
                 Activate();
                 SetAltTabFlag(true);
                 hold.Start();
                 RegisterThumbs();
-                slideTimer.Start();
+                if (slideAnimOn) slideTimer.Start();
+                else { PlaceThumbs(); }
             }
             PlaceThumbs();
             Invalidate();

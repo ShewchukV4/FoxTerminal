@@ -189,21 +189,38 @@ namespace FoxOs.Nodes {
         }
 
         ThemeMetrics Tm { get { return cfg != null && cfg.theme != null ? cfg.theme : new ThemeMetrics(); } }
+        FoxMotionConfig MotionCfg {
+            get {
+                return styleProfile != null && styleProfile.Motion != null
+                    ? styleProfile.Motion : FoxMotionConfig.CreateDefault();
+            }
+        }
         int MotionMs {
             get {
                 int pct = cfg != null ? Math.Max(0, Math.Min(160, cfg.motionPercent)) : 100;
-                return Math.Max(80, Tm.animMs * pct / 100);
+                int baseMs = Tm.animMs;
+                if (MotionCfg.launcher != null && MotionCfg.launcher.openMs > 0)
+                    baseMs = MotionCfg.launcher.openMs;
+                return Math.Max(1, MotionCfg.ScaleDuration(baseMs * pct / 100));
             }
         }
         int ScaledMs(int value) {
             int pct = cfg != null ? Math.Max(0, Math.Min(160, cfg.motionPercent)) : 100;
             int stylePct = styleProfile != null ? styleProfile.AnimationSpeed : 100;
-            return Math.Max(1, StyleDuration(value) * pct * stylePct / 10000);
+            return Math.Max(1, MotionCfg.ScaleDuration(
+                StyleDuration(value) * pct * stylePct / 10000));
         }
         string MotionStyle {
             get {
                 return FoxNodesSync.NormalizeMotionStyle(
                     styleProfile != null ? styleProfile.AnimationStyle : "smooth");
+            }
+        }
+        string MotionEasing {
+            get {
+                FoxAnimCategory cat = MotionCfg.launcher;
+                if (cat != null && !string.IsNullOrEmpty(cat.easing)) return cat.easing;
+                return MotionStyle == "spring" ? "spring" : "easeOut";
             }
         }
         int StyleDuration(int value) {
@@ -216,6 +233,8 @@ namespace FoxOs.Nodes {
         int StaggerMs(int value) {
             string style = MotionStyle;
             if (style == "minimal") return 0;
+            if (MotionCfg.launcher != null)
+                value = Math.Min(value, Math.Max(0, MotionCfg.launcher.staggerMs));
             if (style == "restrained") return value / 2;
             return value;
         }
@@ -1374,8 +1393,7 @@ namespace FoxOs.Nodes {
             string style = MotionStyle;
             if (style == "minimal") return t;
             if (style == "restrained") return Ease(t);
-            if (style == "spring") return EaseOutBack(t);
-            return EaseOutCubic(t);
+            return FoxEase.Apply(MotionEasing, t);
         }
 
         float CategoryReveal(int index) {

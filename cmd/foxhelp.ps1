@@ -137,7 +137,8 @@ function Show-Commands {
         $known["foxinfo"]    = @{ usage = "foxinfo"; desc = "hotkey binding manager: add open/close bindings, configure FoxTerminal path" }
         $known["foxdeps"]    = @{ usage = "foxdeps [-Check] [-Install]"; desc = "check + auto-install all FoxTerminal dependencies (Firefox, OhMyPosh, AHK, .NET 9, FoxTerminalApp)" }
         $known["foxtest"]    = @{ usage = "foxtest [-List] [-Quiet] [-Only <names>] [-Group all|info|tui|bat] [-Timeout <s>]"; desc = "smoke-test every command: runs the ones that finish, checks the menus still draw, reports what broke" }
-        $known["foxpack"]    = @{ usage = "foxpack [-Full] [-Open] [-OutPath <path>]"; desc = "pack FoxTerminal into shareable zip (clean by default, -Full keeps your binds/notes/theme)" }
+        $known["foxpack"]    = @{ usage = "foxpack [-Full|-Profile export|-ImportProfile <path>] [-IncludeNotes] [-Open]"; desc = "pack Fox System zip or portable profile (style/launcher/look); never packs secrets/STT/exe" }
+        $known["foxdoctor"]  = @{ usage = "foxdoctor [-Fix] [-Json]"; desc = "діагностика Системи Фокс: root, runtime, Ghostty, csc, fonts, configs, дублікати процесів" }
         $known["foxlife"]    = @{ usage = "foxlife [-Status|-Rebuild]"; desc = "FOXOS Life: notes, finance, tables, AI assistant (native window)" }
         $known["foxstyle"]   = @{ usage = "foxstyle [-Status|-Rebuild|-Preset neon|-NodeEditor]"; desc = "FOXSTYLE look studio і візуальний редактор Node Launcher (меню без JSON)" }
         $known["foxnodes"]   = @{ usage = "foxnodes [-Status|-Settings|-Show|-Hide|-Stop|-Rebuild]"; desc = "persistent desktop Node Launcher; Ctrl+Alt+Space activates, -Hide is explicit hide" }
@@ -147,7 +148,7 @@ function Show-Commands {
         $known["off"]        = @{ usage = "off"; desc = "shut down the PC safely (asks Yes/No first; default is No)" }
         $known["shutdown"]   = @{ usage = "shutdown"; desc = "same as off — graceful Windows shutdown after confirm" }
         $known["settings"]   = @{ usage = "settings [-Status] [-Gui] [-StopGui]"; desc = "system settings TUI, or Control UI in the browser (never blocks the pane)" }
-        $known["foxsetup"]   = @{ usage = "foxsetup"; desc = "first-boot wizard: user, theme, FoxOS, logon, hotkeys, idle lock" }
+        $known["foxsetup"]   = @{ usage = "foxsetup [-Doctor] [-SkipFirstBoot]"; desc = "майстер Системи Фокс: середовище, компоненти, deps, профіль, екрани, анімації" }
         $known["changelog"]  = @{ usage = "changelog"; desc = "read-only history of what was added and removed (same viewer as notes)" }
         $known["foxdocs"]    = @{ usage = "foxdocs"; desc = "guides/history picker: Up/Down list, Left=Terminal, Right=Explorer, Enter open, Back at bottom" }
 
@@ -216,7 +217,7 @@ function Show-Commands {
     Write-CommandSection "Network / diagnostics:" $inv @("chek","disk","fday","ftime","foximg","ip","netping","pulse","reconnect","sixel","weather","wifi") 0xF1EB
     Write-CommandSection "System tools:" $inv @("changelog","clear","ffsync","foxbg","foxdocs","foxscan","home","interface","lock","settings","term","texit") 0xF013
     Write-CommandSection "Hotkeys / bindings:" $inv @("foxhotkeys","foxinfo") 0xF11C
-    Write-CommandSection "Setup / reset / help:" $inv @("foxdeps","foxhelp","foxreset","foxsetup","foxtest") 0xF0AD
+    Write-CommandSection "Setup / reset / help:" $inv @("foxdeps","foxdoctor","foxhelp","foxreset","foxsetup","foxtest") 0xF0AD
     Write-CommandSection "Wallpaper prompt (FoxOS desk):" $inv @("arthas","bright","bt","default","dnote","dj","ff","foxhelp","foxlife","foxlook","foxos","home","lock","mirror","noir","notebook","note","off","pride","rig","ser","settings","shader","shutdown","sites","sp","sw","term","wifi","yt","ytm","youtube") 0xF1FC
 
     # Commands that live outside cmd\ (in FoxTerminal folder).

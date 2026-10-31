@@ -41,6 +41,10 @@ namespace FoxOs.Style {
         public void ShowPage(string id) {
             page = id ?? "themes";
             if (focus != null) focus(page);
+            if (motionPreview != null) {
+                try { motionPreview.Stop(); } catch { }
+                motionPreview = null;
+            }
             if (page == "nodes") {
                 ShowStudio();
                 return;
@@ -373,17 +377,233 @@ namespace FoxOs.Style {
             });
         }
 
+        MotionPreviewPanel motionPreview;
+
         void BuildMotion() {
-            AddHead("Motion", "Як швидко кольори доїжджають у прев’ю при зміні теми.");
-            AddImpact("Duration: більше ms = повільніший перехід. Off = миттєво.");
             MotionMod m = store.Doc.motion;
-            AddChoice("Анімації (СИСТЕМА: off = вимкнути у Windows)", new[] { "full", "reduced", "off" }, m.scale, delegate(string v) {
-                m.scale = v; Touch("motion");
+            m.Ensure();
+            AddHead("Анімації", "Система Фокс · плавний рух без важких ефектів.");
+            AddImpact("Apply пише style.json → live / Node Launcher. «Застосовано» лише після ack overlay.");
+            AddToggle("Увімкнути анімації", "Майстер-перемикач для всіх власних поверхонь Фокс", m.enabled, delegate(bool v) {
+                m.enabled = v;
+                if (!v) { m.preset = "off"; m.scale = "off"; }
+                else if (m.preset == "off") { m.preset = "balanced"; m.scale = "full"; m.ApplyPreset("balanced"); }
+                Touch("motion");
+                RebuildMotion();
             });
-            AddSlider("Duration ms", "Час доїзду кольору (не скидається при зміні кольору)", 80, 600, m.med, delegate(int v) {
+            AddChoice("Пресет", new[] { "off", "economy", "balanced", "smooth", "custom" },
+                FoxMotionConfig.NormalizePreset(m.preset), delegate(string v) {
+                    m.ApplyPreset(v);
+                    Touch("motion");
+                    RebuildMotion();
+                });
+            AddHint("off = без анімацій · economy = короткі fade · balanced = типово · smooth = м’якше · custom = ручні значення.");
+            AddSlider("Загальна швидкість %", "Вище = швидше (коротша тривалість)", 40, 180, m.speedPercent, delegate(int v) {
+                m.speedPercent = v; m.preset = "custom"; Touch("motion");
+            });
+            AddSlider("Інтенсивність руху %", "Зміщення / масштаб. 0 = лише fade", 0, 150, m.intensityPercent, delegate(int v) {
+                m.intensityPercent = v; m.preset = "custom"; Touch("motion");
+            });
+            AddChoice("Обмеження FPS", new[] { "30", "60", "auto" }, FoxMotionConfig.NormalizeFps(m.fps), delegate(string v) {
+                m.fps = v; m.preset = "custom"; Touch("motion");
+            });
+            AddToggle("Зменшений рух", "Скорочує тривалість і амплітуду (також читає Windows)", m.reducedMotion, delegate(bool v) {
+                m.reducedMotion = v;
+                if (v && m.scale == "full") m.scale = "reduced";
+                m.preset = "custom"; Touch("motion");
+            });
+            AddChoice("На батареї", new[] { "auto", "economy", "full" }, FoxMotionConfig.NormalizeBattery(m.battery), delegate(string v) {
+                m.battery = v; m.preset = "custom"; Touch("motion");
+            });
+            AddChoice("Системна шкала (legacy)", new[] { "full", "reduced", "off" }, FoxMotionConfig.NormalizeScale(m.scale), delegate(string v) {
+                m.scale = v; m.preset = "custom";
+                if (v == "off") m.enabled = false;
+                Touch("motion");
+            });
+            AddSlider("Палітра preview ms", "Лише колір у LIVE DEMO (не dock/launcher)", 80, 600, m.med, delegate(int v) {
                 m.med = v; Touch("motion");
             });
-            AddHint("Перевір: постав 500ms → клікни інший колір у Colors — перехід повільний.");
+
+            AddCategoryBlock("Node Launcher", m.launcher, "launcher");
+            AddCategoryBlock("FOXSTYLE студія", m.studio, "studio");
+            AddCategoryBlock("Dock", m.dock, "dock");
+            AddCategoryBlock("Alt+Tab", m.altTab, "alttab");
+            AddCategoryBlock("FoxOS панелі", m.foxos, "foxos");
+            AddCategoryBlock("Hover", m.hover, "hover");
+            AddCategoryBlock("Press", m.press, "press");
+
+            AddHead("Локальний preview", "Не перезапускає desktop. Зупиняється при зміні розділу.");
+            motionPreview = new MotionPreviewPanel(theme, m);
+            motionPreview.Tag = "card";
+            motionPreview.Width = Math.Max(480, ClientSize.Width - 24);
+            motionPreview.Height = 120;
+            motionPreview.Location = new Point(8, body.Height);
+            body.Controls.Add(motionPreview);
+            body.Height += 128;
+            SyncBody();
+            motionPreview.Play();
+        }
+
+        void RebuildMotion() {
+            // Rebuild page so preset cards refresh values (safe: only while on motion).
+            if (page == "motion") ShowPage("motion");
+        }
+
+        void AddCategoryBlock(string title, FoxAnimCategory cat, string kind) {
+            if (cat == null) return;
+            AddHead(title, "Окреме ввімкнення й типи переходу для цієї поверхні.");
+            AddToggle(title + " · увімкнено", "Вимкни, щоб миттєво показувати без руху", cat.enabled, delegate(bool v) {
+                cat.enabled = v; store.Doc.motion.preset = "custom"; Touch("motion");
+            });
+            string[] trans = kind == "hover" || kind == "press"
+                ? new[] { "fade", "zoom", "none" }
+                : new[] { "fade", "fade-slide", "zoom", "none" };
+            AddChoice("Тип переходу", trans, FoxAnimCategory.NormalizeTransition(cat.transition), delegate(string v) {
+                cat.transition = v; store.Doc.motion.preset = "custom"; Touch("motion");
+            });
+            AddChoice("Easing", new[] { "easeOut", "easeInOut", "spring", "linear" },
+                NormalizeEaseChoice(cat.easing), delegate(string v) {
+                    cat.easing = v; store.Doc.motion.preset = "custom"; Touch("motion");
+                });
+            AddSlider("Поява ms", "Типово 140–220", 40, 500, cat.openMs, delegate(int v) {
+                cat.openMs = v; store.Doc.motion.preset = "custom"; Touch("motion");
+            });
+            AddSlider("Закриття ms", "Типово 100–160", 40, 400, cat.closeMs, delegate(int v) {
+                cat.closeMs = v; store.Doc.motion.preset = "custom"; Touch("motion");
+            });
+            if (kind != "hover" && kind != "press") {
+                AddSlider("Зміщення dip", "Логічні пікселі × DPI", 0, 24, cat.offsetDip, delegate(int v) {
+                    cat.offsetDip = v; store.Doc.motion.preset = "custom"; Touch("motion");
+                });
+            }
+            if (kind == "launcher" || kind == "press" || kind == "studio") {
+                AddSlider("Масштаб від %", "97 → 100 типово", 90, 100, cat.scaleFromPct, delegate(int v) {
+                    cat.scaleFromPct = v; store.Doc.motion.preset = "custom"; Touch("motion");
+                });
+            }
+            if (kind == "launcher" || kind == "dock" || kind == "alttab" || kind == "studio") {
+                AddSlider("Прозорість від %", "0 = з повної прозорості", 0, 100, cat.opacityFrom, delegate(int v) {
+                    cat.opacityFrom = v; store.Doc.motion.preset = "custom"; Touch("motion");
+                });
+            }
+            if (kind == "launcher") {
+                AddSlider("Stagger ms", "Затримка між елементами (жорсткий ліміт)", 0, 40, cat.staggerMs, delegate(int v) {
+                    cat.staggerMs = v; store.Doc.motion.preset = "custom"; Touch("motion");
+                });
+            }
+            Button reset = FoxUi.Button(theme, "Скинути категорію", false);
+            reset.Width = 160;
+            Panel card = Card();
+            reset.Location = new Point(16, 12);
+            string k = kind;
+            reset.Click += delegate {
+                FoxAnimCategory fresh = FoxAnimCategory.Defaults(k);
+                CopyCat(fresh, cat);
+                store.Doc.motion.preset = "custom";
+                Touch("motion");
+                RebuildMotion();
+            };
+            card.Controls.Add(reset);
+            card.Height = 48;
+            Add(card, 56);
+        }
+
+        static void CopyCat(FoxAnimCategory src, FoxAnimCategory dst) {
+            if (src == null || dst == null) return;
+            dst.enabled = src.enabled;
+            dst.transition = src.transition;
+            dst.easing = src.easing;
+            dst.openMs = src.openMs;
+            dst.closeMs = src.closeMs;
+            dst.offsetDip = src.offsetDip;
+            dst.scaleFromPct = src.scaleFromPct;
+            dst.opacityFrom = src.opacityFrom;
+            dst.staggerMs = src.staggerMs;
+        }
+
+        static string NormalizeEaseChoice(string v) {
+            v = FoxAnimCategory.NormalizeEasing(v);
+            if (v == "ease-in-out" || v == "easeinout") return "easeInOut";
+            if (v == "easeoutback") return "spring";
+            if (v == "easeout") return "easeOut";
+            return v;
+        }
+
+        // Tiny local preview card for motion section.
+        sealed class MotionPreviewPanel : Panel {
+            readonly FoxTheme theme;
+            readonly MotionMod motion;
+            readonly FoxTween tween = new FoxTween();
+            readonly FoxAnimClock clock = new FoxAnimClock();
+            Action<DateTime, float> tickFn;
+            bool playing;
+
+            public MotionPreviewPanel(FoxTheme t, MotionMod m) {
+                theme = t; motion = m;
+                DoubleBuffered = true;
+                BackColor = t.Card;
+                Disposed += delegate {
+                    Stop();
+                    clock.Dispose();
+                };
+                VisibleChanged += delegate {
+                    if (!Visible) Stop();
+                };
+                Paint += OnPaint;
+            }
+
+            public void Play() {
+                FoxMotionConfig cfg = motion != null ? motion.ToConfig() : FoxMotionConfig.CreateDefault();
+                clock.SetFpsCap(cfg.fps);
+                if (!cfg.EffectiveEnabled() || motion.studio == null || !motion.studio.enabled) {
+                    tween.Snap(1f);
+                    Invalidate();
+                    return;
+                }
+                tween.Snap(0f);
+                int ms = cfg.ScaleDuration(motion.studio.openMs);
+                tween.Go(1f, ms, motion.studio.easing, null);
+                if (tickFn == null) {
+                    tickFn = delegate(DateTime now, float dt) {
+                        bool need = tween.Tick(now);
+                        Invalidate();
+                        if (!need) {
+                            playing = false;
+                            clock.Remove(tickFn);
+                        }
+                    };
+                }
+                playing = true;
+                clock.Add(tickFn);
+            }
+
+            public void Stop() {
+                playing = false;
+                if (tickFn != null) clock.Remove(tickFn);
+                tween.Cancel();
+            }
+
+            void OnPaint(object s, PaintEventArgs e) {
+                Graphics g = e.Graphics;
+                g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                FoxUi.PaintCard(g, new Rectangle(0, 0, Width - 1, Height - 1), theme.Card, theme.Line);
+                float t = tween.Value;
+                FoxMotionConfig cfg = motion != null ? motion.ToConfig() : FoxMotionConfig.CreateDefault();
+                float offset = cfg.ScaleIntensity(motion != null && motion.studio != null ? motion.studio.offsetDip : 8);
+                int y = 28 + (int)((1f - t) * offset);
+                int alpha = (int)(255 * FoxEase.Lerp(
+                    (motion != null && motion.studio != null ? motion.studio.opacityFrom : 0) / 100f, 1f, t));
+                if (alpha < 0) alpha = 0; if (alpha > 255) alpha = 255;
+                Rectangle card = new Rectangle(24, y, Math.Max(80, Width - 48), 56);
+                using (var path = FoxUi.Round(card, 12))
+                using (var fill = new SolidBrush(Color.FromArgb(alpha, theme.AccentSoft)))
+                using (var ink = new SolidBrush(Color.FromArgb(alpha, theme.Ink)))
+                using (var mute = new SolidBrush(Color.FromArgb(alpha, theme.Muted))) {
+                    g.FillPath(fill, path);
+                    g.DrawString("Preview панелі", theme.Body, ink, card.X + 14, card.Y + 12);
+                    g.DrawString(playing ? "грає…" : "готово", theme.Small, mute, card.X + 14, card.Y + 32);
+                }
+            }
         }
 
         void ShowStudio() {

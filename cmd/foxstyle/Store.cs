@@ -158,6 +158,7 @@ namespace FoxOs.Style {
             if (d.panel == null) d.panel = new PanelMod();
             if (d.button == null) d.button = new ButtonMod();
             if (d.motion == null) d.motion = new MotionMod();
+            d.motion.Ensure();
             if (d.typography == null) d.typography = new TypeMod();
             if (d.texture == null) d.texture = new TextureMod();
             if (d.labs == null) d.labs = new LabsMod();
@@ -167,6 +168,14 @@ namespace FoxOs.Style {
             if (string.IsNullOrEmpty(d.colors.sw)) {
                 d.colors.sw = SystemBridge.MapSwName(d);
             }
+            // Motion: migrate legacy-only configs, clamp ranges, sync node launcher flags.
+            FoxMotionConfig mc = d.motion.ToConfig();
+            if (string.IsNullOrEmpty(d.motion.preset)) d.motion.preset = "balanced";
+            d.motion.FromConfig(mc);
+            if (!d.motion.enabled || string.Equals(d.motion.preset, "off", StringComparison.OrdinalIgnoreCase))
+                d.motion.scale = "off";
+            d.nodeLauncher.animations = d.nodeLauncher.animations && d.motion.enabled &&
+                !string.Equals(d.motion.scale, "off", StringComparison.OrdinalIgnoreCase);
             d.texture.rain = Clamp(d.texture.rain, 0, 80);
             d.texture.strength = Clamp(d.texture.strength, 0, 100);
             d.texture.scale = Clamp(d.texture.scale, 0, 100);

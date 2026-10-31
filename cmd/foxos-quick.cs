@@ -77,42 +77,74 @@ namespace FoxOsLive {
             f.Location = new Point(x, y);
         }
 
-        // slide-down + fade, then Hide — used when focus leaves or another panel opens
+        // slide-down + fade, then Hide — real-time dt; interruptible from current T.
         public sealed class SoftOut {
             public bool On;
             public float T = 1f;
             public int RestY;
+            DateTime started = DateTime.MinValue;
+            float fromT = 1f;
+            int durationMs = 120;
+            int offsetPx = 48;
+            string easing = "easeOut";
+            bool useOpacity = true;
+
+            public void Configure(int closeMs, int offsetDip, string ease, bool opacity) {
+                durationMs = Math.Max(40, closeMs);
+                offsetPx = Math.Max(8, offsetDip * 4);
+                easing = string.IsNullOrEmpty(ease) ? "easeOut" : ease;
+                useOpacity = opacity;
+            }
+
             public void Begin(Form f) {
                 if (f == null || f.IsDisposed) return;
                 if (!f.Visible) return;
-                // restart cleanly if already closing
+                // Reverse/restart from current visual progress — no jump to start.
+                fromT = T <= 0f ? 1f : T;
+                if (fromT > 1f) fromT = 1f;
+                if (fromT < 0.05f) fromT = 1f;
+                T = fromT;
                 On = true;
-                T = 1f;
                 RestY = f.Top;
+                started = DateTime.UtcNow;
+                try {
+                    FoxOs.Sdk.FoxMotionConfig m = FoxOs.Sdk.FoxMotionHost.LoadFromStyleJson();
+                    if (m != null && m.foxos != null) {
+                        durationMs = m.ScaleDuration(m.foxos.closeMs);
+                        offsetPx = (int)m.ScaleIntensity(Math.Max(8, m.foxos.offsetDip * 4));
+                        easing = m.foxos.easing;
+                        if (!m.EffectiveEnabled() || !m.foxos.enabled) {
+                            On = false; T = 0f;
+                            try { f.Hide(); } catch { }
+                        }
+                    }
+                } catch { }
             }
             public void Cancel() { On = false; T = 1f; }
             // returns true while animating (caller should keep timer alive)
             public bool Tick(Form f) {
                 if (!On || f == null || f.IsDisposed) { On = false; return false; }
-                T -= 0.12f;
-                if (T <= 0f) {
+                double elapsed = (DateTime.UtcNow - started).TotalMilliseconds;
+                float p = (float)(elapsed / Math.Max(1, durationMs));
+                if (p >= 1f) {
                     On = false;
                     T = 0f;
                     try {
                         f.Hide();
-                        f.Opacity = 0.94;
+                        if (useOpacity) f.Opacity = 0.94;
                         f.Top = RestY;
                     } catch { }
                     return false;
                 }
-                // smooth ease-out: fast start, soft land
-                float outp = 1f - T;
-                float e = outp * outp * (3f - 2f * outp);
+                float e = FoxOs.Sdk.FoxEase.Apply(easing, p);
+                T = fromT * (1f - e);
                 try {
-                    f.Top = RestY + (int)(e * 56f);
-                    double op = 0.94 * (1.0 - e);
-                    if (op < 0.04) op = 0.04;
-                    f.Opacity = op;
+                    f.Top = RestY + (int)(e * offsetPx);
+                    if (useOpacity) {
+                        double op = 0.94 * (1.0 - e);
+                        if (op < 0.04) op = 0.04;
+                        f.Opacity = op;
+                    }
                 } catch { }
                 return true;
             }

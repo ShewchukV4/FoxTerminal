@@ -1,7 +1,8 @@
 # FoxTerminal — повний бриф для стороннього чату (ChatGPT тощо)
 
-Оновлено: **2026-10-25**. Це один файл, щоб зрозуміти проєкт без репозиторію.  
-Робоча папка на диску власника досі називається **FireFoxBot**. Продукт — **FoxTerminal**.
+Оновлено: **2026-10-31**. Це один файл, щоб зрозуміти проєкт без репозиторію.  
+Робоча папка на диску власника досі називається **FireFoxBot**.  
+Продукт для користувача — **Система Фокс / Fox System**. **FoxTerminal** = термінал; **FoxOS** = desktop; **FOXSTYLE** = студія.
 
 **Репо:** https://github.com/ShewchukV4/FoxTerminal  
 **Дзеркало:** https://github.com/shew4uk/FoxTerminal  
@@ -48,11 +49,15 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\FoxTerminal\install.ps1
 
 ```powershell
 foxdeps -Install
-foxsetup
+foxsetup          # майстер: середовище, компоненти, профіль, екрани, анімації
+foxdoctor         # діагностика шляхів / Ghostty / csc / configs
 l <user> <pass>
 home
 foxhelp
 ```
+
+Перенесення вигляду з іншого ПК: `foxpack -Profile export` → на новому `foxpack -ImportProfile …`  
+(див. `FoxTerminal/windows/TRANSFER_NEW_PC.md`). AI/STT не обов’язкові.
 
 Повний стіл (лише якщо власник хоче):
 
@@ -138,20 +143,22 @@ FireFoxBot/                          ← корінь (clone = FoxTerminal)
 
 | Команда | Джерела | Exe |
 |---------|---------|-----|
-| `foxstyle` | `cmd/foxstyle/*.cs` + `foxos-sdk.cs` + assistant/stt/understand | `foxstyle.exe` |
-| `foxnodes` | `cmd/foxnodes/*.cs` + ті самі спільні `.cs` | `foxnodes.exe` |
+| `foxstyle` | `foxos-sdk.cs` + `fox-anim.cs` + assistant/stt/understand + `cmd/foxstyle/*.cs` | `foxstyle.exe` |
+| `foxnodes` | ті самі спільні `.cs` + `cmd/foxnodes/*.cs` | `foxnodes.exe` |
 | `foxlife` | `cmd/foxlife/` | `foxlife.exe` |
-| `foxos` | `foxos-live.cs` тощо | `foxos-live.exe` + dock/chrome |
+| `foxos` | `foxos-sdk` + `fox-anim` + live/dock/chrome/quick/… | `foxos-live.exe` |
 
 `-Rebuild` зупиняє процес і збирає заново. Якщо `csc.exe` немає — вікно не збереться.
 
 Apply FOXSTYLE:
 
 1. Пише `launcher.json` (дерево меню).
-2. Пише `style.json` (вигляд).
-3. Пише `foxnodes.signal`.
-4. Overlay перечитує **обидва** файли і відповідає `foxnodes.applied`.
-5. «Застосовано» лише після ack. Без демона — «Збережено».
+2. Пише `style.json` (вигляд + `motion.*` анімації; `requestId` / revision).
+3. Пише `foxnodes.signal` з revision.
+4. Overlay перечитує **обидва** файли і відповідає `foxnodes.applied` тією ж revision.
+5. «Застосовано» лише після ack. Без демона — «Збережено». Старий ack не зараховується за новий.
+
+Анімації: FOXSTYLE → **Анімації** (пресети, FPS, батарея, категорії launcher/studio/dock/Alt+Tab/FoxOS/hover/press). Спільний код — `cmd/fox-anim.cs`.
 
 ---
 
@@ -166,7 +173,9 @@ who / users / passwd / uexit
 home                    дім після логіну
 lock                    сховати Ghostty; Shift+Alt+L
 settings                TUI; settings -Gui → http://127.0.0.1:17321
-foxsetup                майстер першого запуску
+foxsetup                майстер налаштування (середовище → профіль → екрани)
+foxdoctor [-Fix]        діагностика шляхів / Ghostty / configs / дублікатів
+foxpack -Profile export|import   портативний вигляд (не секрети)
 ```
 
 Нове вікно Ghostty питає Test / Login / Register (автологін з файлу прибрано).

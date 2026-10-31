@@ -810,7 +810,12 @@ function Get-FoxOsLiveSource {
 }
 
 function Get-FoxOsLiveSources {
-    $list = @(Get-FoxOsLiveSource)
+    $list = @()
+    $sdk = Join-Path $PSScriptRoot "foxos-sdk.cs"
+    if (Test-Path -LiteralPath $sdk) { $list += $sdk }
+    $anim = Join-Path $PSScriptRoot "fox-anim.cs"
+    if (Test-Path -LiteralPath $anim) { $list += $anim }
+    $list += Get-FoxOsLiveSource
     $help = Join-Path $PSScriptRoot "foxos-help.cs"
     if (Test-Path -LiteralPath $help) { $list += $help }
     $dock = Join-Path $PSScriptRoot "foxos-dock.cs"
@@ -1084,10 +1089,12 @@ function Ensure-FoxOsLiveBuilt {
         "/nologo",
         "/target:winexe",
         "/optimize+",
+        "/codepage:65001",
         ("/out:" + $exe),
         "/r:System.Drawing.dll",
         "/r:System.Windows.Forms.dll",
-        "/r:System.Management.dll"
+        "/r:System.Management.dll",
+        "/r:System.Web.Extensions.dll"
     ) + $sources
     $p = Start-Process -FilePath $csc -ArgumentList $args -Wait -PassThru -NoNewWindow -RedirectStandardOutput $out -RedirectStandardError ($out + ".err")
     return ((Test-Path -LiteralPath $exe) -and $p.ExitCode -eq 0)

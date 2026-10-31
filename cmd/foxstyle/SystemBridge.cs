@@ -101,6 +101,7 @@ namespace FoxOs.Style {
                 aj = SetJsonString(aj, "foxGlowStrength", glowStrength.ToString());
                 aj = SetJsonString(aj, "foxGlowSpeed", glowSpeed.ToString());
                 aj = SetJsonString(aj, "tbAccent", "on");
+                WriteMotionKeys(ref aj, doc);
                 File.WriteAllText(ap, aj, new UTF8Encoding(false));
 
                 string livePath = Path.Combine(dir, "live.json");
@@ -128,8 +129,36 @@ namespace FoxOs.Style {
                 json = SetJsonString(json, "foxGlow", glow);
                 json = SetJsonString(json, "foxGlowStrength", glowStrength.ToString());
                 json = SetJsonString(json, "foxGlowSpeed", glowSpeed.ToString());
+                WriteMotionKeys(ref json, doc);
                 File.WriteAllText(livePath, json, new UTF8Encoding(false));
             } catch { }
+        }
+
+        static void WriteMotionKeys(ref string json, StyleDoc doc) {
+            if (doc == null || doc.motion == null) return;
+            FoxMotionConfig m = doc.motion.ToConfig();
+            json = SetJsonString(json, "motionEnabled", m.EffectiveEnabled() ? "1" : "0");
+            json = SetJsonString(json, "motionPreset", m.preset ?? "balanced");
+            json = SetJsonString(json, "motionSpeed", m.speedPercent.ToString());
+            json = SetJsonString(json, "motionIntensity", m.intensityPercent.ToString());
+            json = SetJsonString(json, "motionFps", m.fps ?? "auto");
+            json = SetJsonString(json, "motionScale", m.scale ?? "full");
+            json = SetJsonString(json, "motionBattery", m.battery ?? "auto");
+            json = SetJsonString(json, "motionRequestId", m.requestId.ToString());
+            if (m.dock != null) {
+                json = SetJsonString(json, "dockAnimOpenMs", m.dock.openMs.ToString());
+                json = SetJsonString(json, "dockAnimCloseMs", m.dock.closeMs.ToString());
+                json = SetJsonString(json, "dockAnimOffset", m.dock.offsetDip.ToString());
+                json = SetJsonString(json, "dockAnimEasing", m.dock.easing ?? "easeOut");
+                json = SetJsonString(json, "dockAnimOn", m.dock.enabled ? "1" : "0");
+            }
+            if (m.altTab != null) {
+                json = SetJsonString(json, "altTabAnimOpenMs", m.altTab.openMs.ToString());
+                json = SetJsonString(json, "altTabAnimCloseMs", m.altTab.closeMs.ToString());
+                json = SetJsonString(json, "altTabAnimOffset", m.altTab.offsetDip.ToString());
+                json = SetJsonString(json, "altTabAnimEasing", m.altTab.easing ?? "easeOut");
+                json = SetJsonString(json, "altTabAnimOn", m.altTab.enabled ? "1" : "0");
+            }
         }
 
         public static void ApplyToSystem(StyleDoc doc) {
@@ -178,6 +207,7 @@ namespace FoxOs.Style {
                 json = SetJsonString(json, "foxGlow", glow);
                 json = SetJsonString(json, "foxGlowStrength", glowStrength.ToString());
                 json = SetJsonString(json, "foxGlowSpeed", glowSpeed.ToString());
+                WriteMotionKeys(ref json, doc);
                 File.WriteAllText(livePath, json, new UTF8Encoding(false));
             } catch { }
 

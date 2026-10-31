@@ -72,7 +72,8 @@ The installer copies the Ghostty config, creates a shortcut, and optionally star
 chek                  # are we really in Ghostty?
 term -Doctor          # config / font / shell diagnostics
 foxdeps -Install      # Firefox, Nerd Font, Oh My Posh, AHK, .NET…
-foxsetup              # wizard: user, theme, FoxOS, hotkeys, idle lock
+foxsetup              # Fox System wizard: env, components, profile, screens
+foxdoctor             # diagnose paths / Ghostty / configs
 ```
 
 Or manually:
@@ -308,7 +309,9 @@ foxstt -Test                  # probe without running commands
 foxstt -Stop
 ```
 
-**Apply cycle.** FOXSTYLE writes `launcher.json` (menu tree) and `style.json` (look), then `foxnodes.signal`. The overlay rereads both files and acks `foxnodes.applied`. “Applied” appears only after that ack. If `foxnodes` is not running: “Saved. Will apply after the menu starts.”
+**Apply cycle.** FOXSTYLE writes `launcher.json` (menu tree) and `style.json` (look + `motion.*`), then `foxnodes.signal` with a revision. The overlay rereads both files and acks `foxnodes.applied` with the same revision. “Applied” appears only after that ack (stale acks ignored). If `foxnodes` is not running: “Saved”.
+
+**Animations.** FOXSTYLE → Animations: master toggle, presets (off / economy / balanced / smooth / custom), FPS, reduced motion, battery policy, per-surface categories (launcher / studio / dock / Alt+Tab / FoxOS / hover / press). Local preview does not restart desktop processes. Shared code: `cmd/fox-anim.cs`.
 
 Look profiles (compact / soft glass / contrast / theme-matched) do not change the menu tree. Menu motion presets: Restrained / Smooth / Springy / Reduced motion.
 
@@ -322,9 +325,10 @@ Menu hotkey: **Ctrl+Alt+Space**.
 
 ## 6) home · lock · settings · foxsetup
 
-### `foxsetup` — first boot
+### `foxsetup` — setup wizard
 
-Wizard: user, theme, FoxOS, logon autostart, hotkeys, idle lock. Runs on a fresh machine or manually: `foxsetup`.
+Steps: environment (`foxdoctor`) → components → deps → new profile or import → binds → screens / animation preset → start layers → summary. AI/STT optional. Does **not** enable `foxlook shell on`.  
+Move to another PC: [`windows/TRANSFER_NEW_PC.md`](windows/TRANSFER_NEW_PC.md) · `foxpack -Profile export` / `-ImportProfile`.
 
 ### `home` — system home
 
@@ -393,7 +397,9 @@ User-facing commands below. Live inventory is always in `foxhelp`.
 | `home` | `home` | post-login home |
 | `lock` | `lock [-Status\|-Unlock]` | session lock |
 | `settings` | `settings [-Status\|-Gui\|-StopGui]` | settings |
-| `foxsetup` | `foxsetup` | first-boot wizard |
+| `foxsetup` | `foxsetup` | Fox System setup wizard |
+| `foxdoctor` | `foxdoctor [-Fix]` | install diagnostics |
+| `foxpack` | `foxpack [-Profile export\|import]` | code zip or look profile |
 | `changelog` | `changelog` | change history |
 | `foxdocs` | `foxdocs` | all guides/history (arrows; ← terminal, → Explorer) |
 | `off` / `shutdown` | `off` | shut down PC (Yes/No, default No) |
