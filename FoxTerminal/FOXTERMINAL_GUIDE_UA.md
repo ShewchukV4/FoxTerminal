@@ -314,7 +314,9 @@ foxstt -Stop
 Профілі вигляду (компактний / м’яке скло / контрастний / за темою) не чіпають дерево меню.  
 **Анімації** — окремий розділ FOXSTYLE («Анімації»): майстер-перемикач, пресети (off / economy / balanced / smooth / custom), FPS, зменшений рух, поведінка на батареї, окремі категорії для Node Launcher / студії / dock / Alt+Tab / FoxOS / hover / press. Локальний preview не перезапускає desktop. Спільний код: `cmd/fox-anim.cs`. У Node Launcher лишаються пресети руху вузлів (стриманий / плавний / пружний / мінімальний).
 
-**Помічник** (FOXSTYLE → Помічник, або з Node Launcher): текст + push-to-talk, локальна Ollama. Відкриває пошук / програми / нотатки / таймер. Повне речення йде в модель, якщо це не коротка однозначна команда. Слово «YouTube» саме по собі не відкриває сайт — потрібен майданчик («на YouTube») або явна команда. Діагностика: `FOXASSIST_TRACE=1` або журнал у FOXSTYLE.
+**Помічник** (FOXSTYLE → Помічник, або з Node Launcher): текст + push-to-talk, локальна Ollama. Панель помічника тримається на **правому краї** столу (під desk-widgets), навіть коли Node Launcher у pocket. Відкриває пошук / програми / нотатки / таймер. Повне речення йде в модель, якщо це не коротка однозначна команда. Слово «YouTube» саме по собі не відкриває сайт — потрібен майданчик («на YouTube») або явна команда. Діагностика: `FOXASSIST_TRACE=1` або журнал у FOXSTYLE.
+
+**Шпалери / дощ.** У FOXSTYLE слайдер «Частота дощу»: **0 = вимкнено**, 1–80 = густота. На `neon` нуль теж вимикає дощ (раніше був баг із мінімальною щільністю).
 
 **STT.** Файли лише в `%LOCALAPPDATA%\FoxTerminal\foxos\stt`. `foxstt -Install` ставить whisper.cpp b5454 (BLAS CPU) і `large-v3-turbo-q8_0`. У студії можна обрати швидшу `small-q8_0` (~2 с) або якіснішу turbo (~12 с на CPU). Fallback: `large-v3-turbo-q5_0`.
 
@@ -327,7 +329,8 @@ foxstt -Stop
 ### `foxsetup` — майстер налаштування
 
 Кроки: середовище (`foxdoctor`) → компоненти → залежності → новий профіль або імпорт → перевірка біндів → екрани / пресет анімацій → запуск шарів → підсумок. AI/STT не обов’язкові. `foxlook shell on` з майстра **не** вмикається.  
-Перенесення на інший ПК: [`windows/TRANSFER_NEW_PC.md`](windows/TRANSFER_NEW_PC.md) · `foxpack -Profile export` / `-ImportProfile`.
+Перенесення на інший ПК: [`windows/TRANSFER_NEW_PC.md`](windows/TRANSFER_NEW_PC.md) · `foxpack -Profile export` / `-ImportProfile`.  
+Аудит (PASS/FAIL): [`windows/AUDIT_REPORT_2026-10-31.md`](windows/AUDIT_REPORT_2026-10-31.md).
 
 ### `home` — системний дім
 

@@ -19,12 +19,14 @@ foxpack -Profile export -IncludeNotes
 1. `winget install AmanThanvi.winghostty`
 2. `git clone …` або розпакуй zip (шлях може мати пробіли/Unicode)
 3. `powershell -ExecutionPolicy Bypass -File .\FoxTerminal\install.ps1`
-4. У Ghostty: `foxdeps -Install` → `foxsetup`
+4. У Ghostty: `foxdeps -Install` → `foxsetup`  
+   (`foxdeps -Install` також ставить **Defender exclusion** для `foxos-live.exe` — без цього Defender часто з’їдає exe і стіл «не піднімається»)
 5. Імпорт вигляду: `foxpack -ImportProfile <файл.foxprofile.zip>` (покаже план змін, з `.bak`)
 6. `foxdoctor` → виправ відсутні шляхи біндів
 7. `l <user> <pass>` → `home` → `foxstyle` / `foxnodes`
 
-AI/STT **не** обов’язкові. `foxlook shell on` — лише з явним «так».
+AI/STT **не** обов’язкові. `foxlook shell on` — лише з явним «так».  
+FOXSTYLE «Частота дощу» = **0** вимикає rain. Помічник — права смуга під widgets.
 
 ## Якщо переїхав лише репозиторій в іншу папку
 
@@ -42,6 +44,8 @@ foxdoctor -Fix
 | Немає csc / не збирається FOXSTYLE | увімкни .NET 4.8 |
 | Пункти меню «мертві» | `bbind` / Node Launcher — новий шлях |
 | Дублікати foxos-live | `foxdoctor -Fix` |
+| Немає `foxos-live.exe` / shell «нічого» | Defender quarantine → `foxdeps -Install` (exclusion) → `foxos on` |
 | Панель за екраном | `foxstyle` Apply / перемісти вручну; позиції з іншого ПК не довіряй |
+| Немає помічника справа | `foxnodes -Show`; HUD має бути на правому краї під widgets |
 
 Детальніше: [`CURSOR_MEGAGUIDE_UA.md`](CURSOR_MEGAGUIDE_UA.md), [`VERIFY_ALL.md`](VERIFY_ALL.md).

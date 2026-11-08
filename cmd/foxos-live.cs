@@ -1251,15 +1251,24 @@ namespace FoxOsLive {
             return found != IntPtr.Zero ? found : progman;
         }
 
+        bool RainEnabled() {
+            if (state.WallRain <= 0) return false;
+            if (string.Equals(state.WallKind, "none", StringComparison.OrdinalIgnoreCase)) return false;
+            return true;
+        }
+
         void InitRain() {
             head = new float[cols];
             speed = new float[cols];
             trail = new int[cols];
             grid = new byte[cols][];
-            // WallRain 0..80 → fraction of active columns; WallKind=none → almost off
-            double dens = state.WallRain / 80.0;
-            if (string.Equals(state.WallKind, "none", StringComparison.OrdinalIgnoreCase)) dens = 0;
-            else if (string.Equals(state.WallKind, "neon", StringComparison.OrdinalIgnoreCase)) dens = Math.Min(1.0, dens + 0.15);
+            // WallRain 0 = fully off (also skips Step/paint). Neon must not re-enable rain.
+            double dens = 0;
+            if (RainEnabled()) {
+                dens = state.WallRain / 80.0;
+                if (string.Equals(state.WallKind, "neon", StringComparison.OrdinalIgnoreCase))
+                    dens = Math.Min(1.0, dens + 0.15);
+            }
             for (int c = 0; c < cols; c++) {
                 bool on = dens > 0.02 && (rng.NextDouble() < dens);
                 head[c] = on ? (float)(rng.NextDouble() * rows) : -200f;
@@ -1346,6 +1355,7 @@ namespace FoxOsLive {
 
         void RebuildGlyphs() {
             DropGlyphs();
+            if (!RainEnabled()) return;
             if (rainBrushes == null || font == null) return;
             var fmt = rainFmt ?? StringFormat.GenericTypographic;
             rainGlyphs = new Bitmap[6][];
@@ -1828,6 +1838,7 @@ namespace FoxOsLive {
         }
 
         void Step() {
+            if (!RainEnabled() || head == null) return;
             for (int c = 0; c < cols; c++) {
                 if (speed[c] <= 0f) continue;
                 head[c] += speed[c];
@@ -1963,24 +1974,26 @@ namespace FoxOsLive {
                         g.FillRectangle(wash, ClientRectangle);
                 }
             }
-            g.CompositingQuality = CompositingQuality.HighSpeed;
-            g.InterpolationMode = InterpolationMode.NearestNeighbor;
-            g.SmoothingMode = SmoothingMode.None;
-            g.PixelOffsetMode = PixelOffsetMode.None;
-            g.TextRenderingHint = TextRenderingHint.SingleBitPerPixelGridFit;
-            for (int c = 0; c < cols; c++) {
-                if (speed[c] <= 0f) continue;
-                int start = (int)Math.Floor(head[c] - trail[c]);
-                int end = (int)Math.Floor(head[c]);
-                int tlen = Math.Max(1, trail[c]);
-                int x = c * cellW;
-                for (int r = start; r <= end; r++) {
-                    if (r < 0 || r >= rows) continue;
-                    int dist = end - r;
-                    int bi = 5 - Math.Min(5, dist * 5 / tlen);
-                    if (dist == 0) bi = 5;
-                    if (rainGlyphs != null) {
-                        g.DrawImageUnscaled(rainGlyphs[bi][grid[c][r]], x, r * cellH);
+            if (RainEnabled() && head != null) {
+                g.CompositingQuality = CompositingQuality.HighSpeed;
+                g.InterpolationMode = InterpolationMode.NearestNeighbor;
+                g.SmoothingMode = SmoothingMode.None;
+                g.PixelOffsetMode = PixelOffsetMode.None;
+                g.TextRenderingHint = TextRenderingHint.SingleBitPerPixelGridFit;
+                for (int c = 0; c < cols; c++) {
+                    if (speed[c] <= 0f) continue;
+                    int start = (int)Math.Floor(head[c] - trail[c]);
+                    int end = (int)Math.Floor(head[c]);
+                    int tlen = Math.Max(1, trail[c]);
+                    int x = c * cellW;
+                    for (int r = start; r <= end; r++) {
+                        if (r < 0 || r >= rows) continue;
+                        int dist = end - r;
+                        int bi = 5 - Math.Min(5, dist * 5 / tlen);
+                        if (dist == 0) bi = 5;
+                        if (rainGlyphs != null) {
+                            g.DrawImageUnscaled(rainGlyphs[bi][grid[c][r]], x, r * cellH);
+                        }
                     }
                 }
             }

@@ -37,6 +37,7 @@ function Get-FoxDocsCatalog([string]$root) {
         @{ Title = "Windows MEGAGUIDE"; Rel = "FoxTerminal/windows/CURSOR_MEGAGUIDE_UA.md"; Group = "Windows"; Desc = "Перенос на інший Windows: залізо, DPI, Cursor" }
         @{ Title = "VERIFY_ALL"; Rel = "FoxTerminal/windows/VERIFY_ALL.md"; Group = "Windows"; Desc = "Прогін кожної команди + Alt+Tab / таскбар" }
         @{ Title = "Перенесення на новий ПК"; Rel = "FoxTerminal/windows/TRANSFER_NEW_PC.md"; Group = "Windows"; Desc = "Експорт профілю, install, import, foxdoctor" }
+        @{ Title = "Аудит 2026-10-31"; Rel = "FoxTerminal/windows/AUDIT_REPORT_2026-10-31.md"; Group = "Windows"; Desc = "Інвентар PASS/FAIL + виправлення Apply/rain/term" }
         @{ Title = "HARDWARE_SCREEN"; Rel = "FoxTerminal/windows/HARDWARE_SCREEN.md"; Group = "Windows"; Desc = "Таблиці DPI / GPU / моніторів для foxlook" }
         @{ Title = "Windows AGENTS"; Rel = "FoxTerminal/windows/AGENTS.md"; Group = "Windows"; Desc = "Коротка пам'ять агента для Windows-паку" }
         @{ Title = "Windows README"; Rel = "FoxTerminal/windows/README.md"; Group = "Windows"; Desc = "Індекс Windows-паку + стартовий промпт" }

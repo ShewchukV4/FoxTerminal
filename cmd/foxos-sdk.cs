@@ -165,8 +165,12 @@ namespace FoxOs.Sdk {
         public static void WriteApplied(int revision) {
             try {
                 Directory.CreateDirectory(FoxPaths.RuntimeDir());
+                int next = Math.Max(1, revision);
+                // Never clobber a newer ack with an older revision (style watcher vs reload).
+                int prev; string utc;
+                if (TryReadApplied(out prev, out utc) && prev > next) return;
                 File.WriteAllText(AppliedPath,
-                    Math.Max(1, revision) + "\r\n" + DateTime.UtcNow.ToString("o"),
+                    next + "\r\n" + DateTime.UtcNow.ToString("o"),
                     new UTF8Encoding(false));
             } catch { }
         }

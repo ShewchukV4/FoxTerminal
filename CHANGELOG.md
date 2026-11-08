@@ -10,6 +10,25 @@
 
 ---
 
+## 2026-11-08 — rain=0, Defender, помічник справа, master
+
+### Виправлено
+
+- **FOXSTYLE «Частота дощу» = 0** тепер **повністю вимикає** ASCII-дощ. Раніше на `wallKind=neon` щільність піднімалась на +0.15 навіть при `rain=0`, тож дощ лишався.
+- **Помічник (AssistantHud)** більше не зникає за правим краєм, коли Node Launcher у pocket: панель стабільно на **правому краї** екрана під desk-widgets.
+- **Windows Defender** карантинував `foxos-live.exe` → FoxOS / `foxlook shell on` «нічого не робили». Додано exclusion для `%LOCALAPPDATA%\FoxTerminal\foxos`, `cmd\` і процесу `foxos-live.exe` (`Ensure-FoxOsDefenderExclusion` у `foxos-lib.ps1`, також з `foxdeps -Install`).
+
+### Оптимізація (реальна)
+
+- При `wallRain=0`: пропуск `Step`/`Paint` дощу і не будуються rain-glyphs (менше CPU/RAM на live desk).
+- Інших «магічних» прискорень немає: FPS dock/launcher уже на 16 ms; без профілювання далі не чіпали.
+
+### Git / гілка
+
+- Усі фікси злиті в **master** (було на `fix/cave-vision-freeze`).
+
+---
+
 ## 2026-02-04 — день нуль
 
 Папка `Desktop\FireFoxBot` з’явилась о 12:23.
@@ -696,6 +715,24 @@ Noir полагодили: шорткати більше не скидали р�
 - Тести: `sites/fox-genesis/tests/logic-tests.html`
 
 Запуск: Hub / `sites/fox-genesis/index.html`. Деталі — README гри.
+
+---
+
+## 2026-10-31 — аудит: фікси Apply / live rain / term / foxtest
+
+### Виправлено
+
+| Що | Навіщо |
+|----|--------|
+| `term -Status` ParserError | em-dash у рядку ламав Windows PowerShell 5.1 |
+| `foxnodes` style-watcher → `foxnodes.applied` | застарілий revision міг перезаписати новий Apply-ack |
+| `FoxNodesSync.WriteApplied` | ігнорує older revision (monotonic) |
+| `Write-FoxOsLiveState` | texture з `style.json` — джерело правди для rain/wall; sync `style-applied` |
+| `foxtest` маніфест | додано foxdoctor / foxstyle / foxnodes / foxlook / foxstt + skip libs |
+
+### Документація
+
+- `FoxTerminal/windows/AUDIT_REPORT_2026-10-31.md` — інвентар PASS/FAIL/BLOCKED/NOT TESTED
 
 ---
 

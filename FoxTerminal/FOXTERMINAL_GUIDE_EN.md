@@ -315,7 +315,9 @@ foxstt -Stop
 
 Look profiles (compact / soft glass / contrast / theme-matched) do not change the menu tree. Menu motion presets: Restrained / Smooth / Springy / Reduced motion.
 
-**Assistant** (FOXSTYLE → Assistant, or from Node Launcher): text + push-to-talk, local Ollama. Opens search / apps / notes / timer. Full sentences go to the model unless the phrase is a short unambiguous command. The word “YouTube” alone does not open the site — it needs a venue (“on YouTube”) or an explicit command. Trace: `FOXASSIST_TRACE=1` or the FOXSTYLE log.
+**Assistant** (FOXSTYLE → Assistant, or from Node Launcher): text + push-to-talk, local Ollama. The helper panel stays on the **right edge** of the desk (under desk-widgets), even when Node Launcher is pocketed. Opens search / apps / notes / timer. Full sentences go to the model unless the phrase is a short unambiguous command. The word “YouTube” alone does not open the site — it needs a venue (“on YouTube”) or an explicit command. Trace: `FOXASSIST_TRACE=1` or the FOXSTYLE log.
+
+**Wallpaper / rain.** FOXSTYLE “Rain frequency”: **0 = off**, 1–80 = density. On `neon`, zero also disables rain (previously a minimum-density bug kept it on).
 
 **STT.** Files live only in `%LOCALAPPDATA%\FoxTerminal\foxos\stt`. `foxstt -Install` installs whisper.cpp b5454 (BLAS CPU) and `large-v3-turbo-q8_0`. In the studio you can pick faster `small-q8_0` (~2 s) or higher-quality turbo (~12 s on CPU). Fallback: `large-v3-turbo-q5_0`.
 
@@ -328,7 +330,8 @@ Menu hotkey: **Ctrl+Alt+Space**.
 ### `foxsetup` — setup wizard
 
 Steps: environment (`foxdoctor`) → components → deps → new profile or import → binds → screens / animation preset → start layers → summary. AI/STT optional. Does **not** enable `foxlook shell on`.  
-Move to another PC: [`windows/TRANSFER_NEW_PC.md`](windows/TRANSFER_NEW_PC.md) · `foxpack -Profile export` / `-ImportProfile`.
+Move to another PC: [`windows/TRANSFER_NEW_PC.md`](windows/TRANSFER_NEW_PC.md) · `foxpack -Profile export` / `-ImportProfile`.  
+Audit inventory: [`windows/AUDIT_REPORT_2026-10-31.md`](windows/AUDIT_REPORT_2026-10-31.md).
 
 ### `home` — system home
 

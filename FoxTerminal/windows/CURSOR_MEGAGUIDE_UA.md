@@ -683,6 +683,9 @@ quick 38% · не fullscreen Ghostty на весь span · 2–3 колонки 
 | Різний DPI мильний курсор | cursor scale під primary; перезапуск foxlook cursors |
 | foxlook не відкотити | `foxlook off` |
 | Після shell on немає Explorer | restore-windows.cmd |
+| `foxos-live.exe` зникає / shell «нічого» | Defender → `foxdeps -Install` (exclusion) → перезібрати `foxos on` |
+| Дощ не вимикається на 0 | після 2026-11-08: rain=0 = off; Apply у FOXSTYLE |
+| Помічник «зник» справа | `foxnodes -Show`; панель на правому краї під widgets |
 | AI мовчить | `ollama serve` + pull model |
 | Push 403 | PAT правильного акаунта |
 | Агент без контексту | змусь читати цей MEGAGUIDE |
@@ -696,6 +699,7 @@ quick 38% · не fullscreen Ghostty на весь span · 2–3 колонки 
 - Чати Cursor між ПК не синхроняться → MEGAGUIDE = пам’ять.  
 - Цей **windows/CURSOR_MEGAGUIDE_UA.md** — головний контекст для Cursor на іншому Windows.  
 - 2026-10-21…10-25: FOXSTYLE / foxnodes / foxstt / notebook у гайдах; для ChatGPT — `../CHATGPT_PROJECT.md`.
+- 2026-11-08: rain=0 off; Defender exclusion для foxos-live; AssistantHud справа; фікси на master.
 
 ---
 

@@ -871,7 +871,7 @@ function Write-FoxOsLiveState {
         flag    = $flag
         fox     = $fox
         cmd     = $PSScriptRoot
-        rig     = $(if ($script:FoxOsRigOverride) { $script:FoxOsRigOverride } else { Get-FoxOsRigStyle })
+        rig     = $(if ((Test-Path variable:script:FoxOsRigOverride) -and $script:FoxOsRigOverride) { $script:FoxOsRigOverride } else { Get-FoxOsRigStyle })
         wall    = $(if (Get-Command Get-FoxLookWall -ErrorAction SilentlyContinue) { Get-FoxLookWall } else { "overlay" })
         shell   = "off"
         dockStyle = "pill"
@@ -966,8 +966,60 @@ function Write-FoxOsLiveState {
             }
         } catch {}
     }
+    $livePath = Get-FoxOsLiveStatePath
+    # style.json is the FOXSTYLE source of truth for wallpaper texture.
+    # style-applied can go stale (e.g. rain left at 0) and must not win forever.
+    $stylePath = Join-Path (Get-FoxOsDir) 'style.json'
+    if (Test-Path -LiteralPath $stylePath) {
+        try {
+            $sj = Get-Content -LiteralPath $stylePath -Raw -Encoding UTF8 | ConvertFrom-Json
+            if ($sj.texture) {
+                if ($sj.texture.kind) { $obj['wallKind'] = [string]$sj.texture.kind }
+                if ($null -ne $sj.texture.rain) { $obj['wallRain'] = [string]([int]$sj.texture.rain) }
+                if ($null -ne $sj.texture.strength) { $obj['wallStrength'] = [string]([int]$sj.texture.strength) }
+                if ($null -ne $sj.texture.scale) { $obj['wallScale'] = [string]([int]$sj.texture.scale) }
+                if ($null -ne $sj.texture.weight) { $obj['wallWeight'] = [string]([int]$sj.texture.weight) }
+                if ($null -ne $sj.texture.veil) { $obj['wallVeil'] = [string]([int]$sj.texture.veil) }
+            }
+            if ($sj.labs) {
+                $obj['foxGlow'] = $(if ($sj.labs.foxGlow) { 'on' } else { 'off' })
+                if ($null -ne $sj.labs.glowStrength) { $obj['foxGlowStrength'] = [string]([int]$sj.labs.glowStrength) }
+                if ($null -ne $sj.labs.glowSpeed) { $obj['foxGlowSpeed'] = [string]([int]$sj.labs.glowSpeed) }
+            }
+        } catch {}
+    }
+    # Preserve pins/cmd from previous live when missing on the fresh object.
+    if (Test-Path -LiteralPath $livePath) {
+        try {
+            $prev = Get-Content -LiteralPath $livePath -Raw -Encoding UTF8 | ConvertFrom-Json
+            foreach ($k in @('pinCursor','pinZen','pinTerm','cmd','fox','rig','user')) {
+                if (-not $obj.ContainsKey($k) -and $null -ne $prev.$k -and "$($prev.$k)".Length -gt 0) {
+                    $obj[$k] = [string]$prev.$k
+                }
+            }
+        } catch {}
+    }
+    if (-not $obj.ContainsKey('wallRain') -or [string]::IsNullOrWhiteSpace([string]$obj['wallRain'])) {
+        $obj['wallRain'] = '30'
+        if (-not $obj.ContainsKey('wallStrength')) { $obj['wallStrength'] = '60' }
+        if (-not $obj.ContainsKey('wallVeil')) { $obj['wallVeil'] = '55' }
+        if (-not $obj.ContainsKey('wallWeight')) { $obj['wallWeight'] = '40' }
+    }
+    # Keep style-applied wall keys in sync so other readers stay consistent.
+    $appliedPath = Join-Path (Get-FoxOsDir) 'style-applied.json'
+    if (Test-Path -LiteralPath $appliedPath) {
+        try {
+            $ap = Get-Content -LiteralPath $appliedPath -Raw -Encoding UTF8 | ConvertFrom-Json
+            foreach ($k in @('wallKind','wallRain','wallStrength','wallScale','wallWeight','wallVeil','foxGlow','foxGlowStrength','foxGlowSpeed')) {
+                if ($obj.ContainsKey($k)) {
+                    $ap | Add-Member -NotePropertyName $k -NotePropertyValue $obj[$k] -Force
+                }
+            }
+            [System.IO.File]::WriteAllText($appliedPath, ($ap | ConvertTo-Json -Compress), (New-Object System.Text.UTF8Encoding $false))
+        } catch {}
+    }
     $utf8 = New-Object System.Text.UTF8Encoding($false)
-    [System.IO.File]::WriteAllText((Get-FoxOsLiveStatePath), ($obj | ConvertTo-Json -Compress), $utf8)
+    [System.IO.File]::WriteAllText($livePath, ($obj | ConvertTo-Json -Compress), $utf8)
 }
 
 function Get-FoxOsRigStyle {
@@ -1077,11 +1129,101 @@ function Test-FoxOsLiveStale {
     return $false
 }
 
+function Get-FoxOsDefenderMarkerPath {
+    return (Join-Path (Get-FoxOsDir) "defender-excl.ok")
+}
+
+function Test-FoxOsDefenderExcluded {
+    if (-not (Test-FoxOsWindows)) { return $true }
+    $dir = (Get-FoxOsDir).TrimEnd('\')
+    $cmd = $PSScriptRoot.TrimEnd('\')
+    try {
+        $pref = Get-MpPreference -ErrorAction Stop
+        $paths = @($pref.ExclusionPath) | Where-Object { $_ }
+        foreach ($p in $paths) {
+            $n = ([string]$p).TrimEnd('\')
+            if ($n -and ($n -eq $dir -or $n -eq $cmd -or $dir.StartsWith($n + '\', [StringComparison]::OrdinalIgnoreCase))) {
+                return $true
+            }
+        }
+        $procs = @($pref.ExclusionProcess) | Where-Object { $_ }
+        if ($procs | Where-Object { [string]$_ -eq "foxos-live.exe" }) { return $true }
+    } catch {}
+    return $false
+}
+
+# Defender repeatedly quarantines the local csc-built foxos-live.exe. Keep a
+# folder/process exclusion so shell on / login can actually start FoxOS.
+function Ensure-FoxOsDefenderExclusion {
+    param([switch]$Force)
+
+    if (-not (Test-FoxOsWindows)) { return $true }
+    if (-not $Force -and (Test-FoxOsDefenderExcluded)) { return $true }
+
+    $dir = Get-FoxOsDir
+    $cmd = $PSScriptRoot
+    $marker = Get-FoxOsDefenderMarkerPath
+    if (-not $Force -and (Test-Path -LiteralPath $marker)) {
+        try {
+            $age = (Get-Date) - (Get-Item -LiteralPath $marker).LastWriteTime
+            # Prefer reading MpPreference; marker only throttles UAC retries.
+            if ($age.TotalHours -lt 12 -and (Test-Path -LiteralPath (Get-FoxOsLiveExe))) {
+                return $true
+            }
+        } catch {}
+    }
+
+    $out = Join-Path $env:TEMP ("foxos-defender-excl-" + [Guid]::NewGuid().ToString("N") + ".txt")
+    $script = Join-Path $env:TEMP ("foxos-defender-excl-" + [Guid]::NewGuid().ToString("N") + ".ps1")
+    $body = @(
+        "`$ErrorActionPreference = 'Stop'",
+        "try {",
+        "  Add-MpPreference -ExclusionPath '$dir'",
+        "  Add-MpPreference -ExclusionPath '$cmd'",
+        "  Add-MpPreference -ExclusionProcess 'foxos-live.exe'",
+        "  'OK' | Set-Content -LiteralPath '$out' -Encoding ASCII",
+        "} catch {",
+        "  ('FAIL:' + `$_.Exception.Message) | Set-Content -LiteralPath '$out' -Encoding ASCII",
+        "  exit 1",
+        "}"
+    ) -join "`r`n"
+    try {
+        [System.IO.File]::WriteAllText($script, $body + "`r`n", (New-Object System.Text.UTF8Encoding($false)))
+        $p = Start-Process -FilePath "powershell.exe" -ArgumentList @(
+            "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $script
+        ) -Verb RunAs -Wait -PassThru -WindowStyle Hidden
+        $ok = $false
+        if (Test-Path -LiteralPath $out) {
+            $txt = (Get-Content -LiteralPath $out -Raw -ErrorAction SilentlyContinue)
+            $ok = ($txt -and $txt.Trim().StartsWith("OK"))
+        }
+        if (-not $ok) { $ok = ($p.ExitCode -eq 0 -and (Test-FoxOsDefenderExcluded)) }
+        if ($ok) {
+            try {
+                "ok`t$((Get-Date).ToString('o'))" | Set-Content -LiteralPath $marker -Encoding ASCII
+            } catch {}
+            return $true
+        }
+        try {
+            "fail`t$((Get-Date).ToString('o'))" | Set-Content -LiteralPath $marker -Encoding ASCII
+        } catch {}
+        return $false
+    } catch {
+        return $false
+    } finally {
+        Remove-Item -LiteralPath $script -Force -ErrorAction SilentlyContinue
+        Remove-Item -LiteralPath $out -Force -ErrorAction SilentlyContinue
+    }
+}
+
 function Ensure-FoxOsLiveBuilt {
     $sources = @(Get-FoxOsLiveSources)
     if ($sources.Count -eq 0) { return $false }
     $exe = Get-FoxOsLiveExe
     if (-not (Test-FoxOsLiveStale)) { return $true }
+    if (-not (Test-Path -LiteralPath $exe)) {
+        try { Ensure-FoxOsDefenderExclusion | Out-Null } catch {}
+    }
     $csc = Join-Path $env:WINDIR "Microsoft.NET\Framework64\v4.0.30319\csc.exe"
     if (-not (Test-Path -LiteralPath $csc)) { return $false }
     $out = Join-Path (Get-FoxOsDir) "foxos-live.build.log"
@@ -1097,7 +1239,20 @@ function Ensure-FoxOsLiveBuilt {
         "/r:System.Web.Extensions.dll"
     ) + $sources
     $p = Start-Process -FilePath $csc -ArgumentList $args -Wait -PassThru -NoNewWindow -RedirectStandardOutput $out -RedirectStandardError ($out + ".err")
-    return ((Test-Path -LiteralPath $exe) -and $p.ExitCode -eq 0)
+    $ok = ((Test-Path -LiteralPath $exe) -and $p.ExitCode -eq 0)
+    if (-not $ok) { return $false }
+    # Defender sometimes deletes the fresh binary within a second of csc.
+    Start-Sleep -Milliseconds 800
+    if (-not (Test-Path -LiteralPath $exe)) {
+        try { Ensure-FoxOsDefenderExclusion -Force | Out-Null } catch {}
+        $p2 = Start-Process -FilePath $csc -ArgumentList $args -Wait -PassThru -NoNewWindow -RedirectStandardOutput $out -RedirectStandardError ($out + ".err")
+        $ok = ((Test-Path -LiteralPath $exe) -and $p2.ExitCode -eq 0)
+        if ($ok) {
+            Start-Sleep -Milliseconds 800
+            $ok = (Test-Path -LiteralPath $exe)
+        }
+    }
+    return $ok
 }
 
 function Start-FoxOsLive {
@@ -1110,6 +1265,16 @@ function Start-FoxOsLive {
     if (Test-FoxOsLiveRunning) { return $true }
     Start-Process -FilePath $exe -ArgumentList @((Get-FoxOsLiveStatePath)) -WindowStyle Hidden | Out-Null
     Start-Sleep -Milliseconds 400
+    # Quarantine race: process never appears / exe vanished after start.
+    if (-not (Test-FoxOsLiveRunning)) {
+        if (-not (Test-Path -LiteralPath $exe)) {
+            try { Ensure-FoxOsDefenderExclusion -Force | Out-Null } catch {}
+            if (Ensure-FoxOsLiveBuilt) {
+                Start-Process -FilePath (Get-FoxOsLiveExe) -ArgumentList @((Get-FoxOsLiveStatePath)) -WindowStyle Hidden | Out-Null
+                Start-Sleep -Milliseconds 500
+            }
+        }
+    }
     try { Start-FoxOsMediaWatch | Out-Null } catch {}
     # Alt+Tab remap is in foxhotkeys.ahk (#HotIf foxos-live) — without the
     # daemon, Windows Alt+Tab stays and the Fox slide never appears.

@@ -82,6 +82,7 @@ bash ./FoxTerminal/install.sh
 - Гайди / історія: `foxdocs` (↑↓ список, ← Terminal, → Explorer, Enter; Back внизу), `changelog`
 - Знімки / перенесення: `build <name>`, `foxpack`, `foxpack -Profile export|import`, `foxdoctor`, `FoxTerminal/windows/TRANSFER_NEW_PC.md`
 - Анімації: FOXSTYLE → «Анімації» (`style.json` → `motion.*`, код `cmd/fox-anim.cs`)
+- Останній аудит: `FoxTerminal/windows/AUDIT_REPORT_2026-10-31.md`
 
 ---
 
@@ -112,6 +113,7 @@ bash ./FoxTerminal/install.sh
 7. 2026-10-04 (пізніше): **`notebook`** — пергаментний стіл / чорнильний rain; пункт у `themes`.
 8. 2026-10-21: **FOXSTYLE** (нативна студія вигляду + Node Launcher editor), **`foxnodes`** (desktop overlay, Ctrl+Alt+Space), **Помічник** (Ollama + push-to-talk), **`foxstt`** (whisper.cpp). Apply-цикл: `launcher.json` + `style.json` → сигнал → ack overlay.
 9. 2026-10-25: усі системні гайди підтягнуті під FOXSTYLE / foxnodes / foxstt / notebook; додано `FoxTerminal/CHATGPT_PROJECT.md` — один файл для стороннього чату (ChatGPT тощо).
+10. 2026-11-08: FOXSTYLE rain=0 = off; Defender exclusion для `foxos-live.exe` (`foxdeps -Install`); AssistantHud на правому краї; робоча гілка = **master**.
 
 ---
 

@@ -66,6 +66,11 @@ $infoCommands = [ordered]@{
     "frederik"      = @()
     "shader"        = @("status")
     "foxos"         = @("status")
+    "foxlook"       = @("status")
+    "foxdoctor"     = @("-Quiet")
+    "foxstyle"      = @("-Status")
+    "foxnodes"      = @("-Status")
+    "foxstt"        = @()
     "lock"          = @("-Status")
     "settings"      = @("-Status")
     "foxlife"       = @("-Status")
@@ -114,6 +119,16 @@ $skipCommands = [ordered]@{
     "interface-gui"  = "opens a GUI window"
     "ff"             = "needs the ffsync daemon running"
     "wai"            = "needs the ffsync daemon running"
+    "foxlook-lib"    = "shared library for foxlook"
+    "foxcursor-lib"  = "shared library for cursors"
+    "foxos-media"    = "desktop media strip helper"
+    "foxos-shell"    = "optional Winlogon shell helper; never auto-enabled"
+    "foxos-watch"    = "desktop watcher helper"
+    "foxstyle-apply" = "invoked by FOXSTYLE Apply, not a user command"
+    "default"        = "changes the active theme"
+    "notebook"       = "changes the active theme"
+    "foximg"         = "needs an image path / interactive viewer"
+    "sw"             = "alias of sw-script; theme UI"
 }
 
 # ── output helpers ──────────────────────────────────────────

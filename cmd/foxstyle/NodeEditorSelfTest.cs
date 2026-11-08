@@ -77,11 +77,30 @@ namespace FoxOs.Style {
             Assert(FoxNodesSync.NormalizeMotionStyle("nope") == "smooth",
                 "unknown motion style should fall back");
 
+            // WriteApplied must not clobber a newer ack with an older revision.
+            string appliedPath = FoxNodesSync.AppliedPath;
+            string appliedBak = null;
+            try {
+                if (File.Exists(appliedPath)) {
+                    appliedBak = File.ReadAllText(appliedPath);
+                }
+                FoxNodesSync.WriteApplied(40);
+                FoxNodesSync.WriteApplied(25);
+                int got; string utc;
+                Assert(FoxNodesSync.TryReadApplied(out got, out utc) && got == 40,
+                    "WriteApplied allowed older revision to overwrite newer ack");
+            } finally {
+                try {
+                    if (appliedBak != null) File.WriteAllText(appliedPath, appliedBak);
+                    else if (File.Exists(appliedPath)) File.Delete(appliedPath);
+                } catch { }
+            }
+
             FoxOs.Stt.SttSelfTest.Run();
 
             File.WriteAllText(Path.Combine(FoxPaths.RuntimeDir(), "foxstyle-selftest.log"),
                 "PASS\r\nvalidate\r\ncycle\r\nunique-ids\r\ndepth=6\r\nimport-export\r\n" +
-                "signal-after-style\r\nmotion-presets\r\nstt-paths\r\n");
+                "signal-after-style\r\nmotion-presets\r\nstt-paths\r\napplied-monotonic\r\n");
         }
 
         static void Assert(bool condition, string message) {

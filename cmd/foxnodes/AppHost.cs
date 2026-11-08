@@ -139,8 +139,9 @@ namespace FoxOs.Nodes {
             if (now - lastStyleTick < 60) return;
             lastStyleTick = now;
             try {
+                // Theme/palette only. Do NOT WriteApplied here: a delayed style.json
+                // watcher event would overwrite a newer reload ack with a stale revision.
                 launcher.RefreshExternalTheme(true);
-                FoxNodesSync.WriteApplied(launcher.CurrentRevision);
             } catch (Exception ex) {
                 LogSync("style", ex);
             }

@@ -128,28 +128,36 @@ if ($perf -ge 0 -and $perf -le 3) {
     $preset = $names[$perf]
     $stylePath = Join-Path $runtime 'style.json'
     try {
-        $doc = $null
+        $enabled = ($preset -ne 'off')
+        $scale = 'full'
+        if ($preset -eq 'off') { $scale = 'off' }
+        elseif ($preset -eq 'economy') { $scale = 'reduced' }
+        $utf8 = New-Object System.Text.UTF8Encoding $false
         if (Test-Path -LiteralPath $stylePath) {
+            Copy-Item -LiteralPath $stylePath -Destination ($stylePath + '.bak-setup') -Force
             $doc = Get-Content -LiteralPath $stylePath -Raw -Encoding UTF8 | ConvertFrom-Json
-        }
-        if (-not $doc) {
-            $doc = [pscustomobject]@{ version = '1'; name = 'FoxOS Dark'; preset = 'dark'; motion = [pscustomobject]@{} }
+        } else {
+            $doc = [pscustomobject]@{
+                version = '1'; name = 'FoxOS Dark'; preset = 'dark'
+                texture = [pscustomobject]@{ kind = 'glass'; dock = 'pill'; rain = 30; strength = 60; scale = 50; weight = 40; veil = 55 }
+            }
         }
         if (-not $doc.motion) {
             $doc | Add-Member -NotePropertyName motion -NotePropertyValue ([pscustomobject]@{}) -Force
         }
         $doc.motion | Add-Member -NotePropertyName preset -NotePropertyValue $preset -Force
-        $doc.motion | Add-Member -NotePropertyName enabled -NotePropertyValue ($preset -ne 'off') -Force
-        $scale = 'full'
-        if ($preset -eq 'off') { $scale = 'off' }
-        elseif ($preset -eq 'economy') { $scale = 'reduced' }
+        $doc.motion | Add-Member -NotePropertyName enabled -NotePropertyValue $enabled -Force
         $doc.motion | Add-Member -NotePropertyName scale -NotePropertyValue $scale -Force
-        $utf8 = New-Object System.Text.UTF8Encoding $false
-        $tmp = $stylePath + '.tmp'
-        if (Test-Path -LiteralPath $stylePath) {
-            Copy-Item -LiteralPath $stylePath -Destination ($stylePath + '.bak-setup') -Force
+        # Keep rain usable if someone had wiped it to 0 earlier.
+        if ($doc.texture -and [int]$doc.texture.rain -eq 0 -and [int]$doc.texture.strength -lt 10) {
+            $doc.texture.rain = 30
+            $doc.texture.strength = 60
+            $doc.texture.veil = 55
+            $doc.texture.weight = 40
         }
-        [System.IO.File]::WriteAllText($tmp, ($doc | ConvertTo-Json -Depth 12), $utf8)
+        $tmp = $stylePath + '.tmp'
+        [System.IO.File]::WriteAllText($tmp, ($doc | ConvertTo-Json -Depth 20), $utf8)
+        $null = Get-Content -LiteralPath $tmp -Raw -Encoding UTF8 | ConvertFrom-Json
         Move-Item -LiteralPath $tmp -Destination $stylePath -Force
         fx ("  motion.preset = $preset") 'Green'
     } catch {

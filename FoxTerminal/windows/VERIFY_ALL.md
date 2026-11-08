@@ -35,6 +35,8 @@
 
 Деталі: [`TRANSFER_NEW_PC.md`](TRANSFER_NEW_PC.md).
 
+Повний інвентар аудиту (з фіксами 2026-10-31): [`AUDIT_REPORT_2026-10-31.md`](AUDIT_REPORT_2026-10-31.md).
+
 ---
 
 ## 1) Автопрогін foxtest
@@ -101,7 +103,9 @@ foxtest -Quiet
 | # | Перевірка | Як | PASS якщо |
 |---|-----------|-----|-----------|
 | F1 | `foxos status` | команда | ON, тема/accent ок |
-| F2 | ASCII rain / wallpaper | Візуально | Малює, FPS прийнятний для профілю Low/Mid/High |
+| F2 | ASCII rain / wallpaper | Візуально | Малює, FPS прийнятний для профілю Low/Mid/High; у FOXSTYLE rain=0 → дощ **вимкнений** |
+| F2b | Помічник справа | `foxnodes -Show` | HUD на правому краї під widgets (не за екраном) |
+| F2c | foxos-live.exe живий | Файл + процес | Якщо зник — Defender; `foxdeps -Install` → exclusion → `foxos on` |
 | F3 | Desk prompt | Клік під лисицею | Приймає коротку команду або фокус |
 | F4 | `foxlook status` | команда | look ON, частини збігаються |
 | F5 | Курсор | Порухати | Стиль fox/pixel… і scale x1–x3 ок на DPI |

@@ -335,10 +335,10 @@ namespace FoxOs.Style {
             AddSlider("Veil / світіння", "Плями accent на glass · блиск на metal/neon", 0, 100, x.veil, delegate(int v) {
                 x.veil = v; Touch("dock");
             });
-            AddSlider("Rain density", "Густота ASCII-дощу на desk", 0, 80, x.rain, delegate(int v) {
+            AddSlider("Частота дощу", "0 = вимкнено · 1–80 густота ASCII-дощу на desk", 0, 80, x.rain, delegate(int v) {
                 x.rain = v; Touch("dock");
             });
-            AddHint("Якщо панелі не видно — курсор до низу екрана (auto-hide) або foxlook shell on.");
+            AddHint("Rain = 0 повністю вимикає дощ (і на neon). Панелі: курсор до низу або foxlook shell on.");
         }
 
         void BuildWindows() {

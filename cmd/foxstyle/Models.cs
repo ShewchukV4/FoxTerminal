@@ -258,7 +258,7 @@ namespace FoxOs.Style {
     public class TextureMod {
         public string kind = "glass"; // glass | metal | fabric | neon | none
         public string dock = "pill";   // pill | bar
-        public int rain = 30;         // 0..80 ASCII rain density
+        public int rain = 30;         // 0 = off · 1..80 ASCII rain density
         public int strength = 60;     // 0..100 overall texture intensity
         public int scale = 50;        // 0..100 grid spacing (higher = larger cells)
         public int weight = 40;       // 0..100 line thickness (однакова для всієї сітки)

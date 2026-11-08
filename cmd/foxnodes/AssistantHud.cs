@@ -225,8 +225,15 @@ namespace FoxOs.Nodes {
                 return;
             }
             if (!Visible) Show(launcher);
-            Point loc = launcher.PointToScreen(new Point(launcher.Width / 2 + 36, launcher.Height / 2 + 8));
-            Location = loc;
+            Screen sc = Screen.FromControl(launcher);
+            Rectangle wa = sc.WorkingArea;
+            // Stable right-edge strip under desk widgets — not glued to the
+            // pocketed graph center (that pushed the HUD off-screen).
+            int x = wa.Right - Width - 24;
+            int y = wa.Top + 180;
+            x = Math.Max(wa.Left + 8, Math.Min(x, wa.Right - Width - 8));
+            y = Math.Max(wa.Top + 8, Math.Min(y, wa.Bottom - Height - 8));
+            if (Location.X != x || Location.Y != y) Location = new Point(x, y);
         }
 
         protected override void OnFormClosed(FormClosedEventArgs e) {

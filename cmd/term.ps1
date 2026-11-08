@@ -192,9 +192,9 @@ function Invoke-Doctor {
             $shaderOn = Test-FoxShadersEnabled
         }
         $shaderDetail = if (Test-Path $shaderOverlay) {
-            if ($shaderOn) { $shaderOverlay } else { "written, currently off — run: shader on" }
+            if ($shaderOn) { $shaderOverlay } else { "written, currently off - run: shader on" }
         } else {
-            "missing — run: shader status"
+            "missing - run: shader status"
         }
         Check "Shader overlay" ($(if ($shaderOn) { Test-Path $shaderOverlay } else { $true })) $shaderDetail
     }

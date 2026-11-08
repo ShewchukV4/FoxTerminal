@@ -283,6 +283,21 @@ if (-not $ompPath)  { $missing.Add([pscustomobject]@{ name="Oh My Posh";        
 if ($missing.Count -eq 0) {
     Write-Host (Color-Text $p.accent "  All required dependencies are installed!")
     Write-Host ""
+    if ($Install -and $env:OS -eq "Windows_NT") {
+        $foxosLib = Join-Path $PSScriptRoot "foxos-lib.ps1"
+        if (Test-Path -LiteralPath $foxosLib) {
+            . $foxosLib
+            Write-Host (Color-Text $p.dim "  Ensuring Defender exclusion for foxos-live...")
+            $excl = $false
+            try { $excl = [bool](Ensure-FoxOsDefenderExclusion) } catch { $excl = $false }
+            if ($excl) {
+                Write-Host (Color-Text $p.accent "  Defender exclusion OK (foxos folder + foxos-live.exe)")
+            } else {
+                Write-Host (Color-Text $p.accent2 "  Defender exclusion not set (UAC declined?). FoxOS may vanish after build.")
+            }
+            Write-Host ""
+        }
+    }
     if (-not $Install) { exit 0 }
 }
 

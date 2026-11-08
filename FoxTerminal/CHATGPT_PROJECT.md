@@ -1,8 +1,9 @@
 # FoxTerminal — повний бриф для стороннього чату (ChatGPT тощо)
 
-Оновлено: **2026-10-31**. Це один файл, щоб зрозуміти проєкт без репозиторію.  
+Оновлено: **2026-11-08** (rain=0 off, Defender exclusion, помічник справа, master). Це один файл, щоб зрозуміти проєкт без репозиторію.  
 Робоча папка на диску власника досі називається **FireFoxBot**.  
-Продукт для користувача — **Система Фокс / Fox System**. **FoxTerminal** = термінал; **FoxOS** = desktop; **FOXSTYLE** = студія.
+Продукт для користувача — **Система Фокс / Fox System**. **FoxTerminal** = термінал; **FoxOS** = desktop; **FOXSTYLE** = студія.  
+Повний інвентар перевірок: `FoxTerminal/windows/AUDIT_REPORT_2026-10-31.md`.
 
 **Репо:** https://github.com/ShewchukV4/FoxTerminal  
 **Дзеркало:** https://github.com/shew4uk/FoxTerminal  
@@ -208,7 +209,9 @@ foxnodes                 overlay; хоткей Ctrl+Alt+Space
 foxstt -Install          whisper.cpp у LocalAppData (не git)
 ```
 
-Помічник (вкладка FOXSTYLE або з меню): текст + push-to-talk, **локальна Ollama**. Відкриває пошук / програми / нотатки / таймер. Повне речення → модель, якщо це не коротка однозначна команда. Слово «YouTube» / «Google» — об’єкт запиту, не «відкрий сайт», поки немає майданчика («на YouTube») або явної команди. Трасування: `FOXASSIST_TRACE=1`.
+Помічник (вкладка FOXSTYLE або з меню): текст + push-to-talk, **локальна Ollama**. Панель на **правому краї** столу (під widgets), навіть у pocket. Відкриває пошук / програми / нотатки / таймер. Повне речення → модель, якщо це не коротка однозначна команда. Слово «YouTube» / «Google» — об’єкт запиту, не «відкрий сайт», поки немає майданчика («на YouTube») або явної команди. Трасування: `FOXASSIST_TRACE=1`.
+
+FOXSTYLE «Частота дощу» = **0** вимикає ASCII rain (і на neon). `foxdeps -Install` додає Defender exclusion для `foxos-live.exe` (без цього exe часто зникає з карантину).
 
 STT: `foxstt -Install` ставить whisper.cpp b5454 (BLAS CPU) і `large-v3-turbo-q8_0`. У студії можна `small-q8_0` (~2 с) або turbo (~12 с на CPU). Fallback `large-v3-turbo-q5_0`.
 

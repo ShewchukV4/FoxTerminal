@@ -190,12 +190,14 @@ namespace FoxOs.Style {
             int tWt = doc != null && doc.texture != null ? Math.Max(0, Math.Min(100, doc.texture.weight)) : 40;
             int tVeil = doc != null && doc.texture != null ? Math.Max(0, Math.Min(100, doc.texture.veil)) : 50;
             float stroke = 1f + tWt * 3.5f / 100f; // preview: 1..4.5
-            int aRain = Math.Max(10, rain * (40 + tStr) / 140);
-            using (Pen rp = new Pen(Color.FromArgb(aRain, accent), 1f)) {
-                int step = Math.Max(8, 44 - rain / 2);
-                for (int x = desk.X + 4; x < desk.Right; x += step) {
-                    int y0 = desk.Y + 4 + ((x * 5) % 17);
-                    g.DrawLine(rp, x, y0, x, Math.Min(desk.Bottom - 2, y0 + 10 + rain / 8));
+            if (rain > 0 && !string.Equals(tex, "none", StringComparison.OrdinalIgnoreCase)) {
+                int aRain = Math.Max(10, rain * (40 + tStr) / 140);
+                using (Pen rp = new Pen(Color.FromArgb(aRain, accent), 1f)) {
+                    int step = Math.Max(8, 44 - rain / 2);
+                    for (int x = desk.X + 4; x < desk.Right; x += step) {
+                        int y0 = desk.Y + 4 + ((x * 5) % 17);
+                        g.DrawLine(rp, x, y0, x, Math.Min(desk.Bottom - 2, y0 + 10 + rain / 8));
+                    }
                 }
             }
             int grid = Math.Max(10, 14 + tSc / 3);
