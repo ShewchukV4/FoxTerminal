@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/RemoteFlow.Agent/RemoteFlow.Agent.csproj" />
+    <Project Path="src/RemoteFlow.Capture/RemoteFlow.Capture.csproj" />
+    <Project Path="src/RemoteFlow.Core/RemoteFlow.Core.csproj" />
+    <Project Path="src/RemoteFlow.Input/RemoteFlow.Input.csproj" />
+    <Project Path="src/RemoteFlow.Security/RemoteFlow.Security.csproj" />
+  </Folder>
+  <Folder Name="/tests/" />
+  <Folder Name="/tests/Unit/">
+    <Project Path="tests/Unit/RemoteFlow.Tests.Unit.csproj" />
+  </Folder>
+</Solution>

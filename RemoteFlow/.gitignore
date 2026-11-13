@@ -1,0 +1,10 @@
+**/bin/
+**/obj/
+**/node_modules/
+src/RemoteFlow.Web/dist/
+**/.vs/
+**/.idea/
+*.user
+*.suo
+*.pfx
+.DS_Store

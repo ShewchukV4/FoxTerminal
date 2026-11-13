@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <title>RemoteFlow Connect</title>
+  <style>
+    body { font-family: -apple-system, system-ui, sans-serif; background:#070b16; color:#e8eef9; margin:0; padding:24px; }
+    .card { background:#121a2b; border-radius:18px; padding:20px; max-width:420px; margin:40px auto; }
+    h1 { margin:0 0 8px; }
+    p { color:#8b9bb8; line-height:1.45; }
+    .code { font-size:2rem; letter-spacing:.25em; font-weight:800; color:#7c5cff; text-align:center; margin:16px 0; }
+    .ok { color:#22c55e; } .err { color:#fecaca; }
+    button { width:100%; border:0; border-radius:14px; padding:14px; font-weight:700; background:#7c5cff; color:#fff; margin-top:12px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>RemoteFlow</h1>
+    <p id="msg">Готово до підключення</p>
+    <div class="code" id="code" style="display:none"></div>
+    <button id="btn">Підключити один раз</button>
+  </div>
+  <script>
+    var msg = document.getElementById('msg')
+    var codeEl = document.getElementById('code')
+    var btn = document.getElementById('btn')
+    var busy = false
+    function nonce() {
+      try {
+        if (crypto && crypto.getRandomValues) {
+          var b = new Uint8Array(16); crypto.getRandomValues(b)
+          return Array.from(b).map(function (x) { return x.toString(16).padStart(2, '0') }).join('')
+        }
+      } catch (e) {}
+      return 'n' + Date.now().toString(36) + Math.random().toString(36).slice(2)
+    }
+    function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms) }) }
+    async function dropSw() {
+      try {
+        if (!('serviceWorker' in navigator)) return
+        var regs = await navigator.serviceWorker.getRegistrations()
+        await Promise.all(regs.map(function (r) { return r.unregister() }))
+        if (window.caches && caches.keys) {
+          var keys = await caches.keys()
+          await Promise.all(keys.map(function (k) { return caches.delete(k) }))
+        }
+      } catch (e) {}
+    }
+    async function run() {
+      if (busy) return
+      busy = true
+      btn.disabled = true
+      msg.className = ''
+      msg.textContent = 'Запит…'
+      try {
+        await dropSw()
+        localStorage.removeItem('rf_device_id')
+        localStorage.removeItem('rf_device_token')
+        var reqRes = await fetch('/api/pair/request', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ deviceName: 'iPhone', clientNonce: nonce() })
+        })
+        var req = await reqRes.json()
+        if (!reqRes.ok) throw new Error(req.error || ('HTTP ' + reqRes.status))
+        codeEl.style.display = 'block'
+        codeEl.textContent = req.pairingCode
+        msg.textContent = 'На ноутбуці натисніть Approve (один раз)'
+        var onVis = function () {
+          if (document.visibilityState === 'visible') window.__rfKick = true
+        }
+        document.addEventListener('visibilitychange', onVis)
+        for (var i = 0; i < 120; i++) {
+          if (window.__rfKick) { window.__rfKick = false }
+          var done = await fetch('/api/pair/complete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ requestId: req.requestId })
+          }).then(function (r) { return r.json() })
+          if (done.status === 'approved' && done.deviceId && done.deviceToken) {
+            localStorage.setItem('rf_device_id', done.deviceId)
+            localStorage.setItem('rf_device_token', done.deviceToken)
+            localStorage.setItem('rf_device_name', 'iPhone')
+            msg.className = 'ok'
+            msg.textContent = 'Готово! Відкриваю панель…'
+            document.removeEventListener('visibilitychange', onVis)
+            await sleep(300)
+            location.replace('/?paired=1&t=' + Date.now())
+            return
+          }
+          if (done.status === 'rejected' || done.status === 'expired' || done.status === 'approved_consumed') {
+            throw new Error('Запит ' + done.status + ' — натисніть ще раз')
+          }
+          msg.textContent = 'Чекаємо Approve… ' + (i + 1) + 'с'
+          await sleep(1000)
+        }
+        throw new Error('Час вийшов — натисніть ще раз')
+      } catch (e) {
+        msg.className = 'err'
+        msg.textContent = e.message || String(e)
+        busy = false
+        btn.disabled = false
+      }
+    }
+    btn.onclick = run
+    // Auto-start once so iPhone only needs the page open.
+    run()
+  </script>
+</body>
+</html>
