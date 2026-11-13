@@ -15,8 +15,10 @@
 ### Виправлено
 
 - **FOXSTYLE «Частота дощу» = 0** тепер **повністю вимикає** ASCII-дощ. Раніше на `wallKind=neon` щільність піднімалась на +0.15 навіть при `rain=0`, тож дощ лишався.
-- **Помічник (AssistantHud)** більше не зникає за правим краєм, коли Node Launcher у pocket: панель стабільно на **правому краї** екрана під desk-widgets.
+- **Помічник (AssistantHud)** більше не зникає за правим краєм, коли Node Launcher у pocket: панель стабільно на **правому краї** екрана під desk-widgets. Пізніше HUD зі столу прибрано — лишилось лише дерево Node Launcher.
 - **Windows Defender** карантинував `foxos-live.exe` → FoxOS / `foxlook shell on` «нічого не робили». Додано exclusion для `%LOCALAPPDATA%\FoxTerminal\foxos`, `cmd\` і процесу `foxos-live.exe` (`Ensure-FoxOsDefenderExclusion` у `foxos-lib.ps1`, також з `foxdeps -Install`).
+- **Home WALL / TERM**: повний каталог wallpaper-команд + усі команди з `cmd\` (скан диск); Enter запускає зі столу (deskcmd / Ghostty `term …`).
+- **Термінал лагав / фрізив / не домальовував:** на кожен prompt йшли **2× oh-my-posh.exe**; `custom-shader-animation=true` ганяв GPU навіть у простої; `background-blur` при opacity 1.0 був марний. Тепер: 1× omp + короткий кеш промпту, `custom-shader-animation=false`, blur=0, легший `adaptive.glsl`.
 
 ### Оптимізація (реальна)
 

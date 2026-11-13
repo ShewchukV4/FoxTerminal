@@ -40,8 +40,10 @@ namespace FoxOs.Nodes {
 
             launcher = new LauncherView(store, runner, OpenSettings);
             assistant = new AssistantHost(store, runner);
-            hud = new AssistantHud(assistant);
-            launcher.AttachAssistant(assistant, hud);
+            // Desktop voice panel off — only the Node Launcher tree on the desk.
+            // FOXSTYLE → Помічник / PTT / AssistantHost stay available without the HUD.
+            hud = null;
+            launcher.AttachAssistant(assistant, null);
             hotkeyHost.PttPressed += delegate {
                 if (assistant.Listening) assistant.EndPush();
                 else assistant.BeginPush();

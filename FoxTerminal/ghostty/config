@@ -88,7 +88,8 @@ search-selected-foreground = #0B0F1A
 # Window & chrome
 # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 background-opacity = 1.0
-background-blur = 20
+# Blur is invisible at opacity 1.0 and costs GPU on Windows — keep off.
+background-blur = 0
 background-opacity-cells = true
 
 window-padding-x = 8

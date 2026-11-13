@@ -1651,6 +1651,8 @@ namespace FoxOsLive {
 
         readonly Action<string> runDesk;
         readonly Action<string> fillPrompt;
+        readonly string cmdDir;
+        HelpItem[] catalog;
         readonly Font titleFont;
         readonly Font tabFont;
         readonly Font rowFont;
@@ -1693,14 +1695,19 @@ namespace FoxOsLive {
         }
 
         public HomeLaunch(Color nightColor, Color accentColor, Color accent2Color, string foxPath, string theme, Action<string> runDesk)
-            : this(nightColor, accentColor, accent2Color, foxPath, theme, runDesk, null) { }
+            : this(nightColor, accentColor, accent2Color, foxPath, theme, runDesk, null, null) { }
 
-        public HomeLaunch(Color nightColor, Color accentColor, Color accent2Color, string foxPath, string theme, Action<string> runDesk, Action<string> fillPrompt) {
+        public HomeLaunch(Color nightColor, Color accentColor, Color accent2Color, string foxPath, string theme, Action<string> runDesk, Action<string> fillPrompt)
+            : this(nightColor, accentColor, accent2Color, foxPath, theme, runDesk, fillPrompt, null) { }
+
+        public HomeLaunch(Color nightColor, Color accentColor, Color accent2Color, string foxPath, string theme, Action<string> runDesk, Action<string> fillPrompt, string commandsDir) {
             night = nightColor;
             accent = accentColor;
             themeName = string.IsNullOrEmpty(theme) ? "foxos" : theme;
             this.runDesk = runDesk;
             this.fillPrompt = fillPrompt;
+            cmdDir = string.IsNullOrEmpty(commandsDir) ? "" : commandsDir;
+            catalog = HelpBoard.ResolveCatalog(cmdDir);
             Text = "FoxOS Home";
             FormBorderStyle = FormBorderStyle.None;
             ShowInTaskbar = false;
@@ -2171,7 +2178,9 @@ namespace FoxOsLive {
                     var extra = new HelpItem("files", "files", "open user profile folder", "launch", true, false);
                     AppendItem(extra, q, ref last, false, null);
                 }
-                HelpItem[] cat = HelpBoard.Catalog;
+                if (catalog == null || catalog.Length == 0)
+                    catalog = HelpBoard.ResolveCatalog(cmdDir);
+                HelpItem[] cat = catalog;
                 for (int i = 0; i < cat.Length; i++) {
                     HelpItem it = cat[i];
                     if (it.Wall != wall) continue;
@@ -2272,9 +2281,14 @@ namespace FoxOsLive {
                 if (runDesk != null) runDesk(item.Name);
                 return;
             }
-            // terminal tab → run in ghostty after login
+            // terminal tab → type/run in Ghostty (pending-term if not logged in)
             SavePos();
             Hide();
+            if (item.NeedsArg) {
+                if (fillPrompt != null) fillPrompt("term " + item.Name + " ");
+                else if (runDesk != null) runDesk("term " + item.Name);
+                return;
+            }
             if (runDesk != null) runDesk("term " + item.Name);
         }
 

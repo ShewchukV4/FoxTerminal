@@ -132,46 +132,39 @@ vec3 foxAccent(int style) {
     return vec3(0.863, 0.478, 0.078);
 }
 
-// 8 samples instead of 24 — enough to catch Ghostty split seams.
+// 4 samples — enough for split seams without hammering the GPU.
 float foxDivider(vec2 uv, vec2 res) {
     vec3 mark = vec3(0.478, 0.635, 0.969);
+    float s = 3.0;
     float hit = 0.0;
-    for (int i = 1; i <= 2; i++) {
-        float s = float(i) * 2.5;
-        hit = max(hit, 1.0 - smoothstep(0.05, 0.14, distance(texture(iChannel0, uv + vec2(s, 0.0) / res).rgb, mark)));
-        hit = max(hit, 1.0 - smoothstep(0.05, 0.14, distance(texture(iChannel0, uv - vec2(s, 0.0) / res).rgb, mark)));
-        hit = max(hit, 1.0 - smoothstep(0.05, 0.14, distance(texture(iChannel0, uv + vec2(0.0, s) / res).rgb, mark)));
-        hit = max(hit, 1.0 - smoothstep(0.05, 0.14, distance(texture(iChannel0, uv - vec2(0.0, s) / res).rgb, mark)));
-    }
+    hit = max(hit, 1.0 - smoothstep(0.05, 0.14, distance(texture(iChannel0, uv + vec2(s, 0.0) / res).rgb, mark)));
+    hit = max(hit, 1.0 - smoothstep(0.05, 0.14, distance(texture(iChannel0, uv - vec2(s, 0.0) / res).rgb, mark)));
+    hit = max(hit, 1.0 - smoothstep(0.05, 0.14, distance(texture(iChannel0, uv + vec2(0.0, s) / res).rgb, mark)));
+    hit = max(hit, 1.0 - smoothstep(0.05, 0.14, distance(texture(iChannel0, uv - vec2(0.0, s) / res).rgb, mark)));
     return hit;
 }
 
-// Two soft rain layers + wet sheen. Cheaper than the old 3-layer loop.
+// One rain layer (animation usually off — still looks wet on redraws).
 vec3 foxSlateRain(vec2 uv, vec2 res, vec3 col, vec3 accent) {
+    float cols = 88.0;
+    float id = floor(uv.x * cols);
+    float h = foxHash(vec2(id, 3.3));
     float rain = 0.0;
-    for (int k = 0; k < 2; k++) {
-        float layer = float(k);
-        float cols = 72.0 + layer * 48.0;
-        float id = floor(uv.x * cols + layer * 5.1);
-        float h = foxHash(vec2(id, 3.3 + layer));
-        if (h < 0.32) {
-            continue;
-        }
+    if (h >= 0.36) {
         float speed = 0.18 + h * 0.42;
         float y = fract(uv.y * (0.78 + 0.22 * h) + iTime * speed + h * 0.7);
         float x = abs(fract(uv.x * cols) - 0.5);
         float thin = 1.0 - smoothstep(0.0, 0.38, x * 20.0);
         float body = smoothstep(1.0, 0.12, y) * smoothstep(0.0, 0.10, y + 0.03);
         float tip = smoothstep(0.0, 0.18, y) * (1.0 - smoothstep(0.18, 0.42, y));
-        rain += thin * (body * 0.85 + tip * 0.55) * (0.40 + 0.60 * h);
+        rain = thin * (body * 0.85 + tip * 0.55) * (0.40 + 0.60 * h);
     }
 
     float edge = min(min(uv.x, 1.0 - uv.x), min(uv.y, 1.0 - uv.y));
     float glow = 1.0 - smoothstep(0.0, 0.032, edge);
-    float sheen = 0.5 + 0.5 * sin(uv.x * 9.0 + uv.y * 4.0 + iTime * 0.22);
 
     vec3 wet = col + accent * rain * 0.11;
-    wet = mix(wet, accent, glow * 0.035 + sheen * rain * 0.018);
+    wet = mix(wet, accent, glow * 0.035);
     return wet;
 }
 
@@ -188,16 +181,12 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         return;
     }
 
-    // Two downward probes instead of four.
-    vec3 probe = col;
-    float probeLum = lum;
-    for (int i = 1; i <= 2; i++) {
-        vec3 s = texture(iChannel0, clamp(uv + vec2(0.0, -float(i) * 4.0) / res, 0.0, 1.0)).rgb;
-        float sl = dot(s, vec3(0.299, 0.587, 0.114));
-        if (sl < probeLum) {
-            probe = s;
-            probeLum = sl;
-        }
+    // One downward probe — enough for OSC-tinted pane background.
+    vec3 probe = texture(iChannel0, clamp(uv + vec2(0.0, -5.0) / res, 0.0, 1.0)).rgb;
+    float probeLum = dot(probe, vec3(0.299, 0.587, 0.114));
+    if (lum < probeLum) {
+        probe = col;
+        probeLum = lum;
     }
 
     int style = foxStyle(foxHsv(probe), probe);
@@ -243,8 +232,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         col = mix(col, accent, rim * 0.11);
     }
 
-    // Soft dither kills gradient banding without a visible grain.
-    col += (foxHash(fragCoord + iTime) - 0.5) * (1.0 / 255.0);
+    // Static dither (no iTime) — works with animation=false.
+    col += (foxHash(fragCoord) - 0.5) * (1.0 / 255.0);
 
     fragColor = vec4(col, src.a);
 }

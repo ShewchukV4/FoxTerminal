@@ -218,7 +218,9 @@ function Show-Commands {
     Write-CommandSection "System tools:" $inv @("changelog","clear","ffsync","foxbg","foxdocs","foxscan","home","interface","lock","settings","term","texit") 0xF013
     Write-CommandSection "Hotkeys / bindings:" $inv @("foxhotkeys","foxinfo") 0xF11C
     Write-CommandSection "Setup / reset / help:" $inv @("foxdeps","foxdoctor","foxhelp","foxreset","foxsetup","foxtest") 0xF0AD
-    Write-CommandSection "Wallpaper prompt (FoxOS desk):" $inv @("arthas","bright","bt","default","dnote","dj","ff","foxhelp","foxlife","foxlook","foxos","home","lock","mirror","noir","notebook","note","off","pride","rig","ser","settings","shader","shutdown","sites","sp","sw","term","wifi","yt","ytm","youtube") 0xF1FC
+    Write-CommandSection "Wallpaper prompt (FoxOS desk):" $inv @("arthas","bright","bt","cal","changelog","default","dnote","dj","ff","foxdocs","foxhelp","foxlife","foxlook","foxnodes","foxos","foxstt","foxstyle","home","lock","mirror","noir","notebook","note","off","pride","pulse","rig","ser","settings","shader","shutdown","sites","sp","sw","term","vol","wifi","yt","ytm","youtube") 0xF1FC
+    Write-Host (Color-Text $p.dim "  Home WALL/TERM tabs list the same wallpaper specials + every cmd\ command; Enter runs them.")
+    Write-Host ""
 
     # Commands that live outside cmd\ (in FoxTerminal folder).
     Write-Host (Color-Text $p.accent2 ((Get-FoxIcon 0xF17A) + "  Windows (run from FoxTerminal folder):"))

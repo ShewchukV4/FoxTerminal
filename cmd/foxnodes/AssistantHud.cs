@@ -150,11 +150,10 @@ namespace FoxOs.Nodes {
         }
 
         public void Attach(Form view) {
+            // Kept for optional tooling; AppHost no longer attaches this on desktop.
             launcher = view;
-            if (view != null) {
-                Owner = view;
-                Show(view);
-            }
+            if (view != null) Owner = view;
+            if (Visible) Hide();
         }
 
         public void RefreshUi() {
@@ -220,20 +219,8 @@ namespace FoxOs.Nodes {
         }
 
         void PlaceNearLauncher() {
-            if (launcher == null || launcher.IsDisposed || !launcher.Visible) {
-                if (Visible) Hide();
-                return;
-            }
-            if (!Visible) Show(launcher);
-            Screen sc = Screen.FromControl(launcher);
-            Rectangle wa = sc.WorkingArea;
-            // Stable right-edge strip under desk widgets — not glued to the
-            // pocketed graph center (that pushed the HUD off-screen).
-            int x = wa.Right - Width - 24;
-            int y = wa.Top + 180;
-            x = Math.Max(wa.Left + 8, Math.Min(x, wa.Right - Width - 8));
-            y = Math.Max(wa.Top + 8, Math.Min(y, wa.Bottom - Height - 8));
-            if (Location.X != x || Location.Y != y) Location = new Point(x, y);
+            // Voice panel is not shown on the desktop; tree-only mode.
+            if (Visible) Hide();
         }
 
         protected override void OnFormClosed(FormClosedEventArgs e) {

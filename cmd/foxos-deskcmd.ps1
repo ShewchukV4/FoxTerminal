@@ -242,7 +242,32 @@ switch ($verb) {
         Start-DeskApp "foxstyle" @()
     }
     "foxnodes" {
-        Start-DeskApp "foxnodes" @()
+        $mode = if ($rest.Count -gt 0) { $rest[0].ToLowerInvariant() } else { "" }
+        if ($mode -in @("-show","show","-hide","hide","-stop","stop","-settings","settings","-status","status","-rebuild","rebuild")) {
+            Start-DeskApp "foxnodes" @($mode)
+        } else {
+            Start-DeskApp "foxnodes" @("-Show")
+        }
+    }
+    "foxstt" {
+        $pending = Join-Path $env:LOCALAPPDATA "FoxTerminal\foxos\pending-term.txt"
+        $line = if ($query) { "foxstt $query" } else { "foxstt" }
+        [System.IO.File]::WriteAllText($pending, $line, (New-Object System.Text.UTF8Encoding $false))
+        if (-not (Get-Command Start-FoxGhosttyWindow -ErrorAction SilentlyContinue)) {
+            . (Join-Path $cmdDir "ghostty-lib.ps1")
+        }
+        Start-FoxGhosttyWindow | Out-Null
+        Write-DeskLog $line
+    }
+    { $_ -in @("foxdocs","changelog","pulse") } {
+        $pending = Join-Path $env:LOCALAPPDATA "FoxTerminal\foxos\pending-term.txt"
+        $line = if ($query) { "$verb $query" } else { $verb }
+        [System.IO.File]::WriteAllText($pending, $line, (New-Object System.Text.UTF8Encoding $false))
+        if (-not (Get-Command Start-FoxGhosttyWindow -ErrorAction SilentlyContinue)) {
+            . (Join-Path $cmdDir "ghostty-lib.ps1")
+        }
+        Start-FoxGhosttyWindow | Out-Null
+        Write-DeskLog $line
     }
     "mirror" {
         Start-DeskApp "foxmirror" @()
@@ -351,5 +376,25 @@ switch ($verb) {
             Write-DeskLog ("note " + $query)
         }
     }
-    default { throw "not allowed" }
+    default {
+        # Wallpaper Home / desk: known GUI helpers, else open Ghostty and run.
+        $gui = @("foxlife","foxstyle","foxnodes","foxmirror","lock")
+        if ($gui -contains $verb) {
+            Start-DeskApp $verb @($rest)
+            return
+        }
+        $ps1 = Join-Path $cmdDir ($verb + ".ps1")
+        $bat = Join-Path $cmdDir ($verb + ".bat")
+        if ((Test-Path -LiteralPath $ps1) -or (Test-Path -LiteralPath $bat)) {
+            $pending = Join-Path $env:LOCALAPPDATA "FoxTerminal\foxos\pending-term.txt"
+            [System.IO.File]::WriteAllText($pending, $raw, (New-Object System.Text.UTF8Encoding $false))
+            if (-not (Get-Command Start-FoxGhosttyWindow -ErrorAction SilentlyContinue)) {
+                . (Join-Path $cmdDir "ghostty-lib.ps1")
+            }
+            Start-FoxGhosttyWindow | Out-Null
+            Write-DeskLog ("term-fallback " + $raw)
+            return
+        }
+        throw "not allowed"
+    }
 }

@@ -556,7 +556,8 @@ namespace FoxOsLive {
             "sw","default","orange","fox","noir","dnote","notebook",
             "arthas","pride","shader","foxos","foxlook",
             "ytm","yt","sp","dj","term","sites","youtube","ff","help","rig","note",
-            "ser","foxhelp","foxlife","home","lock","settings","mirror",
+            "ser","foxhelp","foxlife","foxstyle","foxnodes","foxstt","foxdocs","changelog","pulse",
+            "home","lock","settings","mirror",
             "wifi","bt","bright","vol","bat","cal","calendar","reminders","off","shutdown"
         };
 
@@ -957,7 +958,7 @@ namespace FoxOsLive {
                     }
                     return;
                 }
-                homeWin = new HomeLaunch(state.Night, state.Accent, state.Accent2, state.FoxPath, state.Theme, RunDeskLine, FillDeskPrompt);
+                homeWin = new HomeLaunch(state.Night, state.Accent, state.Accent2, state.FoxPath, state.Theme, RunDeskLine, FillDeskPrompt, state.CmdDir);
                 homeWin.FormClosed += delegate { homeWin = null; };
                 if (!string.IsNullOrEmpty(focusTab)) homeWin.FocusTab(focusTab);
                 homeWin.TopMost = true;
@@ -1649,7 +1650,7 @@ namespace FoxOsLive {
                 helpWin.Activate();
                 return;
             }
-            helpWin = new HelpBoard(state.Night, state.Accent, RunDeskLine, FillDeskPrompt);
+            helpWin = new HelpBoard(state.Night, state.Accent, RunDeskLine, FillDeskPrompt, state.CmdDir);
             helpWin.FormClosed += delegate { helpWin = null; };
             helpWin.Show();
         }

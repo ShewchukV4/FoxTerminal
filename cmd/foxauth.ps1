@@ -235,6 +235,7 @@ function global:Get-OhMyPoshPromptText {
     if (Get-Command Test-WaiPinSuspended -ErrorAction SilentlyContinue) {
         try { if (Test-WaiPinSuspended) { return "" } } catch {}
     }
+    # Cheap side-channel work first (mtime / empty-dir short-circuits).
     Invoke-FoxSyncTerminalInbox
     if (-not $global:FOXTERM_SYNC_SUPPRESS_POLL) {
         Write-FoxSyncSidebarEvents
@@ -244,37 +245,53 @@ function global:Get-OhMyPoshPromptText {
     }
     Repair-TerminalColors
     Invoke-WaiPinPromptHook
+
     $cfg = $env:POSH_THEME
     if ([string]::IsNullOrWhiteSpace($cfg)) { $cfg = $global:FOXTERM_POSH_CONFIG }
     $exe = $global:FOXTERM_POSH_EXE
     if (-not $exe -or -not (Test-Path -LiteralPath $exe)) { $exe = (Resolve-OhMyPoshExe) }
     if (-not $exe) { return (New-FoxPrompt) }
 
-    $sh = Get-PoshShellName
     $pwd = (Get-Location).Path
+    $now = [Environment]::TickCount
+    $cacheKey = "$pwd|$cfg|$($env:FOXTERM_USER)|$($global:FOXTERM_OSC_APPLIED)"
+    if ($global:FOXTERM_POSH_CACHE_KEY -eq $cacheKey -and
+        $null -ne $global:FOXTERM_POSH_CACHE_TEXT -and
+        $null -ne $global:FOXTERM_POSH_CACHE_TICK) {
+        $dt = $now - [int]$global:FOXTERM_POSH_CACHE_TICK
+        # Skip a second oh-my-posh.exe spawn when the prompt repeats quickly
+        # (clear/redraw, sidebar sync, focus repair). Keeps typing feel smooth.
+        if ($dt -ge 0 -and $dt -lt 450) {
+            return [string]$global:FOXTERM_POSH_CACHE_TEXT
+        }
+    }
+
+    $sh = Get-PoshShellName
+    # One process only — secondary line is just the accent caret.
     $primary = & $exe print primary --config $cfg --shell $sh --force --pwd $pwd 2>$null
-    $secondary = & $exe print secondary --config $cfg --shell $sh --force --pwd $pwd 2>$null
 
     $primaryLines = @($primary | ForEach-Object { [string]$_.ToString().TrimEnd("`r", "`n") })
     if ($primaryLines.Count -gt 1) {
-        return ($primaryLines -join "`n")
+        $joined = ($primaryLines -join "`n")
+        $global:FOXTERM_POSH_CACHE_KEY = $cacheKey
+        $global:FOXTERM_POSH_CACHE_TICK = $now
+        $global:FOXTERM_POSH_CACHE_TEXT = $joined
+        return $joined
     }
     $primaryLine = if ($primaryLines.Count -eq 1) { $primaryLines[0] } else { "" }
     if ([string]::IsNullOrWhiteSpace($primaryLine)) { return (New-FoxPrompt) }
 
-    $secondaryLine = ($secondary | ForEach-Object { "$_" }) -join ''
-    if ([string]::IsNullOrWhiteSpace($secondaryLine)) {
-        $p = Get-ThemePalette
-        $fg = if (Test-NoirActive) { $p.text } else { $p.accent }
-        $secondaryLine = (Color-Text $fg ([char]0x276F + " "))
-    }
+    $p = Get-ThemePalette
+    $fg = if (Test-NoirActive) { $p.text } else { $p.accent }
+    $secondaryLine = (Color-Text $fg ([char]0x276F + " "))
 
     $primaryLine = $primaryLine.TrimEnd("`r", "`n")
     $secondaryLine = $secondaryLine.TrimEnd("`r", "`n")
-    if ($primaryLine -match "`n") {
-        return $primaryLine
-    }
-    return $primaryLine + "`n" + $secondaryLine
+    $out = if ($primaryLine -match "`n") { $primaryLine } else { $primaryLine + "`n" + $secondaryLine }
+    $global:FOXTERM_POSH_CACHE_KEY = $cacheKey
+    $global:FOXTERM_POSH_CACHE_TICK = $now
+    $global:FOXTERM_POSH_CACHE_TEXT = $out
+    return $out
 }
 
 function Install-OhMyPoshPrompt {
