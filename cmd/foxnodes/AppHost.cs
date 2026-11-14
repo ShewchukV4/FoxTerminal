@@ -15,12 +15,14 @@ namespace FoxOs.Nodes {
         readonly LauncherView launcher;
         readonly AssistantHost assistant;
         readonly AssistantHud hud;
+        readonly ActionWheelHost actionWheel;
         readonly NotifyIcon tray;
         readonly System.Windows.Forms.Timer fallbackTimer;
         readonly SynchronizationContext ui;
         FileSystemWatcher signalWatcher;
         FileSystemWatcher styleWatcher;
         FileSystemWatcher assistantWatcher;
+        FileSystemWatcher featuresWatcher;
         int lastSignalTick;
         int lastStyleTick;
 
@@ -37,6 +39,10 @@ namespace FoxOs.Nodes {
                 }
             };
             hotkeyHost.Show();
+            actionWheel = new ActionWheelHost(hotkeyHost, runner);
+            hotkeyHost.AnyHotkey += delegate(int id) {
+                try { actionWheel.HandleHotkeyMessage(id); } catch { }
+            };
 
             launcher = new LauncherView(store, runner, OpenSettings);
             assistant = new AssistantHost(store, runner);
@@ -86,6 +92,16 @@ namespace FoxOs.Nodes {
             });
             assistantWatcher = Watch(run, "assistant.json", delegate {
                 QueueUi(delegate { assistant.ReloadConfig(); BindPtt(); });
+            });
+            featuresWatcher = Watch(run, "features.json", delegate {
+                QueueUi(delegate {
+                    try { actionWheel.Reload(); } catch { }
+                });
+            });
+            Watch(run, "features.signal", delegate {
+                QueueUi(delegate {
+                    try { actionWheel.Reload(); } catch { }
+                });
             });
         }
 
@@ -219,10 +235,12 @@ namespace FoxOs.Nodes {
             try { if (signalWatcher != null) signalWatcher.Dispose(); } catch { }
             try { if (styleWatcher != null) styleWatcher.Dispose(); } catch { }
             try { if (assistantWatcher != null) assistantWatcher.Dispose(); } catch { }
+            try { if (featuresWatcher != null) featuresWatcher.Dispose(); } catch { }
             try {
                 Microsoft.Win32.SystemEvents.DisplaySettingsChanged -= OnDisplaySettingsChanged;
                 Microsoft.Win32.SystemEvents.UserPreferenceChanged -= OnUserPreferenceChanged;
             } catch { }
+            try { if (actionWheel != null) actionWheel.Dispose(); } catch { }
             try { hotkeyHost.Unregister(); hotkeyHost.Close(); } catch { }
             try { tray.Visible = false; tray.Dispose(); } catch { }
             try { if (hud != null) hud.Dispose(); } catch { }

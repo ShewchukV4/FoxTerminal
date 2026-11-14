@@ -114,6 +114,8 @@ bash ./FoxTerminal/install.sh
 8. 2026-10-21: **FOXSTYLE** (нативна студія вигляду + Node Launcher editor), **`foxnodes`** (desktop overlay, Ctrl+Alt+Space), **Помічник** (Ollama + push-to-talk), **`foxstt`** (whisper.cpp). Apply-цикл: `launcher.json` + `style.json` → сигнал → ack overlay.
 9. 2026-10-25: усі системні гайди підтягнуті під FOXSTYLE / foxnodes / foxstt / notebook; додано `FoxTerminal/CHATGPT_PROJECT.md` — один файл для стороннього чату (ChatGPT тощо).
 10. 2026-11-08: FOXSTYLE rain=0 = off; Defender exclusion для `foxos-live.exe` (`foxdeps -Install`); AssistantHud на правому краї; робоча гілка = **master**.
+11. 2026-11-13: мікшер програм у VolumeBoard; колесо дій біля курсора (`foxnodes`, Ctrl+Alt+W); пауза медіа при відʼєднанні вибраних навушників; FOXSTYLE «Звук / Жести» → `features.json`.
+12. 2026-11-13: FOX Overview (Огляд за Win) — без постійного taskbar/дока; lone Win → огляд з мініатюрами; `foxoverview on|off`; аварійне `fox-overview-off.cmd`.
 
 ---
 

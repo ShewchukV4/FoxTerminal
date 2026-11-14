@@ -319,6 +319,19 @@ Look profiles (compact / soft glass / contrast / theme-matched) do not change th
 
 **Wallpaper / rain.** FOXSTYLE “Rain frequency”: **0 = off**, 1–80 = density. On `neon`, zero also disables rain (previously a minimum-density bug kept it on).
 
+**Sound / Gestures** (FOXSTYLE → “Звук / Жести”, `features.json`):
+
+| Feature | Where | How |
+|---------|-------|-----|
+| App mixer | dock / `vol` volume panel | Per-process slider; “device (Windows)” opens the system mixer |
+| Cursor action wheel | `foxnodes` | Hold Ctrl+Alt+W (or your combo) → sector → release; Esc/center cancels |
+| Headphone pause | `foxos-live` + media watcher | Enable, pick device ID; disconnect → Pause on the active session; auto-resume is a separate toggle |
+| Overview (Win) | `foxos-live` + `foxhotkeys` | `foxoverview on` or FOXSTYLE toggle; lone Win → Overview; `foxoverview off` / `fox-overview-off.cmd` restores the taskbar |
+
+**Win (Overview on):** lone Win → Overview; Win+R/E/S/I/L follow winkeys; other Win+… stay with Windows. Alt+Tab unchanged.
+
+Each feature is toggled separately. FOXSTYLE Apply writes `features.json` and signals live/nodes. After changing Overview, restart `foxhotkeys`.
+
 **STT.** Files live only in `%LOCALAPPDATA%\FoxTerminal\foxos\stt`. `foxstt -Install` installs whisper.cpp b5454 (BLAS CPU) and `large-v3-turbo-q8_0`. In the studio you can pick faster `small-q8_0` (~2 s) or higher-quality turbo (~12 s on CPU). Fallback: `large-v3-turbo-q5_0`.
 
 Menu hotkey: **Ctrl+Alt+Space**.

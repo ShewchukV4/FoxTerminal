@@ -10,6 +10,53 @@
 
 ---
 
+## 2026-11-13 — FOX Overview (Огляд за Win)
+
+### Додано
+
+- **FOX Overview**: режим панелі замість постійного taskbar/дока з edge-reveal. Окремий Win відкриває огляд (зменшена «сцена», DWM-мініатюри вікон, нижня панель програм + «Усі програми» з пошуком). Повторний Win / Esc / клік по фону закриває.
+- Реальні вікна **не** масштабуються й не згортаються — лише overlay на основному моніторі.
+- Приховування Windows taskbar з одноразовим `overview-taskbar.bak` + heartbeat `overview.alive`; відновлення при вимкненні / `Stop-FoxOsLive` / `foxoverview off` / `cmd/fox-overview-off.cmd`.
+- Win-комбінації (Win+E/R/…) лишаються; Alt+Tab, Node Launcher і колесо дій не замінені.
+- FOXSTYLE → «Звук / Жести» → тумблер «Огляд за Win»; CLI: `foxoverview on|off|status`.
+
+### Файли
+
+- `cmd/foxos-overview.cs`, `cmd/foxoverview.ps1`, `cmd/fox-overview-off.cmd`, `cmd/fox-overview-test.ps1`
+- `cmd/foxhotkeys.ahk` (lone Win → overview), `cmd/fox-features.cs` (`OverviewFeature`), інтеграція в `foxos-live` / `foxos-lib`
+
+### Обмеження
+
+- За замовчуванням **classic** (не вмикає hide taskbar без явного on).
+- Після зміни режиму потрібен reload `foxhotkeys`.
+- Захищений контент / згорнуті вікна можуть показувати картку з іконкою замість live DWM thumb.
+- Повний BT/мультимоніторний UI-чекліст — вручну після `foxoverview on`.
+
+---
+
+## 2026-11-13 — мікшер програм, колесо дій, пауза навушників
+
+### Додано
+
+- **Мікшер програм** у панелі гучності FoxOS (`VolumeBoard`): загальна гучність + окремий повзунок/mute на процес (Core Audio sessions, групування за PID). Кнопка «пристрій (Windows)» чесно відкриває системний мікшер — стабільного публічного API маршрутизації програми на цьому стеку немає.
+- **Колесо дій біля курсора** у `foxnodes` (не замінює Node Launcher): утримання комбінації (за замовч. Ctrl+Alt+W) → сектори → відпускання = одна дія; центр/Esc = скасувати. Старт: мікшер, play/pause, далі, скриншот.
+- **Пауза при відʼєднанні навушників**: користувач вмикає й обирає пристрій за ID; при зникненні — `Pause` поточній GSMTC-сесії (не PlayPause). Автопродовження за замовчуванням вимкнене.
+- **FOXSTYLE → «Звук / Жести»**: окремі тумблери трьох функцій; конфіг `%LOCALAPPDATA%\FoxTerminal\foxos\features.json` + сигнал `features.signal`.
+
+### Файли
+
+- `cmd/fox-features.cs`, `cmd/foxos-audio.cs`, `cmd/foxnodes/ActionWheel.cs`, `cmd/foxstyle/FeaturesPage.cs`
+- оновлено `foxos-quick.cs` (мікшер), `foxos-live.cs`, `foxnodes`/`foxstyle` host, збірки в `foxos-lib.ps1` / `foxnodes.ps1` / `foxstyle.ps1`
+- логіка: `cmd/fox-features-test.ps1`
+
+### Обмеження
+
+- Per-app output device = лише handoff у Windows Settings / SndVol.
+- Пауза навушників не гарантує нульову затримку; короткий звук на динаміках можливий.
+- Колесо потребує запущеного `foxnodes`; мікшер/пауза — `foxos-live` + `foxos-media` watcher.
+
+---
+
 ## 2026-11-08 — rain=0, Defender, помічник справа, master
 
 ### Виправлено

@@ -318,6 +318,19 @@ foxstt -Stop
 
 **Шпалери / дощ.** У FOXSTYLE слайдер «Частота дощу»: **0 = вимкнено**, 1–80 = густота. На `neon` нуль теж вимикає дощ (раніше був баг із мінімальною щільністю).
 
+**Звук / Жести** (FOXSTYLE → «Звук / Жести», `features.json`):
+
+| Функція | Де | Як |
+|---------|----|----|
+| Мікшер програм | dock / `vol` → панель гучності | Окремий повзунок на процес; «пристрій (Windows)» = системний мікшер |
+| Колесо біля курсора | `foxnodes` | Утримуй Ctrl+Alt+W (або свою комбінацію) → сектор → відпустити; Esc/центр скасовує |
+| Пауза навушників | `foxos-live` + media watcher | Увімкни, обери device ID; відʼєднання → Pause активної сесії; автопродовження окремим тумблером |
+| Огляд за Win | `foxos-live` + `foxhotkeys` | `foxoverview on` або тумблер у FOXSTYLE; окремий Win → Overview; `foxoverview off` / `fox-overview-off.cmd` повертає taskbar |
+
+**Win (коли Overview увімкнено):** lone Win → Overview; Win+R/E/S/I/L — як у winkeys; інші Win+… → Windows. Alt+Tab без змін.
+
+Кожна функція вмикається окремо. Apply у FOXSTYLE пише `features.json` і сигналить live/nodes. Після зміни Overview — перезапусти `foxhotkeys`.
+
 **STT.** Файли лише в `%LOCALAPPDATA%\FoxTerminal\foxos\stt`. `foxstt -Install` ставить whisper.cpp b5454 (BLAS CPU) і `large-v3-turbo-q8_0`. У студії можна обрати швидшу `small-q8_0` (~2 с) або якіснішу turbo (~12 с на CPU). Fallback: `large-v3-turbo-q5_0`.
 
 Гаряча клавіша меню: **Ctrl+Alt+Space**.

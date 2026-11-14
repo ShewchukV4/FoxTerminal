@@ -97,9 +97,9 @@ namespace FoxOs.Style {
         }
 
         void BuildNav() {
-            string[] ids = new[] { "themes", "colors", "dock", "windows", "buttons", "motion", "nodes", "assistant", "labs" };
-            string[] titles = new[] { "Modes", "Colors", "Dock / Wall", "Windows", "Buttons", "Анімації", "Node Launcher", "Помічник", "Labs" };
-            string[] glyphs = new[] { "\uE8F1", "\uE790", "\uE8A1", "\uE8A7", "\uE8FD", "\uE916", "\uE8EF", "\uE13D", "\uE950" };
+            string[] ids = new[] { "themes", "colors", "dock", "windows", "buttons", "motion", "nodes", "assistant", "features", "labs" };
+            string[] titles = new[] { "Modes", "Colors", "Dock / Wall", "Windows", "Buttons", "Анімації", "Node Launcher", "Помічник", "Звук / Жести", "Labs" };
+            string[] glyphs = new[] { "\uE8F1", "\uE790", "\uE8A1", "\uE8A7", "\uE8FD", "\uE916", "\uE8EF", "\uE13D", "\uE8D6", "\uE950" };
             for (int i = 0; i < ids.Length; i++) {
                 StyleNav n = new StyleNav(theme, ids[i], titles[i], glyphs[i]);
                 n.Location = new Point(6, 78 + i * 44);
@@ -202,6 +202,7 @@ namespace FoxOs.Style {
                 case "motion": impact.Text = "Duration = швидкість кольору в preview."; break;
                 case "nodes": impact.Text = "Візуальний редактор меню: дерево, полотно, властивості."; break;
                 case "assistant": impact.Text = "Локальний помічник: модель, мікрофон, дозволені дії."; break;
+                case "features": impact.Text = "Мікшер · колесо біля курсора · пауза навушників → features.json."; break;
                 case "themes": impact.Text = "Пресет = sw. Apply ставить theme.txt і всю шкіру."; break;
                 case "labs": impact.Text = "FoxGlow: сила + швидкість пульсу рамок усіх вікон."; break;
                 default: impact.Text = "Apply пише на систему: wall, accent, dock, Ghostty, sw."; break;
@@ -265,6 +266,7 @@ namespace FoxOs.Style {
                 store.Doc.nodeLauncher.revision = Math.Max(store.Doc.nodeLauncher.revision, store.Doc.motion.requestId);
             store.Save();
             if (editor != null) editor.SaveAssistant();
+            if (editor != null) editor.SaveFeatures();
             int req = store.Doc.motion.requestId;
             bool overlay = FoxNodesSync.OverlayRunning();
             if (overlay) FoxNodesSync.RequestReload(req);
@@ -390,6 +392,7 @@ namespace FoxOs.Style {
                 case "labs": return "Labs";
                 case "nodes": return "Редактор меню";
                 case "assistant": return "Помічник";
+                case "features": return "Звук / Жести";
                 default: return "Режими FoxOS";
             }
         }

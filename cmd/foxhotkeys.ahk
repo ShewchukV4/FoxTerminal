@@ -23,9 +23,13 @@ if g_Config.start_hidden && !HasFoxTerminalLogonShortcut()
 RegisterCustomHotkeys(g_Config.bindings)
 
 ; FoxOS look: Win keys belong to FoxOS (foxlook winkeys on|off writes the flag, then reloads us).
+; Overview mode can take lone Win even when winkeys.txt is off (features.json → overview.mode).
 global g_WinKeys := WinKeysEnabled()
+global g_Overview := OverviewModeEnabled()
 if g_WinKeys
     RegisterWinKeys()
+else if g_Overview
+    RegisterOverviewWinOnly()
 
 ; FoxOS Alt+Tab only while foxos-live is running; otherwise Windows keeps Alt+Tab.
 #HotIf FoxLiveRunning()
@@ -218,12 +222,13 @@ CloseFoxTerm() {
 }
 
 ; ── FoxOS Win keys ───────────────────────────────────────────────────────────
-; Win alone       → show / hide FoxTerminal (instead of Start)
+; Win alone       → FOX Overview (if overview.mode=on + foxos-live) else show/hide FoxTerminal
 ; Win+R           → desk prompt on the FoxOS wallpaper (FoxTerminal if no wallpaper)
 ; Win+S / Win+Alt+A → FoxOS Home on Apps tab (Start Menu search without taskbar)
 ; Win+E           → `edit` in FoxTerminal        Win+I → `settings` in FoxTerminal
 ; Win+L           → Fox lock, only after `foxlook winlock on` (Windows grabs Win+L first otherwise)
 ; Other Win combos (Win+D, Win+Shift+S, Win+Tab, Win+number…) still reach Windows.
+; Binding table: lone Win → Overview|Terminal; Win+letter shortcuts above; everything else → Windows.
 
 FoxOsDir() {
     return EnvGet("LOCALAPPDATA") "\FoxTerminal\foxos"
@@ -235,6 +240,20 @@ WinKeysEnabled() {
         return false
     try return Trim(FileRead(flag)) = "on"
     return false
+}
+
+OverviewModeEnabled() {
+    flag := FoxOsDir() "\overview.mode"
+    if !FileExist(flag)
+        return false
+    try return Trim(FileRead(flag)) = "on"
+    return false
+}
+
+RegisterOverviewWinOnly() {
+    try InstallKeybdHook()
+    Hotkey "~LWin", (*) => Send("{Blind}{vkE8}")
+    Hotkey "~LWin Up", WinAlone
 }
 
 RegisterWinKeys() {
@@ -278,6 +297,13 @@ FoxAltTab(back) {
 
 WinAlone(*) {
     if (A_PriorKey != "LWin")
+        return
+    ; FOX Overview takes lone Win when mode is on and live desk is running.
+    if (OverviewModeEnabled() && FoxLiveRunning()) {
+        WriteFoxRequest("overview.req", "toggle")
+        return
+    }
+    if !WinKeysEnabled()
         return
     exeName := FoxTermExeName()
     if WinActive("ahk_exe " exeName)

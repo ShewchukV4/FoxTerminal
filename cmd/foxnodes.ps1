@@ -27,6 +27,7 @@ $ErrorActionPreference = "Stop"
 function Get-FoxNodesSources {
     $list = @(Join-Path $PSScriptRoot "foxos-sdk.cs")
     $list += Join-Path $PSScriptRoot "fox-anim.cs"
+    $list += Join-Path $PSScriptRoot "fox-features.cs"
     $list += Join-Path $PSScriptRoot "fox-assistant.cs"
     $list += Join-Path $PSScriptRoot "fox-stt.cs"
     $list += Join-Path $PSScriptRoot "fox-understand.cs"

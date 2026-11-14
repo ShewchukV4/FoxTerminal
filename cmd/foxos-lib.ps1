@@ -815,6 +815,8 @@ function Get-FoxOsLiveSources {
     if (Test-Path -LiteralPath $sdk) { $list += $sdk }
     $anim = Join-Path $PSScriptRoot "fox-anim.cs"
     if (Test-Path -LiteralPath $anim) { $list += $anim }
+    $feat = Join-Path $PSScriptRoot "fox-features.cs"
+    if (Test-Path -LiteralPath $feat) { $list += $feat }
     $list += Get-FoxOsLiveSource
     $help = Join-Path $PSScriptRoot "foxos-help.cs"
     if (Test-Path -LiteralPath $help) { $list += $help }
@@ -826,6 +828,10 @@ function Get-FoxOsLiveSources {
     if (Test-Path -LiteralPath $quick) { $list += $quick }
     $media = Join-Path $PSScriptRoot "foxos-media.cs"
     if (Test-Path -LiteralPath $media) { $list += $media }
+    $audio = Join-Path $PSScriptRoot "foxos-audio.cs"
+    if (Test-Path -LiteralPath $audio) { $list += $audio }
+    $overview = Join-Path $PSScriptRoot "foxos-overview.cs"
+    if (Test-Path -LiteralPath $overview) { $list += $overview }
     return $list
 }
 
@@ -1117,6 +1123,31 @@ function Stop-FoxOsLive {
     if (Test-Path -LiteralPath $pidPath) {
         Remove-Item -LiteralPath $pidPath -Force -ErrorAction SilentlyContinue
     }
+    # If Overview hid the Windows taskbar, restore it when live exits.
+    try {
+        $alive = Join-Path (Get-FoxOsDir) 'overview.alive'
+        $suppress = Join-Path (Get-FoxOsDir) 'overview-suppress-dock.flag'
+        if ((Test-Path -LiteralPath $alive) -or (Test-Path -LiteralPath $suppress)) {
+            if (Get-Command foxoverview -ErrorAction SilentlyContinue) { }
+            $off = Join-Path $PSScriptRoot 'foxoverview.ps1'
+            # Only restore taskbar chrome — do not flip features.json off here.
+            Remove-Item -LiteralPath $suppress -Force -ErrorAction SilentlyContinue
+            Remove-Item -LiteralPath $alive -Force -ErrorAction SilentlyContinue
+            if (Test-Path -LiteralPath (Join-Path $PSScriptRoot 'foxlook-lib.ps1')) {
+                . (Join-Path $PSScriptRoot 'foxlook-lib.ps1')
+                if (Ensure-FoxLookNative) {
+                    $bak = Join-Path (Get-FoxOsDir) 'overview-taskbar.bak'
+                    $state = 0
+                    if (Test-Path -LiteralPath $bak) {
+                        $raw = (Get-Content -LiteralPath $bak -Raw).Trim()
+                        [void][int]::TryParse($raw, [ref]$state)
+                    }
+                    [FoxLookNative]::SetTaskbarState($state)
+                    [FoxLookNative]::ShowTaskbars()
+                }
+            }
+        }
+    } catch {}
 }
 
 function Test-FoxOsLiveStale {

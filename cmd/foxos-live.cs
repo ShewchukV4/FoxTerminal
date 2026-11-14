@@ -551,6 +551,8 @@ namespace FoxOsLive {
         BatteryBoard batWin;
         ReminderBoard calWin;
         MediaStrip mediaStrip;
+        HeadphonesGuard headphonesGuard;
+        FoxOverviewHost overviewHost;
 
         static readonly string[] Allowed = {
             "sw","default","orange","fox","noir","dnote","notebook",
@@ -653,6 +655,8 @@ namespace FoxOsLive {
             Shown += delegate {
                 Attach();
                 EnsureMediaStrip();
+                EnsureHeadphonesGuard();
+                EnsureOverviewHost();
                 timer.Start();
                 reqTimer.Start();
             };
@@ -666,6 +670,28 @@ namespace FoxOsLive {
                 }
                 mediaStrip.Recolor(state.Night, state.Accent, state.Accent2);
             } catch (Exception ex) { Log("media strip: " + ex.Message); }
+        }
+
+        void EnsureHeadphonesGuard() {
+            try {
+                string dir = Path.GetDirectoryName(statePath) ?? FoxOs.Sdk.FoxPaths.RuntimeDir();
+                if (headphonesGuard == null) {
+                    headphonesGuard = new HeadphonesGuard(dir, SynchronizationContext.Current);
+                } else {
+                    headphonesGuard.Reload();
+                }
+            } catch (Exception ex) { Log("headphones guard: " + ex.Message); }
+        }
+
+        void EnsureOverviewHost() {
+            try {
+                string dir = Path.GetDirectoryName(statePath) ?? FoxOs.Sdk.FoxPaths.RuntimeDir();
+                if (overviewHost == null) {
+                    overviewHost = new FoxOverviewHost(dir, RunDeskLine, delegate { return state; });
+                } else {
+                    overviewHost.Reload();
+                }
+            } catch (Exception ex) { Log("overview host: " + ex.Message); }
         }
 
 
@@ -850,7 +876,20 @@ namespace FoxOsLive {
             } catch { }
         }
 
+        bool OverviewSuppressesDock() {
+            try {
+                string flag = Path.Combine(Path.GetDirectoryName(statePath) ?? "", "overview-suppress-dock.flag");
+                if (File.Exists(flag)) return true;
+                return FoxOs.Sdk.FoxFeatures.OverviewActive(FoxOs.Sdk.FoxFeatures.Load());
+            } catch { return false; }
+        }
+
         void EnsureDock() {
+            if (OverviewSuppressesDock()) {
+                // Overview mode owns chrome — no edge-reveal Fox dock.
+                if (docks.Count > 0) KillDocks();
+                return;
+            }
             if (!state.Shell) {
                 bool had = hadShell || docks.Count > 0;
                 KillDocks();
@@ -1546,6 +1585,27 @@ namespace FoxOsLive {
                 try { File.Delete(bright); } catch { }
                 if (!sessionLocked) ShowBright();
                 return;
+            }
+            string featSig = Path.Combine(dir, "features.signal");
+            if (File.Exists(featSig)) {
+                try { File.Delete(featSig); } catch { }
+                try { if (headphonesGuard != null) headphonesGuard.Reload(); } catch { }
+                try { if (overviewHost != null) overviewHost.Reload(); } catch { }
+            }
+            string overviewReq = Path.Combine(dir, "overview.req");
+            if (File.Exists(overviewReq)) {
+                try { File.Delete(overviewReq); } catch { }
+                if (!sessionLocked) {
+                    try {
+                        EnsureOverviewHost();
+                        if (overviewHost != null) overviewHost.Toggle();
+                    } catch (Exception ex) { Log("overview: " + ex.Message); }
+                }
+            }
+            string hpResume = Path.Combine(dir, "headphones-resume.act");
+            if (File.Exists(hpResume)) {
+                try { File.Delete(hpResume); } catch { }
+                try { if (headphonesGuard != null) headphonesGuard.TryResume(); } catch { }
             }
             string vol = Path.Combine(dir, "vol.req");
             if (File.Exists(vol)) {
@@ -2891,6 +2951,10 @@ namespace FoxOsLive {
                 KillChrome();
                 if (mediaStrip != null && !mediaStrip.IsDisposed) {
                     try { mediaStrip.Close(); mediaStrip.Dispose(); } catch { }
+                    try { if (headphonesGuard != null) headphonesGuard.Dispose(); } catch { }
+                    headphonesGuard = null;
+                    try { if (overviewHost != null) overviewHost.Dispose(); } catch { }
+                    overviewHost = null;
                     mediaStrip = null;
                 }
                 if (helpWin != null && !helpWin.IsDisposed) helpWin.Close();

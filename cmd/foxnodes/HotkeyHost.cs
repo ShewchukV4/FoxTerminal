@@ -7,6 +7,7 @@ namespace FoxOs.Nodes {
     sealed class HotkeyHost : Form {
         public event Action HotkeyPressed;
         public event Action PttPressed;
+        public event Action<int> AnyHotkey;
         public string LastHotkeyError = "";
 
         HotkeySpec bound;
@@ -55,12 +56,17 @@ namespace FoxOs.Nodes {
         }
 
         protected override void WndProc(ref Message m) {
-            if (m.Msg == NativeWin.WM_HOTKEY && m.WParam.ToInt32() == NativeWin.HOTKEY_ID) {
-                if (HotkeyPressed != null) HotkeyPressed();
-                return;
-            }
-            if (m.Msg == NativeWin.WM_HOTKEY && m.WParam.ToInt32() == NativeWin.HOTKEY_PTT) {
-                if (PttPressed != null) PttPressed();
+            if (m.Msg == NativeWin.WM_HOTKEY) {
+                int id = m.WParam.ToInt32();
+                if (AnyHotkey != null) AnyHotkey(id);
+                if (id == NativeWin.HOTKEY_ID) {
+                    if (HotkeyPressed != null) HotkeyPressed();
+                    return;
+                }
+                if (id == NativeWin.HOTKEY_PTT) {
+                    if (PttPressed != null) PttPressed();
+                    return;
+                }
                 return;
             }
             base.WndProc(ref m);

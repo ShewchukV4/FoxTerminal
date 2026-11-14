@@ -65,6 +65,7 @@ namespace FoxOs.Style {
                 case "nodes": BuildNodeLauncher(); break;
                 case "labs": BuildLabs(); break;
                 case "assistant": BuildAssistant(); break;
+                case "features": BuildFeatures(); break;
                 default: BuildThemes(); break;
             }
             RelayoutWidth();
@@ -77,10 +78,19 @@ namespace FoxOs.Style {
             AssistantPage.Build(body, theme, assistantCfg, delegate { Touch("assistant"); });
         }
 
+        void BuildFeatures() {
+            FeaturesPage.Ensure();
+            FeaturesPage.Build(body, theme, delegate { Touch("features"); });
+        }
+
         public void SaveAssistant() {
             if (assistantCfg == null) return;
             assistantCfg.revision++;
             AssistantStore.Save(assistantCfg);
+        }
+
+        public void SaveFeatures() {
+            FeaturesPage.SaveDraft();
         }
 
         void Touch(string mod) {

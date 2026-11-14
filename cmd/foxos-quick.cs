@@ -176,10 +176,16 @@ namespace FoxOsLive {
         }
     }
 
-    // ── Volume ──────────────────────────────────────────────────────────────
+    // ── Volume / app mixer ──────────────────────────────────────────────────
     sealed class VolumeBoard : Form {
+        const int RowH = 44;
+        const int MasterBlock = 118;
+        const int FootH = 44;
+        const int MaxVisibleApps = 6;
+
         readonly Font titleFont, rowFont, small;
         readonly System.Windows.Forms.Timer tick;
+        readonly System.Windows.Forms.Timer refresh;
         Color night, accent;
         int pct;
         bool mute;
@@ -187,30 +193,91 @@ namespace FoxOsLive {
         float popT = 1f;
         int restY;
         readonly QuickUi.SoftOut soft = new QuickUi.SoftOut();
+        List<FoxAudioApp> apps = new List<FoxAudioApp>();
+        int scroll;
+        int dragRow = -2; // -1 master, >=0 app index
+        string emptyHint = "";
+        bool mixerOn = true;
 
         public VolumeBoard(Color n, Color a) {
             night = n; accent = a;
-            Text = "FoxOS Volume";
+            Text = "FoxOS Mixer";
             FormBorderStyle = FormBorderStyle.None;
             ShowInTaskbar = false; TopMost = true;
             StartPosition = FormStartPosition.Manual;
             DoubleBuffered = true;
             BackColor = QuickUi.Choke; TransparencyKey = QuickUi.Choke;
-            Opacity = 0.94; Size = new Size(340, 200); KeyPreview = true;
-            titleFont = new Font("Consolas", 22f, FontStyle.Bold, GraphicsUnit.Pixel);
-            rowFont = new Font("Consolas", 15f, FontStyle.Regular, GraphicsUnit.Pixel);
-            small = new Font("Consolas", 12f, FontStyle.Regular, GraphicsUnit.Pixel);
+            Opacity = 0.94; Size = new Size(360, 280); KeyPreview = true;
+            titleFont = new Font("Consolas", 20f, FontStyle.Bold, GraphicsUnit.Pixel);
+            rowFont = new Font("Consolas", 13f, FontStyle.Regular, GraphicsUnit.Pixel);
+            small = new Font("Consolas", 11f, FontStyle.Regular, GraphicsUnit.Pixel);
             tick = new System.Windows.Forms.Timer();
             tick.Interval = 16;
             tick.Tick += TickAnim;
+            refresh = new System.Windows.Forms.Timer();
+            refresh.Interval = 900;
+            refresh.Tick += delegate { if (Visible) { RefreshVals(); Invalidate(); } };
             RefreshVals();
             QuickUi.PlaceNearTray(this);
         }
 
         void RefreshVals() {
+            try {
+                FoxOs.Sdk.FoxFeaturesDoc feat = FoxOs.Sdk.FoxFeatures.Load();
+                mixerOn = feat.mixer == null || feat.mixer.enabled;
+            } catch { mixerOn = true; }
             pct = FoxAudio.GetPct();
             mute = FoxAudio.GetMute();
-            if (pct < 0) pct = 0;
+            if (pct < 0) { pct = 0; emptyHint = "аудіопристрій недоступний"; }
+            else emptyHint = "";
+            if (mixerOn) {
+                try {
+                    apps = FoxAudio.ListApps(false) ?? new List<FoxAudioApp>();
+                } catch {
+                    apps = new List<FoxAudioApp>();
+                    if (string.IsNullOrEmpty(emptyHint)) emptyHint = "не вдалося прочитати сесії";
+                }
+            } else apps = new List<FoxAudioApp>();
+            try { WriteDeviceCache(); } catch { }
+            int vis = Math.Min(MaxVisibleApps, Math.Max(1, apps.Count == 0 ? 1 : apps.Count));
+            int h = 20 + MasterBlock + (mixerOn ? vis * RowH + FootH : FootH) + 20;
+            if (h < 220) h = 220;
+            if (h > 520) h = 520;
+            if (Height != h) {
+                Height = h;
+                QuickUi.PlaceNearTray(this);
+                restY = Top;
+            }
+            int maxScroll = Math.Max(0, apps.Count - MaxVisibleApps);
+            if (scroll > maxScroll) scroll = maxScroll;
+            if (scroll < 0) scroll = 0;
+        }
+
+        static void WriteDeviceCache() {
+            List<FoxAudioDevice> devices = FoxAudio.ListRenderDevices();
+            StringBuilder sb = new StringBuilder();
+            sb.Append('[');
+            for (int i = 0; i < devices.Count; i++) {
+                if (i > 0) sb.Append(',');
+                string id = (devices[i].Id ?? "").Replace("\\", "\\\\").Replace("\"", "\\\"");
+                string name = (devices[i].Name ?? "").Replace("\\", "\\\\").Replace("\"", "\\\"");
+                sb.Append("{\"id\":\"").Append(id).Append("\",\"name\":\"").Append(name)
+                    .Append("\",\"active\":").Append(devices[i].Active ? "true" : "false")
+                    .Append(",\"isDefault\":").Append(devices[i].IsDefault ? "true" : "false")
+                    .Append('}');
+            }
+            sb.Append(']');
+            string path = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "FoxTerminal", "foxos", "audio-devices.json");
+            string tmp = path + ".tmp";
+            File.WriteAllText(tmp, sb.ToString(), Encoding.UTF8);
+            try {
+                if (File.Exists(path)) File.Replace(tmp, path, null);
+                else File.Move(tmp, path);
+            } catch {
+                try { File.Copy(tmp, path, true); File.Delete(tmp); } catch { }
+            }
         }
 
         void TickAnim(object s, EventArgs e) {
@@ -229,6 +296,7 @@ namespace FoxOsLive {
 
         public void SoftClose() {
             soft.Begin(this);
+            try { refresh.Stop(); } catch { }
             if (!tick.Enabled) tick.Start();
         }
 
@@ -241,15 +309,40 @@ namespace FoxOsLive {
                 popT = 0f; Top = restY + 28; Opacity = 0.8;
                 Show(); Activate(); tick.Start();
             } else { Activate(); BringToFront(); }
+            try { refresh.Start(); } catch { }
             Invalidate();
         }
 
         Rectangle Island() { return new Rectangle(10, 10, Width - 20, Height - 20); }
-        Rectangle CloseRect() { var i = Island(); return new Rectangle(i.Right - 46, i.Y + 16, 30, 30); }
-        Rectangle MuteRect() { var i = Island(); return new Rectangle(i.X + 24, i.Bottom - 52, 90, 30); }
-        Rectangle TrackRect() {
+        Rectangle CloseRect() { var i = Island(); return new Rectangle(i.Right - 46, i.Y + 14, 30, 30); }
+        Rectangle MasterMuteRect() { var i = Island(); return new Rectangle(i.X + 24, i.Y + 78, 78, 26); }
+        Rectangle MasterTrackRect() {
             var i = Island();
-            return new Rectangle(i.X + 24, i.Y + 96, i.Width - 48, 16);
+            return new Rectangle(i.X + 112, i.Y + 82, i.Width - 136, 14);
+        }
+        Rectangle RouteRect() {
+            var i = Island();
+            return new Rectangle(i.X + 24, i.Bottom - 36, 150, 26);
+        }
+        Rectangle RefreshRect() {
+            var i = Island();
+            return new Rectangle(i.Right - 110, i.Bottom - 36, 86, 26);
+        }
+        Rectangle AppsClip() {
+            var i = Island();
+            int top = i.Y + MasterBlock;
+            int bot = i.Bottom - FootH;
+            return new Rectangle(i.X + 16, top, i.Width - 32, Math.Max(0, bot - top));
+        }
+        Rectangle AppRow(int visualIndex) {
+            var clip = AppsClip();
+            return new Rectangle(clip.X, clip.Y + visualIndex * RowH, clip.Width, RowH - 4);
+        }
+        Rectangle AppTrack(Rectangle row) {
+            return new Rectangle(row.X + 112, row.Y + 16, row.Width - 168, 12);
+        }
+        Rectangle AppMute(Rectangle row) {
+            return new Rectangle(row.Right - 48, row.Y + 10, 42, 24);
         }
 
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData) {
@@ -257,34 +350,105 @@ namespace FoxOsLive {
             if (keyData == Keys.Up || keyData == Keys.Right) { FoxAudio.VolUp(); RefreshVals(); Invalidate(); return true; }
             if (keyData == Keys.Down || keyData == Keys.Left) { FoxAudio.VolDown(); RefreshVals(); Invalidate(); return true; }
             if (keyData == Keys.M || keyData == Keys.Space) { FoxAudio.VolMute(); RefreshVals(); Invalidate(); return true; }
+            if (keyData == Keys.F5) { RefreshVals(); Invalidate(); return true; }
             return base.ProcessCmdKey(ref msg, keyData);
         }
 
         protected override void OnMouseDown(MouseEventArgs e) {
             if (CloseRect().Contains(e.Location)) { SoftClose(); return; }
-            if (MuteRect().Contains(e.Location)) { FoxAudio.VolMute(); RefreshVals(); Invalidate(); return; }
-            var tr = TrackRect();
-            if (tr.Contains(e.Location) || (e.Y >= tr.Y - 8 && e.Y <= tr.Bottom + 8 && e.X >= tr.X && e.X <= tr.Right)) {
-                float t = (e.X - tr.X) / (float)Math.Max(1, tr.Width);
-                if (t < 0) t = 0; if (t > 1) t = 1;
-                FoxAudio.SetPct((int)Math.Round(t * 100));
-                RefreshVals();
-                Invalidate();
+            if (MasterMuteRect().Contains(e.Location)) {
+                FoxAudio.SetMute(!FoxAudio.GetMute());
+                RefreshVals(); Invalidate(); return;
+            }
+            if (RouteRect().Contains(e.Location)) {
+                // Honest handoff — no fake per-app route success
+                FoxAudio.OpenSystemAppVolume();
+                return;
+            }
+            if (RefreshRect().Contains(e.Location)) { RefreshVals(); Invalidate(); return; }
+            var mtr = MasterTrackRect();
+            if (HitTrack(mtr, e.Location)) {
+                dragRow = -1;
+                SetMasterFromX(e.X, mtr);
+                return;
+            }
+            if (mixerOn) {
+                var clip = AppsClip();
+                if (clip.Contains(e.Location)) {
+                    int vis = (e.Y - clip.Y) / RowH;
+                    int idx = vis + scroll;
+                    if (idx >= 0 && idx < apps.Count) {
+                        Rectangle row = AppRow(vis);
+                        if (AppMute(row).Contains(e.Location)) {
+                            FoxAudioApp app = apps[idx];
+                            FoxAudio.SetAppMute(app.Pid, !app.Mute);
+                            RefreshVals(); Invalidate();
+                            return;
+                        }
+                        Rectangle tr = AppTrack(row);
+                        if (HitTrack(tr, e.Location)) {
+                            dragRow = idx;
+                            SetAppFromX(idx, e.X, tr);
+                            return;
+                        }
+                    }
+                }
             }
             base.OnMouseDown(e);
+        }
+
+        static bool HitTrack(Rectangle tr, Point p) {
+            return p.X >= tr.X && p.X <= tr.Right && p.Y >= tr.Y - 10 && p.Y <= tr.Bottom + 10;
+        }
+
+        void SetMasterFromX(int x, Rectangle tr) {
+            float t = (x - tr.X) / (float)Math.Max(1, tr.Width);
+            if (t < 0) t = 0; if (t > 1) t = 1;
+            FoxAudio.SetPct((int)Math.Round(t * 100));
+            RefreshVals(); Invalidate();
+        }
+
+        void SetAppFromX(int idx, int x, Rectangle tr) {
+            if (idx < 0 || idx >= apps.Count) return;
+            float t = (x - tr.X) / (float)Math.Max(1, tr.Width);
+            if (t < 0) t = 0; if (t > 1) t = 1;
+            FoxAudio.SetAppPct(apps[idx].Pid, (int)Math.Round(t * 100));
+            RefreshVals(); Invalidate();
         }
 
         protected override void OnMouseMove(MouseEventArgs e) {
             int h = 0;
             if (CloseRect().Contains(e.Location)) h = 1;
-            else if (MuteRect().Contains(e.Location)) h = 2;
-            else if (TrackRect().Contains(e.Location)) h = 3;
+            else if (MasterMuteRect().Contains(e.Location)) h = 2;
+            else if (MasterTrackRect().Contains(e.Location)) h = 3;
+            else if (RouteRect().Contains(e.Location)) h = 4;
+            else if (RefreshRect().Contains(e.Location)) h = 5;
             if (h != hoverBtn) { hoverBtn = h; Cursor = h != 0 ? Cursors.Hand : Cursors.Default; Invalidate(); }
-            if (e.Button == MouseButtons.Left && hoverBtn == 3) OnMouseDown(e);
+            if (e.Button == MouseButtons.Left) {
+                if (dragRow == -1) SetMasterFromX(e.X, MasterTrackRect());
+                else if (dragRow >= 0 && dragRow < apps.Count) {
+                    int vis = dragRow - scroll;
+                    if (vis >= 0 && vis < MaxVisibleApps)
+                        SetAppFromX(dragRow, e.X, AppTrack(AppRow(vis)));
+                }
+            }
             base.OnMouseMove(e);
         }
 
+        protected override void OnMouseUp(MouseEventArgs e) {
+            dragRow = -2;
+            base.OnMouseUp(e);
+        }
+
         protected override void OnMouseWheel(MouseEventArgs e) {
+            if (AppsClip().Contains(e.Location) && apps.Count > MaxVisibleApps) {
+                if (e.Delta < 0) scroll++; else scroll--;
+                int maxScroll = Math.Max(0, apps.Count - MaxVisibleApps);
+                if (scroll < 0) scroll = 0;
+                if (scroll > maxScroll) scroll = maxScroll;
+                Invalidate();
+                return;
+            }
             if (e.Delta > 0) FoxAudio.VolUp(); else FoxAudio.VolDown();
             RefreshVals(); Invalidate();
             base.OnMouseWheel(e);
@@ -300,22 +464,68 @@ namespace FoxOsLive {
             using (var kick = new SolidBrush(Color.FromArgb(230, accent)))
             using (var title = new SolidBrush(Color.FromArgb(236, 238, 242)))
             using (var muteInk = new SolidBrush(Color.FromArgb(130, 142, 156))) {
-                g.DrawString("FOXOS", small, kick, isl.X + 24, isl.Y + 16);
-                g.DrawString("volume", titleFont, title, isl.X + 24, isl.Y + 34);
-                g.DrawString(mute ? "muted" : (pct + "%"), small, muteInk, isl.X + 140, isl.Y + 44);
+                g.DrawString("FOXOS", small, kick, isl.X + 24, isl.Y + 14);
+                g.DrawString(mixerOn ? "mixer" : "volume", titleFont, title, isl.X + 24, isl.Y + 30);
+                g.DrawString(mute ? "muted" : (pct + "%"), small, muteInk, isl.X + 150, isl.Y + 38);
             }
             QuickUi.DrawPill(g, CloseRect(), "x", small, night, accent, hoverBtn == 1, false);
-            var tr = TrackRect();
-            QuickUi.FillRound(g, tr, 8, Color.FromArgb(255, 7, 9, 16));
-            int fillW = (int)(tr.Width * (pct / 100.0));
-            if (fillW > 0) QuickUi.FillRound(g, new Rectangle(tr.X, tr.Y, Math.Max(8, fillW), tr.Height), 8, accent);
-            QuickUi.DrawPill(g, MuteRect(), mute ? "unmute" : "mute", small, night, accent, hoverBtn == 2, true);
+            QuickUi.DrawPill(g, MasterMuteRect(), mute ? "unmute" : "mute", small, night, accent, hoverBtn == 2, true);
+            var mtr = MasterTrackRect();
+            QuickUi.FillRound(g, mtr, 7, Color.FromArgb(255, 7, 9, 16));
+            int fillW = (int)(mtr.Width * (pct / 100.0));
+            if (fillW > 0) QuickUi.FillRound(g, new Rectangle(mtr.X, mtr.Y, Math.Max(8, fillW), mtr.Height), 7, accent);
+
+            if (mixerOn) {
+                using (var sub = new SolidBrush(Color.FromArgb(150, 160, 172)))
+                    g.DrawString("програми (окремо)", small, sub, isl.X + 24, isl.Y + MasterBlock - 22);
+                var clip = AppsClip();
+                g.SetClip(clip);
+                if (apps.Count == 0) {
+                    using (var dim = new SolidBrush(Color.FromArgb(120, 130, 142)))
+                        g.DrawString(string.IsNullOrEmpty(emptyHint) ? "немає активних аудіосесій" : emptyHint,
+                            small, dim, clip.X + 8, clip.Y + 12);
+                } else {
+                    int shown = Math.Min(MaxVisibleApps, apps.Count - scroll);
+                    for (int v = 0; v < shown; v++) {
+                        int idx = v + scroll;
+                        FoxAudioApp app = apps[idx];
+                        Rectangle row = AppRow(v);
+                        QuickUi.FillRound(g, row, 10, Color.FromArgb(255, Math.Min(255, night.R + 10), Math.Min(255, night.G + 10), Math.Min(255, night.B + 14)));
+                        if (app.Icon != null) {
+                            try { g.DrawImage(app.Icon, row.X + 10, row.Y + 10, 20, 20); } catch { }
+                        }
+                        using (var ink = new SolidBrush(Color.FromArgb(220, 228, 236)))
+                            g.DrawString(Clip(app.Display, 14), rowFont, ink, row.X + 36, row.Y + 12);
+                        Rectangle tr = AppTrack(row);
+                        QuickUi.FillRound(g, tr, 6, Color.FromArgb(255, 7, 9, 16));
+                        int aw = (int)(tr.Width * (app.Mute ? 0 : app.Pct) / 100.0);
+                        if (aw > 0) QuickUi.FillRound(g, new Rectangle(tr.X, tr.Y, Math.Max(6, aw), tr.Height), 6, accent);
+                        QuickUi.DrawPill(g, AppMute(row), app.Mute ? "unmute" : "mute", small, night, accent, false, app.Mute);
+                    }
+                }
+                g.ResetClip();
+            }
+
+            QuickUi.DrawPill(g, RouteRect(), "пристрій (Windows)", small, night, accent, hoverBtn == 4, false);
+            QuickUi.DrawPill(g, RefreshRect(), "оновити", small, night, accent, hoverBtn == 5, false);
+        }
+
+        static string Clip(string s, int n) {
+            if (string.IsNullOrEmpty(s)) return "";
+            if (s.Length <= n) return s;
+            return s.Substring(0, n - 1) + "…";
         }
 
         protected override void Dispose(bool disposing) {
             if (disposing) {
                 tick.Stop(); tick.Dispose();
+                refresh.Stop(); refresh.Dispose();
                 titleFont.Dispose(); rowFont.Dispose(); small.Dispose();
+                if (apps != null) {
+                    for (int i = 0; i < apps.Count; i++) {
+                        try { if (apps[i].Icon != null) apps[i].Icon.Dispose(); } catch { }
+                    }
+                }
             }
             base.Dispose(disposing);
         }
