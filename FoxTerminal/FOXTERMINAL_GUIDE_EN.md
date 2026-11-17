@@ -900,3 +900,8 @@ Stable daily flow:
 5. Share with `foxpack`
 
 Live help anytime: **`foxhelp`**. All guides: **`foxdocs`**. External chat dump: **`CHATGPT_PROJECT.md`**.
+
+
+## Motion update 2026-11-17
+
+The media panel expands smoothly from a compact island on hover. Disabled media actions are not dispatched. The wallpaper fox floats gently; FOXSTYLE animation off/reduced settings disable ambient motion, and battery economy lowers its frame rate. Motion settings reload automatically. These are native FOX components, not a Seelen UI integration. Windows compilation and visual verification are still required.

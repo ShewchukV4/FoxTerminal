@@ -541,6 +541,10 @@ namespace FoxOsLive {
         DateTime pinsStamp;
         System.Windows.Forms.Timer reqTimer;
         float foxBoot; // 0..1 entrance
+        readonly System.Diagnostics.Stopwatch foxClock = System.Diagnostics.Stopwatch.StartNew();
+        FoxOs.Sdk.FoxMotionConfig wallpaperMotion = FoxOs.Sdk.FoxMotionConfig.CreateDefault();
+        DateTime nextMotionRead;
+        float foxFloat;
         Color morphFromNight;
         float morphT = 1f; // 1 = idle
         const float MorphMs = 640f;
@@ -611,9 +615,18 @@ namespace FoxOsLive {
             timer.Interval = 100;
             timer.Tick += delegate {
                 bool covered = !promptFocus && ForegroundIsCovered();
+                if (DateTime.UtcNow >= nextMotionRead) {
+                    wallpaperMotion = FoxOs.Sdk.FoxMotionHost.LoadFromStyleJson();
+                    nextMotionRead = DateTime.UtcNow.AddSeconds(1);
+                }
+                bool foxMoving = foxBmp != null && !covered && !sessionLocked
+                    && wallpaperMotion.EffectiveEnabled() && !wallpaperMotion.reducedMotion
+                    && wallpaperMotion.scale != "reduced";
+                foxFloat = foxMoving ? (float)Math.Sin(foxClock.Elapsed.TotalSeconds * 0.85)
+                    * wallpaperMotion.ScaleIntensity(5f) : 0f;
                 bool animating = foxBoot < 1f || morphT < 1f;
                 bool altBusy = altTab != null && !altTab.IsDisposed && altTab.Visible;
-                int want = (animating || altBusy) ? 16 : (promptFocus ? 70 : (covered ? 400 : 100));
+                int want = (animating || altBusy) ? 16 : (promptFocus ? 70 : (covered ? 400 : (foxMoving ? (wallpaperMotion.UseBatteryEconomy() ? 66 : 33) : 100)));
                 if (timer.Interval != want) timer.Interval = want;
                 if (foxBoot < 1f) {
                     foxBoot += 0.045f;
@@ -2069,7 +2082,7 @@ namespace FoxOsLive {
                 int fx = (Width - fw) / 2;
                 int fy = (Height - fh) / 2 + (int)((1f - ease) * 48f);
                 if (ease >= 0.995f) {
-                    g.DrawImageUnscaled(foxBmp, (Width - foxBmp.Width) / 2, (Height - foxBmp.Height) / 2);
+                    g.DrawImageUnscaled(foxBmp, (Width - foxBmp.Width) / 2, (Height - foxBmp.Height) / 2 + (int)Math.Round(foxFloat));
                 } else {
                     var cm = new System.Drawing.Imaging.ColorMatrix();
                     cm.Matrix33 = ease;

@@ -14,7 +14,7 @@ namespace FoxOsLive {
         static readonly Color Choke = Color.FromArgb(255, 1, 2, 3);
         const int FullW = 340;
         const int FullH = 64;
-        const int PeekH = 10;
+        const int PeekH = 28;
         const int EdgePx = 14;
 
         readonly string dir;
@@ -39,6 +39,11 @@ namespace FoxOsLive {
         DateTime lastCmd = DateTime.MinValue;
 
         bool collapsed = true;
+        float expansion;
+        readonly System.Diagnostics.Stopwatch motionClock = System.Diagnostics.Stopwatch.StartNew();
+        long lastFrame;
+        DateTime nextPoll;
+        FoxOs.Sdk.FoxMotionConfig motion = FoxOs.Sdk.FoxMotionConfig.CreateDefault();
         DateTime leaveAt = DateTime.MinValue;
         bool leaveArmed;
 
@@ -64,9 +69,16 @@ namespace FoxOsLive {
             glyphFont = new Font("Segoe UI Symbol", 10.5f, FontStyle.Regular, GraphicsUnit.Point);
 
             tick = new System.Windows.Forms.Timer();
-            tick.Interval = 80;
+            tick.Interval = 33;
             tick.Tick += delegate {
-                Poll();
+                if (DateTime.UtcNow >= nextPoll) {
+                    Poll();
+                    motion = FoxOs.Sdk.FoxMotionHost.LoadFromStyleJson();
+                    nextPoll = DateTime.UtcNow.AddMilliseconds(500);
+                }
+                long now = motionClock.ElapsedMilliseconds;
+                float dt = Math.Min(100, now - lastFrame);
+                lastFrame = now;
                 if (!active) {
                     if (Visible) Hide();
                     collapsed = true;
@@ -79,6 +91,15 @@ namespace FoxOsLive {
                     Show();
                 }
                 TickHide();
+                float target = collapsed ? 0f : 1f;
+                float before = expansion;
+                if (!motion.EffectiveEnabled() || motion.reducedMotion) expansion = target;
+                else {
+                    float step = dt / motion.ScaleDuration(260);
+                    expansion = target > expansion ? Math.Min(target, expansion + step) : Math.Max(target, expansion - step);
+                }
+                tick.Interval = expansion != target ? 16 : 100;
+                if (before != expansion) Place();
                 Invalidate();
             };
             tick.Start();
@@ -101,7 +122,7 @@ namespace FoxOsLive {
                 int sx = (short)(lp & 0xFFFF);
                 int sy = (short)((lp >> 16) & 0xFFFF);
                 Point pt = PointToClient(new Point(sx, sy));
-                if (collapsed || Island().Contains(pt) || ClientRectangle.Contains(pt)) {
+                if (Island().Contains(pt)) {
                     m.Result = new IntPtr(1); // HTCLIENT
                     return;
                 }
@@ -118,10 +139,11 @@ namespace FoxOsLive {
 
         void Place() {
             Rectangle sb = Screen.PrimaryScreen.Bounds;
-            int w = collapsed ? Math.Min(120, FullW) : FullW;
-            int h = collapsed ? PeekH : FullH;
+            float t = expansion * expansion * (3f - 2f * expansion);
+            int w = (int)(160 + (FullW - 160) * t);
+            int h = (int)(PeekH + (FullH - PeekH) * t);
             int x = sb.X + (sb.Width - w) / 2;
-            int y = collapsed ? sb.Y : (sb.Y + 10);
+            int y = sb.Y + 8;
             Bounds = new Rectangle(x, y, w, h);
             try {
                 Native.SetWindowPos(Handle, new IntPtr(-1), x, y, w, h, 0x0010);
@@ -277,9 +299,9 @@ namespace FoxOsLive {
                 Place();
                 return;
             }
-            if (PrevRect().Contains(e.Location)) { SendCmd("prev"); return; }
-            if (PlayRect().Contains(e.Location)) { SendCmd("playpause"); return; }
-            if (NextRect().Contains(e.Location)) { SendCmd("next"); return; }
+            if (canPrev && PrevRect().Contains(e.Location)) { SendCmd("prev"); return; }
+            if ((canPlay || canPause) && PlayRect().Contains(e.Location)) { SendCmd("playpause"); return; }
+            if (canNext && NextRect().Contains(e.Location)) { SendCmd("next"); return; }
             base.OnMouseDown(e);
         }
 
@@ -326,17 +348,20 @@ namespace FoxOsLive {
             g.PixelOffsetMode = PixelOffsetMode.HighQuality;
             g.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
 
-            if (collapsed) {
-                // thin peek pill at top edge
+            if (expansion < 0.7f) {
+                // Compact island stays visible while media is active.
                 var peek = new Rectangle(2, 0, Width - 4, Height);
-                QuickUi.FillRound(g, peek, 3, Color.FromArgb(200, accent));
+                QuickUi.FillRound(g, peek, Math.Min(14, Height / 2), night);
+                TextRenderer.DrawText(g, "♫  " + Clip(title, 18), subFont,
+                    new Rectangle(10, 5, Width - 20, Height - 8), accent2,
+                    TextFormatFlags.EndEllipsis | TextFormatFlags.VerticalCenter);
                 using (var shine = new SolidBrush(Color.FromArgb(60, 255, 255, 255)))
                     g.FillRectangle(shine, peek.X + 8, peek.Y + 1, peek.Width - 16, 2);
                 return;
             }
 
             var isl = Island();
-            int rad = 8;
+            int rad = 20;
             using (var path = QuickUi.RoundBox(isl, rad)) {
                 // Opaque glass (TransparencyKey eats semi-transparent fills → dead clicks)
                 int r = Math.Min(255, night.R + 18);
