@@ -1,0 +1,21 @@
+/* No perpetual loops, animated blur, or global transition: all. */
+.slu-std-popover {
+  background: rgba(20, 23, 30, .96);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 18px;
+  animation: fox-reveal calc(var(--fox-motion-ms, 180) * 1ms) ease-out;
+}
+button[data-skin] {
+  transition: background-color calc(var(--fox-motion-ms, 180) * 1ms) ease,
+              transform calc(var(--fox-motion-ms, 180) * 1ms) ease;
+}
+button[data-skin]:active { transform: scale(.97); }
+button[data-skin]:focus-visible { outline: 2px solid var(--fox-accent, #ed913e); outline-offset: 2px; }
+@keyframes fox-reveal {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .slu-std-popover { animation: none; }
+  button[data-skin] { transition: none; transform: none; }
+}

@@ -1,0 +1,21 @@
+id: '@foxsystem/fox-glass'
+metadata:
+  displayName: FOX Glass
+  description: Dark FOX surfaces with short interaction-driven motion.
+  tags: [dark, minimal, toolbar]
+styles:
+  '@seelen/fancy-toolbar': !include styles/toolbar.css
+  '@seelen/weg': !include styles/dock.css
+sharedStyles: !include styles/shared.css
+settings:
+  - syntax: <color>
+    name: --fox-accent
+    label: FOX accent
+    initialValue: '#ed913e'
+  - syntax: <number>
+    name: --fox-motion-ms
+    label: Transition duration (milliseconds)
+    initialValue: 180
+    min: 0
+    max: 350
+    step: 10

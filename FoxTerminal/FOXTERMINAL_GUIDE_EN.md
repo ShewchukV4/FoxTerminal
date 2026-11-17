@@ -905,3 +905,10 @@ Live help anytime: **`foxhelp`**. All guides: **`foxdocs`**. External chat dump:
 ## Motion update 2026-11-17
 
 The media panel expands smoothly from a compact island on hover. Disabled media actions are not dispatched. The wallpaper fox floats gently; FOXSTYLE animation off/reduced settings disable ambient motion, and battery economy lowers its frame rate. Motion settings reload automatically. These are native FOX components, not a Seelen UI integration. Windows compilation and visual verification are still required.
+
+
+## Seelen UI / FOX Glass (2026-11-17)
+
+Run `foxseelen install` to install official Seelen UI using winget. Start Seelen and run `foxseelen load` to register FOX Glass for the current session. Select and permanently install the theme through Seelen settings.
+The theme adds short dock, toolbar, button and popover transitions, configurable accent/duration and reduced-motion support. No permanent animation loops or animated blur.
+Status: initial theme and installer, NOT complete shell integration. Automatic FOX conflict handover, FOXSTYLE synchronization, video wallpapers and Windows testing remain outstanding. Do not run overlapping dock/window managers together.

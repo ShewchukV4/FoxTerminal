@@ -47,6 +47,7 @@ function Show-Commands {
 
         # Known / documented commands (source of truth for descriptions & usage).
         $known = @{}
+        $known["foxseelen"] = @{ usage = "foxseelen install|load|status"; desc = "install Seelen UI and register FOX Glass theme" }
         $known["l"]        = @{ usage = "l <name> <pass>"; desc = "login (or register if new)" }
         $known["nuser"]    = @{ usage = "nuser <name> <pass>"; desc = "register new user" }
         $known["uexit"]    = @{ usage = "uexit"; desc = "logout" }
