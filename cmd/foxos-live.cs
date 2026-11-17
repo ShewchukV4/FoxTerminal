@@ -562,7 +562,7 @@ namespace FoxOsLive {
             "sw","default","orange","fox","noir","dnote","notebook",
             "arthas","pride","shader","foxos","foxlook",
             "ytm","yt","sp","dj","term","sites","youtube","ff","help","rig","note",
-            "ser","foxhelp","foxlife","foxstyle","foxnodes","foxstt","foxdocs","changelog","pulse",
+            "ser","foxhelp","foxlife","foxstyle","foxnodes","foxdocs","changelog","pulse",
             "home","lock","settings","mirror",
             "wifi","bt","bright","vol","bat","cal","calendar","reminders","off","shutdown"
         };

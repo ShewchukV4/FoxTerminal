@@ -328,62 +328,11 @@ namespace FoxTerm {
 "@ -ErrorAction Stop | Out-Null
 }
 
-function Start-SpeechMicTracker {
-    try {
-        Add-Type -AssemblyName System.Speech -ErrorAction Stop
-        $recognizer = New-Object System.Speech.Recognition.SpeechRecognitionEngine
-        $recognizer.SetInputToDefaultAudioDevice()
 
-        try {
-            $dict = New-Object System.Speech.Recognition.DictationGrammar
-            $recognizer.LoadGrammar($dict)
-        } catch {
-            $gb = New-Object System.Speech.Recognition.GrammarBuilder
-            $gb.Append("fox")
-            $g = New-Object System.Speech.Recognition.Grammar($gb)
-            $recognizer.LoadGrammar($g)
-        }
 
-        $script:FrederikSpeechLevel = 0.0
-        $script:FrederikSpeechLastUpdate = Get-Date
-        $sub = Register-ObjectEvent -InputObject $recognizer -EventName AudioLevelUpdated -Action {
-            try {
-                $lvl = [double]$EventArgs.AudioLevel / 100.0
-                Set-Variable -Scope Script -Name FrederikSpeechLevel -Value $lvl
-                Set-Variable -Scope Script -Name FrederikSpeechLastUpdate -Value (Get-Date)
-            } catch { }
-        }
 
-        $recognizer.RecognizeAsync([System.Speech.Recognition.RecognizeMode]::Multiple)
-        return @{
-            Recognizer = $recognizer
-            Subscription = $sub
-        }
-    } catch {
-        return $null
-    }
-}
 
-function Stop-SpeechMicTracker([hashtable]$tracker) {
-    if (-not $tracker) { return }
-    try { $tracker.Recognizer.RecognizeAsyncCancel() } catch { }
-    try { $tracker.Recognizer.RecognizeAsyncStop() } catch { }
-    try { $tracker.Recognizer.Dispose() } catch { }
-    try {
-        if ($tracker.Subscription) {
-            Unregister-Event -SubscriptionId $tracker.Subscription.Id -ErrorAction SilentlyContinue
-            Remove-Job -Id $tracker.Subscription.Id -Force -ErrorAction SilentlyContinue
-        }
-    } catch { }
-}
 
-function Get-SpeechMicLevel([hashtable]$tracker) {
-    if (-not $tracker) { return $null }
-    if (-not (Get-Variable -Name FrederikSpeechLastUpdate -Scope Script -ErrorAction SilentlyContinue)) { return $null }
-    $ageMs = ((Get-Date) - $script:FrederikSpeechLastUpdate).TotalMilliseconds
-    if ($ageMs -gt 2500) { return $null }
-    return [double]$script:FrederikSpeechLevel
-}
 
 function Try-CreateEndpointMeter([string]$kind, [string]$deviceId = "") {
     try {
@@ -531,7 +480,6 @@ Ensure-MicMeterType
 
 $esc = [char]27
 $showCursor = "$esc[?25h"
-$speechTracker = $null
 $captureMeter = $null
 $renderMeter = $null
 $selectedMic = $null
@@ -569,8 +517,7 @@ if ($Source -eq "Auto" -or $Source -eq "Mic") {
     }
 
     if (-not $captureMeter -and [string]::IsNullOrWhiteSpace($selector)) {
-        $speechTracker = Start-SpeechMicTracker
-        if (-not $speechTracker) {
+        if (-not $captureMeter) {
             $captureMeter = Try-CreateEndpointMeter "capture"
             if ($captureMeter) { $selectedMicLabel = "Default microphone" }
         }
@@ -592,7 +539,7 @@ if ($SetMainMic) {
     }
 }
 
-if ($Source -eq "Mic" -and -not $speechTracker -and -not $captureMeter) {
+if ($Source -eq "Mic" -and -not $captureMeter) {
     Write-Host "Microphone input meter is unavailable."
     Write-Host "Use: frederik -ListMics"
     Write-Host "Or:  frederik -Source Auto"
@@ -602,7 +549,7 @@ if ($Source -eq "System" -and -not $renderMeter) {
     Write-Host "System audio meter is unavailable."
     exit 1
 }
-if (-not $speechTracker -and -not $captureMeter -and -not $renderMeter) {
+if (-not $captureMeter -and -not $renderMeter) {
     Write-Host "Cannot access any audio meter source."
     exit 1
 }
@@ -627,13 +574,7 @@ try {
         $raw = $null
         $activeSource = ""
 
-        if ($speechTracker) {
-            $speechLevel = Get-SpeechMicLevel $speechTracker
-            if ($null -ne $speechLevel) {
-                $raw = [double]$speechLevel
-                $activeSource = "MIC (speech default)"
-            }
-        }
+
         if ($null -eq $raw -and $captureMeter) {
             try {
                 $raw = [double]$captureMeter.GetPeak()
@@ -689,7 +630,6 @@ try {
 } finally {
     try { if ($captureMeter) { $captureMeter.Dispose() } } catch { }
     try { if ($renderMeter) { $renderMeter.Dispose() } } catch { }
-    Stop-SpeechMicTracker $speechTracker
     Write-Host ""
     Write-Host $showCursor
 }

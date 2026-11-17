@@ -60,13 +60,12 @@ namespace FoxOs.Nodes {
             int glass = Math.Max(48, Math.Min(245, 55 * 255 / 100));
             Assert(glass < 145, "opacity floor still hides glass changes");
 
-            FoxOs.Assistant.AssistantSelfTest.Run();
             FoxOs.Stt.SttSelfTest.Run();
 
             File.WriteAllText(Path.Combine(FoxPaths.RuntimeDir(), "foxnodes-selftest.log"),
                 "PASS\r\nunique-ids\r\ncycle-guard\r\ndepth=6\r\ntheme-bridge\r\nhit-policy\r\n" +
                 "path-prune\r\nsignal-revision\r\nmotion-style\r\nglass-opacity\r\n" +
-                "assistant-intents\r\nurl-encode\r\naction-guard\r\nstt-paths\r\n");
+                "");
         }
 
         static MenuNodeSpec Find(List<MenuNodeSpec> nodes, string id) {

@@ -13,15 +13,12 @@ namespace FoxOs.Nodes {
         readonly ActionRunner runner;
         readonly HotkeyHost hotkeyHost;
         readonly LauncherView launcher;
-        readonly AssistantHost assistant;
-        readonly AssistantHud hud;
         readonly ActionWheelHost actionWheel;
         readonly NotifyIcon tray;
         readonly System.Windows.Forms.Timer fallbackTimer;
         readonly SynchronizationContext ui;
         FileSystemWatcher signalWatcher;
         FileSystemWatcher styleWatcher;
-        FileSystemWatcher assistantWatcher;
         FileSystemWatcher featuresWatcher;
         int lastSignalTick;
         int lastStyleTick;
@@ -45,16 +42,6 @@ namespace FoxOs.Nodes {
             };
 
             launcher = new LauncherView(store, runner, OpenSettings);
-            assistant = new AssistantHost(store, runner);
-            // Desktop voice panel off — only the Node Launcher tree on the desk.
-            // FOXSTYLE → Помічник / PTT / AssistantHost stay available without the HUD.
-            hud = null;
-            launcher.AttachAssistant(assistant, null);
-            hotkeyHost.PttPressed += delegate {
-                if (assistant.Listening) assistant.EndPush();
-                else assistant.BeginPush();
-            };
-            BindPtt();
             if (store.Config.desktopVisible) launcher.ShowDesktop();
             FoxNodesSync.WriteApplied(launcher.CurrentRevision);
 
@@ -90,9 +77,6 @@ namespace FoxOs.Nodes {
             styleWatcher = Watch(run, "style.json", delegate {
                 QueueUi(ProcessStyle);
             });
-            assistantWatcher = Watch(run, "assistant.json", delegate {
-                QueueUi(delegate { assistant.ReloadConfig(); BindPtt(); });
-            });
             featuresWatcher = Watch(run, "features.json", delegate {
                 QueueUi(delegate {
                     try { actionWheel.Reload(); } catch { }
@@ -105,18 +89,7 @@ namespace FoxOs.Nodes {
             });
         }
 
-        void BindPtt() {
-            if (assistant == null || assistant.Config == null || !assistant.Config.pttEnabled)
-                return;
-            var hk = new HotkeySpec {
-                ctrl = assistant.Config.ctrl,
-                alt = assistant.Config.alt,
-                shift = assistant.Config.shift,
-                win = assistant.Config.win,
-                key = assistant.Config.pttKey
-            };
-            hotkeyHost.ApplyPttHotkey(hk);
-        }
+
 
         static FileSystemWatcher Watch(string dir, string filter, Action handler) {
             var watcher = new FileSystemWatcher(dir, filter);
@@ -181,8 +154,6 @@ namespace FoxOs.Nodes {
                 else if (cmd == "reload") {
                     store.Reload();
                     launcher.ReloadConfig();
-                    assistant.ReloadConfig();
-                    BindPtt();
                     if (!hotkeyHost.ApplyHotkey(store.Config.hotkey))
                         FoxToast.Show("foxnodes · " + hotkeyHost.LastHotkeyError);
                     FoxNodesSync.WriteApplied(Math.Max(revision, launcher.CurrentRevision));
@@ -234,7 +205,6 @@ namespace FoxOs.Nodes {
             try { fallbackTimer.Stop(); } catch { }
             try { if (signalWatcher != null) signalWatcher.Dispose(); } catch { }
             try { if (styleWatcher != null) styleWatcher.Dispose(); } catch { }
-            try { if (assistantWatcher != null) assistantWatcher.Dispose(); } catch { }
             try { if (featuresWatcher != null) featuresWatcher.Dispose(); } catch { }
             try {
                 Microsoft.Win32.SystemEvents.DisplaySettingsChanged -= OnDisplaySettingsChanged;
@@ -243,8 +213,6 @@ namespace FoxOs.Nodes {
             try { if (actionWheel != null) actionWheel.Dispose(); } catch { }
             try { hotkeyHost.Unregister(); hotkeyHost.Close(); } catch { }
             try { tray.Visible = false; tray.Dispose(); } catch { }
-            try { if (hud != null) hud.Dispose(); } catch { }
-            try { if (assistant != null) assistant.Dispose(); } catch { }
             try { launcher.Dispose(); } catch { }
         }
 

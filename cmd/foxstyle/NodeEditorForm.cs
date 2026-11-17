@@ -5,7 +5,6 @@ using System.Drawing;
 using System.IO;
 using System.Threading;
 using System.Windows.Forms;
-using FoxOs.Assistant;
 using FoxOs.Sdk;
 
 namespace FoxOs.Style {
@@ -18,7 +17,6 @@ namespace FoxOs.Style {
         NodeEditorDocument draft;
         StyleDoc appliedStyle;
         StyleDoc styleDraft;
-        AssistantConfig assistantDraft;
         readonly Stack<string> undo = new Stack<string>();
         readonly Stack<string> redo = new Stack<string>();
         bool dirty;
@@ -72,14 +70,7 @@ namespace FoxOs.Style {
             draft = NodeEditorRepository.Clone(applied);
             appliedStyle = NodeEditorRepository.Clone(styleStore.Doc);
             styleDraft = NodeEditorRepository.Clone(appliedStyle);
-            assistantDraft = AssistantStore.Load();
-            if (string.IsNullOrEmpty(assistantDraft.micName)) {
-                List<MicInfo> mics = AssistantMics.List();
-                for (int i = 0; i < mics.Count; i++)
-                    if (mics[i].preferred) { assistantDraft.micName = mics[i].name; break; }
-                if (string.IsNullOrEmpty(assistantDraft.micName) && mics.Count > 0)
-                    assistantDraft.micName = mics[0].name;
-            }
+
 
             pageHost.Dock = DockStyle.Fill;
             pageHost.BackColor = theme.Paper;
@@ -132,7 +123,6 @@ namespace FoxOs.Style {
             AddPageButton("motion", "", "Анімації");
             AddPageButton("control", "", "Керування й кишеня");
             AddPageButton("profiles", "", "Профілі");
-            AddPageButton("assistant", "", "Помічник");
 
             Resize += delegate { ApplyResponsiveLayout(); };
             ApplyThemeFromDraft();
@@ -253,7 +243,6 @@ namespace FoxOs.Style {
             else if (id == "appearance") BuildAppearancePage();
             else if (id == "motion") BuildMotionPage();
             else if (id == "control") BuildControlPage();
-            else if (id == "assistant") BuildAssistantPage();
             else BuildProfilesPage();
             ApplyResponsiveLayout();
         }
@@ -549,7 +538,7 @@ namespace FoxOs.Style {
 
             string currentType = NodeType(selected);
             ComboBox type = AddRightChoice("Тип", new[] {
-                "Група", "Програма", "Папка", "Файл", "Посилання", "FOXSTYLE / FoxOS"
+                "Група", "Програма", "Папка", "Файл", "Посилання", "FOXUI / FoxOS"
             }, currentType, ref y);
             type.SelectedIndexChanged += delegate {
                 if (rebuilding) return;
@@ -927,7 +916,7 @@ namespace FoxOs.Style {
             if (node.action == null) return "Група";
             if (node.action.kind == "openExe") return "Програма";
             if (node.action.kind == "openUrl") return "Посилання";
-            if (node.action.kind == "foxCommand" || node.action.kind == "internal") return "FOXSTYLE / FoxOS";
+            if (node.action.kind == "foxCommand" || node.action.kind == "internal") return "FOXUI / FoxOS";
             if (node.action.kind == "openPath") {
                 try { return Directory.Exists(node.action.path) ? "Папка" : "Файл"; }
                 catch { return "Файл"; }
@@ -966,7 +955,7 @@ namespace FoxOs.Style {
             Panel body = SettingsBody("Вигляд", "Тема, читабельність і геометрія Node Launcher.");
             NodeLauncherMod n = styleDraft.nodeLauncher;
             AddPresetCards(body);
-            AddChoiceSetting(body, "Джерело кольорів", "Автоматично бере активну тему FOXSTYLE",
+            AddChoiceSetting(body, "Джерело кольорів", "Автоматично бере активну тему FOXUI",
                 new[] { "auto", "wallpaper", "custom" }, n.themeSource,
                 delegate(string v) {
                     n.themeSource = v;
@@ -1017,7 +1006,7 @@ namespace FoxOs.Style {
                 Color.FromArgb(18, 18, 20), Color.FromArgb(230, 232, 236), delegate {
                     ApplyLookPreset(104, 100, 122, 100, 175);
                 });
-            AddLookCard(row, "foxstyle", "За темою FOXSTYLE", "Стандартні розміри теми",
+            AddLookCard(row, "foxstyle", "За темою FOXUI", "Стандартні розміри теми",
                 theme.Card, theme.Accent, delegate {
                     NodeLauncherMod keep = styleDraft.nodeLauncher;
                     bool pocket = keep.pocketEnabled;
@@ -1260,11 +1249,7 @@ namespace FoxOs.Style {
             card.Controls.Add(bar); card.Controls.Add(exact); card.Controls.Add(resetBtn);
         }
 
-        void BuildAssistantPage() {
-            Panel body = SettingsBody("Помічник",
-                "Локальна модель, мікрофон і дозволені дії. Застосувати оновлює живе меню.");
-            AssistantPage.Build(body, theme, assistantDraft, delegate { SetDirty(true); });
-        }
+
 
         void BuildProfilesPage() {
             Panel body = SettingsBody("Профілі", "Збереження структури, команд і оформлення одним набором.");
@@ -1648,8 +1633,6 @@ namespace FoxOs.Style {
                     "Часткове збереження", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return false;
             }
-            assistantDraft.revision = revision;
-            AssistantStore.Save(assistantDraft);
             SystemBridge.ApplyFast(styleStore.Doc);
             repo.SignalReload(revision);
             applied = NodeEditorRepository.Clone(draft);
@@ -1851,7 +1834,7 @@ namespace FoxOs.Style {
             studio = new NodeStudioView(t, store);
             studio.Dock = DockStyle.Fill;
             Controls.Add(studio);
-            Text = "FOXSTYLE · Node Launcher";
+            Text = "FOXUI · Node Launcher";
             MinimumSize = new Size(980, 680);
             Size = new Size(1420, 860);
             StartPosition = FormStartPosition.CenterScreen;

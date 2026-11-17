@@ -1,7 +1,6 @@
 using System;
 using System.Drawing;
 using System.Windows.Forms;
-using FoxOs.Assistant;
 using FoxOs.Sdk;
 
 namespace FoxOs.Style {
@@ -15,7 +14,6 @@ namespace FoxOs.Style {
         string page = "themes";
         readonly Panel body;
         NodeStudioView studio;
-        AssistantConfig assistantCfg;
 
         public EditorView(FoxTheme t, StyleStore s, Action onDirty, Action<string> onFocus, Action onReplayOpen) {
             theme = t; store = s; dirty = onDirty; focus = onFocus; replayOpen = onReplayOpen;
@@ -64,7 +62,6 @@ namespace FoxOs.Style {
                 case "motion": BuildMotion(); break;
                 case "nodes": BuildNodeLauncher(); break;
                 case "labs": BuildLabs(); break;
-                case "assistant": BuildAssistant(); break;
                 case "features": BuildFeatures(); break;
                 default: BuildThemes(); break;
             }
@@ -72,22 +69,14 @@ namespace FoxOs.Style {
             body.ResumeLayout();
         }
 
-        void BuildAssistant() {
-            if (assistantCfg == null) assistantCfg = AssistantStore.Load();
-            AddHead("Помічник", "Локальний AI на Ollama · loopback.");
-            AssistantPage.Build(body, theme, assistantCfg, delegate { Touch("assistant"); });
-        }
+
 
         void BuildFeatures() {
             FeaturesPage.Ensure();
             FeaturesPage.Build(body, theme, delegate { Touch("features"); });
         }
 
-        public void SaveAssistant() {
-            if (assistantCfg == null) return;
-            assistantCfg.revision++;
-            AssistantStore.Save(assistantCfg);
-        }
+
 
         public void SaveFeatures() {
             FeaturesPage.SaveDraft();

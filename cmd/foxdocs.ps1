@@ -49,7 +49,7 @@ function Get-FoxDocsCatalog([string]$root) {
         @{ Title = "Zen / Firefox addon"; Rel = "FoxTerminal/firefox-addon/README.md"; Group = "Addons"; Desc = "Companion: встановлення, pack, міст до терміналу" }
         @{ Title = "FOXSTYLE"; Rel = "sites/foxstyle/README.md"; Group = "FOXSTYLE"; Desc = "Студія вигляду: нативне вікно, пресети" }
         @{ Title = "FOXSTYLE architecture"; Rel = "sites/foxstyle/ARCHITECTURE.md"; Group = "FOXSTYLE"; Desc = "Модулі теми, Apply-цикл, збірка exe" }
-        @{ Title = "FOXSTYLE CLI"; Rel = "sites/foxstyle/CLI.md"; Group = "FOXSTYLE"; Desc = "foxstyle / foxnodes / foxstt команди" }
+        @{ Title = "FOXSTYLE CLI"; Rel = "sites/foxstyle/CLI.md"; Group = "FOXSTYLE"; Desc = "foxstyle / foxnodes команди" }
         @{ Title = "ChatGPT dump"; Rel = "FoxTerminal/CHATGPT_PROJECT.md"; Group = "Guides"; Desc = "Один файл, щоб сторонній чат зрозумів увесь проєкт" }
     )
 

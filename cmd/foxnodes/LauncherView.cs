@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
-using FoxOs.Assistant;
 using FoxOs.Sdk;
 
 namespace FoxOs.Nodes {
@@ -129,8 +128,6 @@ namespace FoxOs.Nodes {
         bool themeAnimating;
         DateTime lastThemeCheck = DateTime.MinValue;
         LauncherMode launcherMode = LauncherMode.Expanded;
-        AssistantHost assistant;
-        AssistantHud assistantHud;
         float applyPulse;
         DateTime applyPulseAt = DateTime.MinValue;
 
@@ -1288,37 +1285,11 @@ namespace FoxOs.Nodes {
                     reveals[i]);
             }
             DrawCenter(g, center, centerR, EaseOutCubic(centerT));
-            DrawAssistantCards(g, center, centerR);
         }
 
-        public void AttachAssistant(AssistantHost host, AssistantHud hud) {
-            assistant = host;
-            assistantHud = hud;
-            if (hud != null) hud.Attach(this);
-            if (host != null) host.Changed += delegate {
-                if (!IsDisposed && IsHandleCreated) BeginInvoke(new Action(Invalidate));
-            };
-        }
 
-        void DrawAssistantCards(Graphics g, Point center, int centerR) {
-            if (assistant == null || assistant.Cards.Count == 0) return;
-            int x = center.X + centerR + S(28);
-            int y = center.Y - S(70);
-            for (int i = 0; i < assistant.Cards.Count; i++) {
-                AssistantCard card = assistant.Cards[i];
-                Rectangle r = new Rectangle(x, y + i * S(46), S(210), S(40));
-                card.bounds = r;
-                GlassRound(g, r, S(10), card.status == StepStatus.Running ? 0.6f : 0.2f, 0.94f);
-                Color mark = accent2;
-                if (card.status == StepStatus.Done) mark = Color.FromArgb(96, 180, 120);
-                if (card.status == StepStatus.Error) mark = Color.FromArgb(210, 90, 90);
-                if (card.status == StepStatus.Cancelled) mark = accent;
-                using (var br = new SolidBrush(Color.FromArgb(220, ink)))
-                    g.DrawString(card.title, smallFont, br, r.X + S(10), r.Y + S(4));
-                using (var br = new SolidBrush(Color.FromArgb(180, mark)))
-                    g.DrawString(card.detail, smallFont, br, r.X + S(10), r.Y + S(20));
-            }
-        }
+
+
 
         void DrawPocketLayer(Graphics g, Point center, int centerR) {
             if (cfg == null || cfg.pocket == null || !cfg.pocket.enabled) return;

@@ -1,4 +1,4 @@
-# FOXSTYLE - native FoxOS look studio (like foxlife).
+# FOXUI - native FoxOS look studio (like foxlife).
 # Usage:
 #   foxstyle              compile (if needed) and open the window
 #   foxstyle -Status      print style.json path
@@ -22,6 +22,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 . (Join-Path $PSScriptRoot "foxos-lib.ps1")
+& (Join-Path $PSScriptRoot "fox-remove-voice-legacy.ps1")
 if (Test-Path -LiteralPath (Join-Path $PSScriptRoot "foxauth.ps1")) {
     . (Join-Path $PSScriptRoot "foxauth.ps1")
 }
@@ -30,9 +31,6 @@ function Get-FoxStyleSources {
     $list = @(Join-Path $PSScriptRoot "foxos-sdk.cs")
     $list += Join-Path $PSScriptRoot "fox-anim.cs"
     $list += Join-Path $PSScriptRoot "fox-features.cs"
-    $list += Join-Path $PSScriptRoot "fox-assistant.cs"
-    $list += Join-Path $PSScriptRoot "fox-stt.cs"
-    $list += Join-Path $PSScriptRoot "fox-understand.cs"
     $mod = Join-Path $PSScriptRoot "foxstyle"
     $list += @(Get-ChildItem -LiteralPath $mod -Filter "*.cs" | Sort-Object Name | ForEach-Object { $_.FullName })
     return $list
@@ -65,7 +63,7 @@ function Ensure-FoxStyleBuilt {
     Start-Sleep -Milliseconds 200
     $csc = Join-Path $env:WINDIR "Microsoft.NET\Framework64\v4.0.30319\csc.exe"
     if (-not (Test-Path -LiteralPath $csc)) {
-        Write-Host "csc.exe missing - cannot build FOXSTYLE."
+        Write-Host "csc.exe missing - cannot build FOXUI."
         return $false
     }
     $out = Join-Path (Get-FoxOsDir) "foxstyle.build.log"
@@ -78,8 +76,7 @@ function Ensure-FoxStyleBuilt {
         "/r:System.Drawing.dll",
         "/r:System.Windows.Forms.dll",
         "/r:System.Web.Extensions.dll",
-        "/r:System.Web.dll",
-        '/r:"C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.8\System.Speech.dll"'
+        "/r:System.Web.dll"
     ) + $sources
     $p = Start-Process -FilePath $csc -ArgumentList $args -Wait -PassThru -NoNewWindow `
         -RedirectStandardOutput $out -RedirectStandardError ($out + ".err")
@@ -99,14 +96,14 @@ function Open-FoxStyle {
     if ($NodeEditor) { $args += "-NodeEditor" }
     Start-Process -FilePath $exe -ArgumentList $args | Out-Null
     if (Get-Command Write-FoxToast -ErrorAction SilentlyContinue) {
-        Write-FoxToast "FOXSTYLE"
+        Write-FoxToast "FOXUI"
     }
     return $true
 }
 
 if ($Help) {
     @"
-FOXSTYLE - native look studio for FoxOS
+FOXUI - native look studio for FoxOS
 
   foxstyle                 open window
   foxstyle -Rebuild        force rebuild
@@ -121,7 +118,7 @@ FOXSTYLE - native look studio for FoxOS
 }
 
 if ($Status) {
-    Write-Host "FOXSTYLE"
+    Write-Host "FOXUI"
     Write-Host ("  exe    " + (Get-FoxStyleExe))
     Write-Host ("  style  " + (Get-FoxStyleJson))
     Write-Host ("  built  " + (-not (Test-FoxStyleStale)))
@@ -149,13 +146,13 @@ if ($PSBoundParameters.ContainsKey('Export')) {
 }
 
 if ($SelfTest) {
-    if (-not (Ensure-FoxStyleBuilt -Force:$Rebuild)) { throw "FOXSTYLE build failed." }
+    if (-not (Ensure-FoxStyleBuilt -Force:$Rebuild)) { throw "FOXUI build failed." }
     $log = Join-Path (Get-FoxOsDir) "foxstyle-selftest.log"
     Remove-Item -LiteralPath $log -Force -ErrorAction SilentlyContinue
     $exe = Get-FoxStyleExe
     Start-Process -FilePath $exe -ArgumentList @('"' + $PSScriptRoot + '"', "-SelfTest") -Wait
     if (Test-Path -LiteralPath $log) { Get-Content -LiteralPath $log }
-    else { throw "FOXSTYLE self-test did not produce a result." }
+    else { throw "FOXUI self-test did not produce a result." }
     return
 }
 

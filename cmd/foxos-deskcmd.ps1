@@ -249,16 +249,7 @@ switch ($verb) {
             Start-DeskApp "foxnodes" @("-Show")
         }
     }
-    "foxstt" {
-        $pending = Join-Path $env:LOCALAPPDATA "FoxTerminal\foxos\pending-term.txt"
-        $line = if ($query) { "foxstt $query" } else { "foxstt" }
-        [System.IO.File]::WriteAllText($pending, $line, (New-Object System.Text.UTF8Encoding $false))
-        if (-not (Get-Command Start-FoxGhosttyWindow -ErrorAction SilentlyContinue)) {
-            . (Join-Path $cmdDir "ghostty-lib.ps1")
-        }
-        Start-FoxGhosttyWindow | Out-Null
-        Write-DeskLog $line
-    }
+
     { $_ -in @("foxdocs","changelog","pulse") } {
         $pending = Join-Path $env:LOCALAPPDATA "FoxTerminal\foxos\pending-term.txt"
         $line = if ($query) { "$verb $query" } else { $verb }

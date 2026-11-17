@@ -47,6 +47,7 @@ function Show-Commands {
 
         # Known / documented commands (source of truth for descriptions & usage).
         $known = @{}
+        $known["foxui"] = @{ usage = "foxui [-Rebuild|-NodeEditor|-Status]"; desc = "FOXUI settings studio (foxstyle-compatible)" }
         $known["foxseelen"] = @{ usage = "foxseelen install|load|status"; desc = "install Seelen UI and register FOX Glass theme" }
         $known["l"]        = @{ usage = "l <name> <pass>"; desc = "login (or register if new)" }
         $known["nuser"]    = @{ usage = "nuser <name> <pass>"; desc = "register new user" }
@@ -143,7 +144,6 @@ function Show-Commands {
         $known["foxlife"]    = @{ usage = "foxlife [-Status|-Rebuild]"; desc = "FOXOS Life: notes, finance, tables, AI assistant (native window)" }
         $known["foxstyle"]   = @{ usage = "foxstyle [-Status|-Rebuild|-Preset neon|-NodeEditor]"; desc = "FOXSTYLE look studio і візуальний редактор Node Launcher (меню без JSON)" }
         $known["foxnodes"]   = @{ usage = "foxnodes [-Status|-Settings|-Show|-Hide|-Stop|-Rebuild]"; desc = "persistent desktop Node Launcher; Ctrl+Alt+Space activates, -Hide is explicit hide" }
-        $known["foxstt"]     = @{ usage = "foxstt [-Install|-Test|-Stop]"; desc = "локальний український STT (whisper.cpp) для FOXSTYLE / Node Launcher" }
         $known["home"]       = @{ usage = "home"; desc = "system home after login: day, notes, last site, Prompt / YTM / Sites / Help / Settings / Lock" }
         $known["lock"]       = @{ usage = "lock [-Status] [-Unlock]"; desc = "lock FoxTerminal (wallpaper + hide Ghostty); Shift+Alt+L; unlock with Fox password" }
         $known["off"]        = @{ usage = "off"; desc = "shut down the PC safely (asks Yes/No first; default is No)" }
@@ -209,7 +209,7 @@ function Show-Commands {
     Write-CommandSection "Login / Users:" $inv @("l","nuser","passwd","uexit","users","who") 0xF007
     Write-CommandSection "AI:" $inv @("ask","friend","sum") 0xF0EB
     Write-CommandSection "Media:" $inv @("dj","sp","sp-ui","yt","ytm","ytm-ui","ytsplit") 0xF001
-    Write-CommandSection "Apps / layout:" $inv @("appbind","apps","foxlife","foxstyle","foxnodes","foxstt") 0xF108
+    Write-CommandSection "Apps / layout:" $inv @("appbind","apps","foxlife","foxstyle","foxnodes") 0xF108
     Write-CommandSection "Firefox / web aliases:" $inv @("bbind","bdel","blist","ff","ffbot","gask","ser","sites","youtube") 0xF0AC
     Write-CommandSection "Telegram:" $inv @("tg","tglist","tgub") 0xF1D8
     Write-CommandSection "Notes / files:" $inv @("changelog","edit","fdel","foxdocs","go","hash","nano","nfile","nfould","unhash","up","view","wai") 0xF07B
@@ -219,7 +219,7 @@ function Show-Commands {
     Write-CommandSection "System tools:" $inv @("changelog","clear","ffsync","foxbg","foxdocs","foxscan","home","interface","lock","settings","term","texit") 0xF013
     Write-CommandSection "Hotkeys / bindings:" $inv @("foxhotkeys","foxinfo") 0xF11C
     Write-CommandSection "Setup / reset / help:" $inv @("foxdeps","foxdoctor","foxhelp","foxreset","foxsetup","foxtest") 0xF0AD
-    Write-CommandSection "Wallpaper prompt (FoxOS desk):" $inv @("arthas","bright","bt","cal","changelog","default","dnote","dj","ff","foxdocs","foxhelp","foxlife","foxlook","foxnodes","foxos","foxstt","foxstyle","home","lock","mirror","noir","notebook","note","off","pride","pulse","rig","ser","settings","shader","shutdown","sites","sp","sw","term","vol","wifi","yt","ytm","youtube") 0xF1FC
+    Write-CommandSection "Wallpaper prompt (FoxOS desk):" $inv @("arthas","bright","bt","cal","changelog","default","dnote","dj","ff","foxdocs","foxhelp","foxlife","foxlook","foxnodes","foxos","foxstyle","home","lock","mirror","noir","notebook","note","off","pride","pulse","rig","ser","settings","shader","shutdown","sites","sp","sw","term","vol","wifi","yt","ytm","youtube") 0xF1FC
     Write-Host (Color-Text $p.dim "  Home WALL/TERM tabs list the same wallpaper specials + every cmd\ command; Enter runs them.")
     Write-Host ""
 

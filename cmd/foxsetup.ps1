@@ -56,8 +56,6 @@ $idx = Select-Menu 'Node Launcher (foxnodes)' @('Yes', 'No')
 $wantNodes = ($idx -ne 1)
 $idx = Select-Menu 'AI (Ollama) - optional' @('No', 'Yes')
 $wantAi = ($idx -eq 1)
-$idx = Select-Menu 'Ukrainian STT (whisper) - large, optional' @('No', 'Yes')
-$wantStt = ($idx -eq 1)
 fxd
 
 fx '  [3/8] Dependencies' 'Yellow'
@@ -67,7 +65,6 @@ if ($idx -ne 1) {
 } else {
     fx '  Skipped. Later: foxdeps -Install' 'DarkGray'
 }
-if ($wantStt) { fx '  STT: after login run foxstt -Install (not in this wizard).' 'DarkGray' }
 if ($wantAi) { fx '  AI: install Ollama separately; qwen3-vl optional.' 'DarkGray' }
 fxd
 
@@ -189,7 +186,7 @@ fx '  2. Look: foxstyle  -> Animations' 'White'
 fx '  3. Menu: foxnodes (Ctrl+Alt+Space)' 'White'
 fx '  4. Check: foxdoctor  |  FoxTerminal/windows/VERIFY_ALL.md' 'White'
 fx '  5. Transfer: foxpack -Profile export / -ImportProfile' 'White'
-fx '  6. AI/STT only if needed: ollama / foxstt -Install' 'White'
+fx '  6. Text AI only if needed: ollama' 'White'
 fxd
 fx '  Done.' 'Green'
 fx ''

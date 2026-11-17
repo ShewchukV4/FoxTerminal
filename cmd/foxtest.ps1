@@ -70,7 +70,6 @@ $infoCommands = [ordered]@{
     "foxdoctor"     = @("-Quiet")
     "foxstyle"      = @("-Status")
     "foxnodes"      = @("-Status")
-    "foxstt"        = @()
     "lock"          = @("-Status")
     "settings"      = @("-Status")
     "foxlife"       = @("-Status")

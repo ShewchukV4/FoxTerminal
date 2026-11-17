@@ -1,3 +1,7 @@
+# Voice assistant removal — 2026-11-17
+
+The desktop assistant, microphone capture, STT/TTS, Whisper installer, push-to-talk and assistant settings have been removed. Do not restore them without a new explicit owner request. Historical sections below are superseded by this notice. Text-only ask/friend remain separate.
+
 # FoxTerminal: Complete System Guide
 
 Full English documentation: from the Ghostty terminal to FoxOS on the Windows desktop, commands, local sites, AI, hotkeys, and day-to-day workflows.
@@ -912,3 +916,8 @@ The media panel expands smoothly from a compact island on hover. Disabled media 
 Run `foxseelen install` to install official Seelen UI using winget. Start Seelen and run `foxseelen load` to register FOX Glass for the current session. Select and permanently install the theme through Seelen settings.
 The theme adds short dock, toolbar, button and popover transitions, configurable accent/duration and reduced-motion support. No permanent animation loops or animated blur.
 Status: initial theme and installer, NOT complete shell integration. Automatic FOX conflict handover, FOXSTYLE synchronization, video wallpapers and Windows testing remain outstanding. Do not run overlapping dock/window managers together.
+
+
+## FOXUI (2026-11-17)
+
+The studio is now named FOXUI; launch with `foxui`. The `foxstyle` command, arguments, all ten sections and configuration files remain compatible. This renames the existing WinForms studio. Migration of its controls into the Seelen React settings panel is NOT implemented yet.

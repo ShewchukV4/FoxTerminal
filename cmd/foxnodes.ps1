@@ -23,14 +23,12 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 . (Join-Path $PSScriptRoot "foxos-lib.ps1")
+& (Join-Path $PSScriptRoot "fox-remove-voice-legacy.ps1")
 
 function Get-FoxNodesSources {
     $list = @(Join-Path $PSScriptRoot "foxos-sdk.cs")
     $list += Join-Path $PSScriptRoot "fox-anim.cs"
     $list += Join-Path $PSScriptRoot "fox-features.cs"
-    $list += Join-Path $PSScriptRoot "fox-assistant.cs"
-    $list += Join-Path $PSScriptRoot "fox-stt.cs"
-    $list += Join-Path $PSScriptRoot "fox-understand.cs"
     $mod = Join-Path $PSScriptRoot "foxnodes"
     $list += @(Get-ChildItem -LiteralPath $mod -Filter "*.cs" | Sort-Object Name | ForEach-Object { $_.FullName })
     return $list
@@ -72,8 +70,7 @@ function Ensure-FoxNodesBuilt {
         "/r:System.Drawing.dll",
         "/r:System.Windows.Forms.dll",
         "/r:System.Web.Extensions.dll",
-        "/r:System.Web.dll",
-        '/r:"C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.8\System.Speech.dll"'
+        "/r:System.Web.dll"
     ) + $sources
     $p = Start-Process -FilePath $csc -ArgumentList $args -Wait -PassThru -NoNewWindow `
         -RedirectStandardOutput $out -RedirectStandardError ($out + ".err")

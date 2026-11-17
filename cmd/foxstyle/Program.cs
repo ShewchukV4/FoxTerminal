@@ -70,7 +70,7 @@ namespace FoxOs.Style {
 
         static void Crash(Exception ex) {
             Log(ex);
-            try { MessageBox.Show(ex != null ? ex.Message : "fatal", "FOXSTYLE"); } catch { }
+            try { MessageBox.Show(ex != null ? ex.Message : "fatal", "FOXUI"); } catch { }
         }
     }
 }

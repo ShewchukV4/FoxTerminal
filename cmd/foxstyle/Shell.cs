@@ -27,7 +27,7 @@ namespace FoxOs.Style {
             store = new StyleStore();
             theme = FoxTheme.Named("midnight");
 
-            Text = "FOXSTYLE";
+            Text = "FOXUI";
             StartPosition = FormStartPosition.CenterScreen;
             MinimumSize = new Size(1080, 680);
             Size = new Size(1320, 840);
@@ -97,9 +97,9 @@ namespace FoxOs.Style {
         }
 
         void BuildNav() {
-            string[] ids = new[] { "themes", "colors", "dock", "windows", "buttons", "motion", "nodes", "assistant", "features", "labs" };
-            string[] titles = new[] { "Modes", "Colors", "Dock / Wall", "Windows", "Buttons", "Анімації", "Node Launcher", "Помічник", "Звук / Жести", "Labs" };
-            string[] glyphs = new[] { "\uE8F1", "\uE790", "\uE8A1", "\uE8A7", "\uE8FD", "\uE916", "\uE8EF", "\uE13D", "\uE8D6", "\uE950" };
+            string[] ids = new[] { "themes", "colors", "dock", "windows", "buttons", "motion", "nodes", "features", "labs" };
+            string[] titles = new[] { "Modes", "Colors", "Dock / Wall", "Windows", "Buttons", "Анімації", "Node Launcher", "Звук / Жести", "Labs" };
+            string[] glyphs = new[] { "\uE8F1", "\uE790", "\uE8A1", "\uE8A7", "\uE8FD", "\uE916", "\uE8EF", "\uE8D6", "\uE950" };
             for (int i = 0; i < ids.Length; i++) {
                 StyleNav n = new StyleNav(theme, ids[i], titles[i], glyphs[i]);
                 n.Location = new Point(6, 78 + i * 44);
@@ -201,7 +201,6 @@ namespace FoxOs.Style {
                 case "buttons": impact.Text = "Стиль кнопок у preview (OK/Cancel/Fox)."; break;
                 case "motion": impact.Text = "Duration = швидкість кольору в preview."; break;
                 case "nodes": impact.Text = "Візуальний редактор меню: дерево, полотно, властивості."; break;
-                case "assistant": impact.Text = "Локальний помічник: модель, мікрофон, дозволені дії."; break;
                 case "features": impact.Text = "Мікшер · колесо біля курсора · пауза навушників → features.json."; break;
                 case "themes": impact.Text = "Пресет = sw. Apply ставить theme.txt і всю шкіру."; break;
                 case "labs": impact.Text = "FoxGlow: сила + швидкість пульсу рамок усіх вікон."; break;
@@ -265,7 +264,6 @@ namespace FoxOs.Style {
             if (store.Doc.nodeLauncher != null)
                 store.Doc.nodeLauncher.revision = Math.Max(store.Doc.nodeLauncher.revision, store.Doc.motion.requestId);
             store.Save();
-            if (editor != null) editor.SaveAssistant();
             if (editor != null) editor.SaveFeatures();
             int req = store.Doc.motion.requestId;
             bool overlay = FoxNodesSync.OverlayRunning();
@@ -342,7 +340,7 @@ namespace FoxOs.Style {
                 FoxAssets.PaintFoxTile(g, new Rectangle(14, 14, 34, 34), theme.Night, 10);
                 using (SolidBrush ink = new SolidBrush(theme.Ink))
                 using (SolidBrush mute = new SolidBrush(theme.Muted)) {
-                    SafeDraw(g, "FOXSTYLE", theme.Head, ink, 56, 14);
+                    SafeDraw(g, "FOXUI", theme.Head, ink, 56, 14);
                     SafeDraw(g, "system look", theme.Small, mute, 56, 34);
                 }
             } catch { }
@@ -391,7 +389,6 @@ namespace FoxOs.Style {
                 case "motion": return "Анімації";
                 case "labs": return "Labs";
                 case "nodes": return "Редактор меню";
-                case "assistant": return "Помічник";
                 case "features": return "Звук / Жести";
                 default: return "Режими FoxOS";
             }

@@ -6,12 +6,10 @@ namespace FoxOs.Nodes {
     // Hidden message pump surface for global hotkeys.
     sealed class HotkeyHost : Form {
         public event Action HotkeyPressed;
-        public event Action PttPressed;
         public event Action<int> AnyHotkey;
         public string LastHotkeyError = "";
 
         HotkeySpec bound;
-        HotkeySpec pttBound;
 
         public HotkeyHost() {
             Text = "FoxNodes Hotkey Host";
@@ -40,19 +38,10 @@ namespace FoxOs.Nodes {
             return true;
         }
 
-        public bool ApplyPttHotkey(HotkeySpec hk) {
-            try { NativeWin.UnregisterHotKey(Handle, NativeWin.HOTKEY_PTT); } catch { }
-            pttBound = hk;
-            if (hk == null) return true;
-            uint mod = NativeWin.ModifiersFromHotkey(hk);
-            uint vk = NativeWin.VkFromHotkey(hk);
-            if (vk == 0) return false;
-            return NativeWin.RegisterHotKey(Handle, NativeWin.HOTKEY_PTT, mod, vk);
-        }
+
 
         public void Unregister() {
             try { NativeWin.UnregisterHotKey(Handle, NativeWin.HOTKEY_ID); } catch { }
-            try { NativeWin.UnregisterHotKey(Handle, NativeWin.HOTKEY_PTT); } catch { }
         }
 
         protected override void WndProc(ref Message m) {
@@ -63,10 +52,7 @@ namespace FoxOs.Nodes {
                     if (HotkeyPressed != null) HotkeyPressed();
                     return;
                 }
-                if (id == NativeWin.HOTKEY_PTT) {
-                    if (PttPressed != null) PttPressed();
-                    return;
-                }
+
                 return;
             }
             base.WndProc(ref m);
