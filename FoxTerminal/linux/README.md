@@ -8,6 +8,8 @@
 | [`AGENTS.md`](AGENTS.md) | Коротка пам’ять агента |
 | [`LINUX_GUIDE_UA.md`](LINUX_GUIDE_UA.md) | Стіл, пропорції екрана, оптимізація |
 | [`COMMANDS_LINUX.md`](COMMANDS_LINUX.md) | Windows-команда → Linux |
+| [`LINUX-MOVE-UA.md`](LINUX-MOVE-UA.md) | Перенос на CachyOS і DarkShadowShell |
+| [`Prepare-WindowsForLinux.ps1`](Prepare-WindowsForLinux.ps1) | Зняти BitLocker і швидкий запуск, не стираючи Windows |
 
 **Промпт на іншому ПК:**
 

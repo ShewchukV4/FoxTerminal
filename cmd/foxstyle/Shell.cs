@@ -28,9 +28,7 @@ namespace FoxOs.Style {
             theme = FoxTheme.Named("midnight");
 
             Text = "FOXUI";
-            StartPosition = FormStartPosition.CenterScreen;
-            MinimumSize = new Size(1080, 680);
-            Size = new Size(1320, 840);
+            StartPosition = FormStartPosition.Manual;
             BackColor = theme.Paper;
             ForeColor = theme.Ink;
             Font = theme.Body;
@@ -38,6 +36,7 @@ namespace FoxOs.Style {
             KeyPreview = true;
 
             Build();
+            FitToScreen();
             ShowPage("themes");
             KeyDown += OnKeys;
             Resize += delegate { LayoutPreview(); top.Invalidate(); };
@@ -127,17 +126,47 @@ namespace FoxOs.Style {
             previewHost.Controls.Add(impact);
         }
 
+        void FitToScreen() {
+            Rectangle wa = Screen.PrimaryScreen != null
+                ? Screen.PrimaryScreen.WorkingArea
+                : new Rectangle(0, 0, 1280, 720);
+            bool compact = wa.Width <= 1500 || wa.Height <= 950;
+            if (compact) {
+                sidebar.Width = 160;
+                previewHost.Width = Math.Min(280, Math.Max(220, wa.Width / 5));
+                top.Height = 48;
+                foot.Height = 56;
+                for (int i = 0; i < nav.Count; i++) {
+                    nav[i].Location = new Point(4, 64 + i * 38);
+                    nav[i].Size = new Size(sidebar.Width - 10, 34);
+                }
+            }
+            int margin = compact ? 16 : 32;
+            int maxW = Math.Max(880, wa.Width - margin);
+            int maxH = Math.Max(540, wa.Height - margin);
+            MinimumSize = new Size(Math.Min(900, maxW), Math.Min(540, maxH));
+            int w = compact ? (int)(wa.Width * 0.96) : Math.Min(1320, maxW);
+            int h = compact ? (int)(wa.Height * 0.94) : Math.Min(840, maxH);
+            if (w > maxW) w = maxW;
+            if (h > maxH) h = maxH;
+            Size = new Size(w, h);
+            Location = new Point(
+                wa.X + Math.Max(0, (wa.Width - w) / 2),
+                wa.Y + Math.Max(0, (wa.Height - h) / 2));
+            LayoutPreview();
+        }
+
         void LayoutPreview() {
             if (preview == null) return;
-            int w = Math.Max(280, previewHost.ClientSize.Width - 24);
+            int w = Math.Max(200, previewHost.ClientSize.Width - 20);
             Control head = previewHost.Controls["prevHead"];
-            if (head != null) head.Bounds = new Rectangle(14, 10, w, 22);
-            int tipH = 48;
-            int canvasH = Math.Max(260, previewHost.ClientSize.Height - 90 - tipH);
-            preview.Bounds = new Rectangle(12, 40, w, canvasH);
+            if (head != null) head.Bounds = new Rectangle(10, 8, w, 20);
+            int tipH = 40;
+            int canvasH = Math.Max(180, previewHost.ClientSize.Height - 72 - tipH);
+            preview.Bounds = new Rectangle(8, 32, w, canvasH);
             if (impact != null) {
-                impact.MaximumSize = new Size(w, 60);
-                impact.Location = new Point(14, preview.Bottom + 8);
+                impact.MaximumSize = new Size(w, 56);
+                impact.Location = new Point(10, preview.Bottom + 6);
             }
         }
 

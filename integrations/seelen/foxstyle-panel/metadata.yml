@@ -1,0 +1,13 @@
+id: '@foxsystem/foxstyle-panel'
+metadata:
+  displayName: FOXSTYLE Panel
+  description: Apply Seelen FOX Glass settings to FoxOS and open FOXUI
+  tags: [foxstyle, foxui, settings]
+icon: PiSlidersHorizontalDuotone
+preset: Popup
+instances: Single
+lazy: true
+html: !include index.html
+js: !include index.js
+css: !include index.css
+settings: []

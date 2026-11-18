@@ -45,6 +45,13 @@ if ($Mode -eq "stop") {
     exit 0
 }
 
+# Shewchuk: FoxOS top media strip off (Nusa keeps the music notch).
+$disableFlag = Join-Path $foxDir "media.disabled"
+if (Test-Path -LiteralPath $disableFlag) {
+    '{"active":false,"disabled":true}' | Set-Content -LiteralPath $statePath -Encoding UTF8
+    exit 0
+}
+
 Add-Type -AssemblyName System.Runtime.WindowsRuntime | Out-Null
 $null = [Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager, Windows.Media.Control, ContentType = WindowsRuntime]
 

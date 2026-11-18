@@ -185,8 +185,10 @@ if (Get-Command Read-FoxLookState -ErrorAction SilentlyContinue) {
         $ls = Read-FoxLookState
         $ls.dockStyle = $dock
         if ($dockPos) { $ls.dockPos = $dockPos }
+        $ls.dockHome = $false
+        $ls.dockWidgets = $false
         Write-FoxLookState $ls
-        Write-Host ("look.dockStyle -> " + $dock + " pos=" + $dockPos)
+        Write-Host ("look.dockStyle -> " + $dock + " pos=" + $dockPos + " (home/widgets forced off)")
     } catch {}
 }
 
@@ -268,20 +270,40 @@ function New-FoxStyleWall([string]$HexNight, [string]$HexAccent, [string]$Kind, 
 
 $wallDir = Join-Path (Get-FoxOsDir) 'walls'
 $wall = Join-Path $wallDir ('foxstyle-' + $sw + '-' + $wallKind + '-r' + $wallRain + '.bmp')
-try {
-    New-FoxStyleWall $night $accent $wallKind $wallRain $wall | Out-Null
-    Set-FoxOsWallpaper $wall | Out-Null
-    Write-Host ("wallpaper -> night=$night kind=$wallKind rain=$wallRain")
-} catch {
-    Write-Host ("wallpaper: " + $_.Exception.Message)
+$photoFile = Join-Path (Get-FoxOsDir) 'wall-photo.txt'
+$userPhoto = ''
+if (Test-Path -LiteralPath $photoFile) {
+    try { $userPhoto = (Get-Content -LiteralPath $photoFile -Raw -ErrorAction SilentlyContinue).Trim().Trim('"') } catch {}
+}
+$keepUserWall = ($userPhoto -and (Test-Path -LiteralPath $userPhoto))
+if ($keepUserWall) {
+    Write-Host ("wallpaper: keep Shewchuk photo -> " + $userPhoto)
+} else {
+    try {
+        # Bake FoxOS look into a REAL Windows wallpaper (fox included)
+        if (Get-Command Publish-FoxOsRealWallpaper -ErrorAction SilentlyContinue) {
+            $published = Publish-FoxOsRealWallpaper -Force
+            Write-Host ("wallpaper -> real desktop $published")
+        } else {
+            New-FoxStyleWall $night $accent $wallKind $wallRain $wall | Out-Null
+            Set-FoxOsWallpaper $wall | Out-Null
+            Write-Host ("wallpaper -> night=$night kind=$wallKind rain=$wallRain")
+        }
+    } catch {
+        Write-Host ("wallpaper: " + $_.Exception.Message)
+    }
 }
 
-# Sync for live process / taskbar / skin bookkeeping (Force)
+# Sync for live process / taskbar / skin bookkeeping
+# Never -Force wallpaper when user photo is active (that was the violet reset loop).
 try {
     if (Test-FoxOsEnabled) {
-        Sync-FoxOsSkin -Force | Out-Null
-        # Sync may overwrite wall with palette night - re-apply style night + accent
-        if (Test-Path -LiteralPath $wall) { Set-FoxOsWallpaper $wall | Out-Null }
+        if ($keepUserWall) {
+            Sync-FoxOsSkin | Out-Null
+        } else {
+            Sync-FoxOsSkin -Force | Out-Null
+            if (Test-Path -LiteralPath $wall) { Set-FoxOsWallpaper $wall | Out-Null }
+        }
     }
 } catch {
     Write-Host ("Sync-FoxOsSkin: " + $_.Exception.Message)
@@ -423,6 +445,17 @@ Write-FoxStyleLivePatch
 
 if (Get-Command Write-FoxToast -ErrorAction SilentlyContinue) {
     Write-FoxToast ("FOXSTYLE system: " + $sw)
+}
+
+# --- Seelen UI bridge: push accent/motion into FOX Glass theme ---
+try {
+    $seelen = Join-Path $PSScriptRoot 'foxseelen.ps1'
+    if (Test-Path -LiteralPath $seelen) {
+        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $seelen -Action sync 2>&1 |
+            ForEach-Object { Write-Host $_ }
+    }
+} catch {
+    Write-Host ("seelen sync: " + $_.Exception.Message)
 }
 
 Write-Host 'FOXSTYLE apply done.'

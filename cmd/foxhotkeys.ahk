@@ -31,6 +31,18 @@ if g_WinKeys
 else if g_Overview
     RegisterOverviewWinOnly()
 
+; Cursor: still moves/clicks, but becomes invisible after 15s without mouse activity.
+global g_CursorHidden := false
+global g_CursorIdleMs := 15000
+SetTimer(CursorIdleTick, 400)
+OnExit(CursorIdleCleanup)
+
+CursorIdleCleanup(*) {
+    global g_CursorHidden
+    if g_CursorHidden
+        SystemCursorShow()
+}
+
 ; FoxOS Alt+Tab only while foxos-live is running; otherwise Windows keeps Alt+Tab.
 #HotIf FoxLiveRunning()
 !Tab:: FoxAltTab(false)
@@ -72,6 +84,49 @@ else if g_Overview
 
 ; Shift+Alt+L      → lock FoxTerminal (Windows stays signed in)
 +!l:: LockFoxTerm()
+
+; ── Idle cursor (invisible, still there) ─────────────────────────────────────
+
+CursorIdleTick(*) {
+    global g_CursorHidden, g_CursorIdleMs
+    ; Mouse only — keyboard typing shouldn't keep the pointer painted.
+    if (A_TimeIdleMouse >= g_CursorIdleMs) {
+        if !g_CursorHidden
+            SystemCursorHide()
+    } else if g_CursorHidden {
+        SystemCursorShow()
+    }
+}
+
+SystemCursorHide() {
+    global g_CursorHidden
+    if g_CursorHidden
+        return
+    ; Replace every system shape with a fully transparent cursor (pointer still works).
+    static ids := [32512, 32513, 32514, 32515, 32516, 32640, 32641, 32642, 32643, 32644, 32645, 32646, 32648, 32649, 32650, 32651]
+    andMask := Buffer(128, 0xFF)  ; 32×32 mono AND = all transparent
+    xorMask := Buffer(128, 0)     ; XOR empty
+    blank := DllCall("CreateCursor", "Ptr", 0, "Int", 0, "Int", 0
+        , "Int", 32, "Int", 32, "Ptr", andMask, "Ptr", xorMask, "Ptr")
+    if !blank
+        return
+    for id in ids {
+        h := DllCall("CopyImage", "Ptr", blank, "UInt", 2, "Int", 0, "Int", 0, "UInt", 0, "Ptr")
+        if h
+            DllCall("SetSystemCursor", "Ptr", h, "UInt", id)
+    }
+    DllCall("DestroyCursor", "Ptr", blank)
+    g_CursorHidden := true
+}
+
+SystemCursorShow() {
+    global g_CursorHidden
+    if !g_CursorHidden
+        return
+    ; Reload cursors from HKCU (FoxOS / macOS scheme) — no PS rebuild needed.
+    DllCall("SystemParametersInfo", "UInt", 0x57, "UInt", 0, "Ptr", 0, "UInt", 0)
+    g_CursorHidden := false
+}
 
 ; ── Core helpers ─────────────────────────────────────────────────────────────
 
@@ -167,6 +222,9 @@ HasFoxTerminalLogonShortcut() {
 LaunchFoxTermHidden(exePath) {
     exeName := FoxTermExeName()
     if WinExist("ahk_exe " exeName)
+        return
+    ; A second launch while the first is still opening is what made two terminals.
+    if ProcessExist("noctty.exe") || ProcessExist("ghostty.exe") || ProcessExist("winghostty.exe")
         return
     if HasFoxTerminalLogonShortcut()
         return

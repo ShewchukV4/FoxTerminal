@@ -16,7 +16,8 @@ function Get-FoxShaderStatePath {
 function Test-FoxShadersEnabled {
     if ($env:FOXTERM_SHADERS -eq "0") { return $false }
     $path = Get-FoxShaderStatePath
-    if (-not (Test-Path -LiteralPath $path)) { return $true }
+    # Off unless explicitly turned on. Wallpaper changes must not enable shaders.
+    if (-not (Test-Path -LiteralPath $path)) { return $false }
     $raw = (Get-Content -LiteralPath $path -Raw -ErrorAction SilentlyContinue)
     if ($null -eq $raw) { return $true }
     $name = $raw.Trim().ToLowerInvariant()
@@ -310,26 +311,34 @@ function Get-FoxShaderOverlayText([bool]$enabled, [string]$shaderId) {
 }
 
 function Ensure-FoxShaderInclude {
+    # Only the main config may include shaders. foxterminal-local used to include
+    # the same file too, which Ghostty reports as "cycle detected".
     $includeLine = "config-file = ?foxterminal-shaders.ghostty"
-    $paths = New-Object System.Collections.Generic.List[string]
-    if (Get-Command Get-GhosttyConfigPath -ErrorAction SilentlyContinue) {
-        $main = Get-GhosttyConfigPath
-        if ($main) { $paths.Add($main) }
-        $dir = Split-Path -Parent $main
-        if ($dir) { $paths.Add((Join-Path $dir "foxterminal-local.ghostty")) }
-    }
+    if (-not (Get-Command Get-GhosttyConfigPath -ErrorAction SilentlyContinue)) { return }
+    $main = Get-GhosttyConfigPath
+    if ([string]::IsNullOrWhiteSpace($main) -or -not (Test-Path -LiteralPath $main)) { return }
 
-    foreach ($path in $paths) {
-        if ([string]::IsNullOrWhiteSpace($path)) { continue }
-        if (-not (Test-Path -LiteralPath $path)) { continue }
-        $raw = Get-Content -LiteralPath $path -Raw -ErrorAction SilentlyContinue
-        if ($null -eq $raw) { $raw = "" }
-        if ($raw -match "foxterminal-shaders\.ghostty") { continue }
+    $raw = Get-Content -LiteralPath $main -Raw -ErrorAction SilentlyContinue
+    if ($null -eq $raw) { $raw = "" }
+    if ($raw -notmatch "foxterminal-shaders\.ghostty") {
         $nl = if ($raw -match "`r`n") { "`r`n" } else { "`n" }
         if (-not $raw.EndsWith($nl)) { $raw += $nl }
         $raw += $nl + $includeLine + $nl
         $utf8 = New-Object System.Text.UTF8Encoding($false)
-        [System.IO.File]::WriteAllText($path, $raw, $utf8)
+        [System.IO.File]::WriteAllText($main, $raw, $utf8)
+    }
+
+    # Drop a duplicate include from the local overlay if an older install left one.
+    $dir = Split-Path -Parent $main
+    $local = Join-Path $dir "foxterminal-local.ghostty"
+    if (-not (Test-Path -LiteralPath $local)) { return }
+    $localRaw = Get-Content -LiteralPath $local -Raw -ErrorAction SilentlyContinue
+    if ([string]::IsNullOrEmpty($localRaw)) { return }
+    if ($localRaw -notmatch "(?m)^\s*config-file\s*=\s*\??foxterminal-shaders\.ghostty\s*$") { return }
+    $cleaned = [regex]::Replace($localRaw, "(?m)^\s*config-file\s*=\s*\??foxterminal-shaders\.ghostty\s*(\r?\n)?", "")
+    if ($cleaned -ne $localRaw) {
+        $utf8 = New-Object System.Text.UTF8Encoding($false)
+        [System.IO.File]::WriteAllText($local, $cleaned, $utf8)
     }
 }
 

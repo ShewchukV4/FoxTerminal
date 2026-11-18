@@ -542,6 +542,24 @@ function Set-FoxOsRegDword([string]$path, [string]$name, $value) {
     } catch { }
 }
 
+function Disable-WindowsWidgetBoard {
+    # Win+W is Windows Widgets AND Shewchuk wallpaper — Widgets must stay dead.
+    $adv = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
+    try { Set-FoxOsRegDword $adv "TaskbarDa" 0 } catch {}
+    try {
+        cmd /c 'reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v TaskbarDa /t REG_DWORD /d 0 /f >nul 2>nul' | Out-Null
+    } catch {}
+
+    try {
+        $feeds = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Feeds"
+        if (-not (Test-Path $feeds)) { New-Item -Path $feeds -Force | Out-Null }
+        Set-FoxOsRegDword $feeds "ShellFeedsTaskbarViewMode" 2
+    } catch {}
+
+    Get-Process -Name "WidgetBoard","Widgets" -ErrorAction SilentlyContinue |
+        Stop-Process -Force -ErrorAction SilentlyContinue
+}
+
 function Apply-FoxOsTaskbar {
     Merge-FoxOsBackupExtras
     $adv = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
@@ -551,6 +569,7 @@ function Apply-FoxOsTaskbar {
     Set-FoxOsRegDword $adv "TaskbarWl" 0
     Set-FoxOsRegDword $adv "ShowCopilotButton" 0
     Set-FoxOsRegDword $adv "TaskbarCopilot" 0
+    try { Disable-WindowsWidgetBoard | Out-Null } catch {}
 }
 
 function Restore-FoxOsTaskbar($b) {
@@ -744,7 +763,10 @@ function Get-FoxOsSeed([string]$s) {
 function New-FoxOsWallpaper {
     param(
         [string]$Theme,
-        [string]$OutPath
+        [string]$OutPath,
+        [string]$AccentHex = "",
+        [string]$Accent2Hex = "",
+        [switch]$WithFox
     )
 
     Add-Type -AssemblyName System.Drawing | Out-Null
@@ -752,11 +774,55 @@ function New-FoxOsWallpaper {
     $w = [int]$sz.W
     $h = [int]$sz.H
     $night = Convert-HexToDrawingColor (Get-FoxOsNightHex $Theme)
+    if (-not $AccentHex) {
+        try { $AccentHex = (Get-FoxOsPalette).accent } catch { $AccentHex = "#7B5CFF" }
+    }
+    if (-not $Accent2Hex) {
+        try { $Accent2Hex = (Get-FoxOsPalette).accent2 } catch { $Accent2Hex = "#DC7A14" }
+    }
+    $accent = Convert-HexToDrawingColor $AccentHex
+    $accent2 = Convert-HexToDrawingColor $Accent2Hex
+
+    # True desktop wallpaper that matches FoxOS Live glass look (not a floating overlay)
     $bmp = New-Object System.Drawing.Bitmap $w, $h, ([System.Drawing.Imaging.PixelFormat]::Format24bppRgb)
     $g = [System.Drawing.Graphics]::FromImage($bmp)
-    $g.Clear($night)
-    $g.Dispose()
+    $g.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::HighQuality
+    $g.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
+    $top = [System.Drawing.Color]::FromArgb(
+        [Math]::Min(255, $night.R + 40),
+        [Math]::Min(255, $night.G + 30),
+        [Math]::Min(255, $night.B + 50))
+    $br = New-Object System.Drawing.Drawing2D.LinearGradientBrush (
+        (New-Object System.Drawing.Rectangle 0, 0, $w, $h), $top, $night,
+        [System.Drawing.Drawing2D.LinearGradientMode]::Vertical)
+    $g.FillRectangle($br, 0, 0, $w, $h)
+    $br.Dispose()
+    $v1 = New-Object System.Drawing.SolidBrush ([System.Drawing.Color]::FromArgb(55, $accent))
+    $g.FillEllipse($v1, -[int]($w / 5), -[int]($h / 4), [int]($w * 2 / 3), [int]($h * 2 / 3))
+    $v1.Dispose()
+    $v2 = New-Object System.Drawing.SolidBrush ([System.Drawing.Color]::FromArgb(40, $accent2))
+    $g.FillEllipse($v2, [int]($w / 3), [int]($h / 2), [int]($w * 2 / 3), [int]($h * 2 / 3))
+    $v2.Dispose()
 
+    if ($WithFox) {
+        $fox = Join-Path (Split-Path $PSScriptRoot -Parent) "FoxTerminal\assets\fox.png"
+        if (-not (Test-Path -LiteralPath $fox)) {
+            $fox = Join-Path $PSScriptRoot "..\FoxTerminal\assets\fox.png"
+        }
+        if (Test-Path -LiteralPath $fox) {
+            try {
+                $img = [System.Drawing.Image]::FromFile($fox)
+                # Same ballpark as foxos-live fox ascii mark (~0.45 of shorter side)
+                $side = [Math]::Max(180, [int]([Math]::Min($w, $h) * 0.42))
+                $dx = [int](($w - $side) / 2)
+                $dy = [int](($h - $side) / 2)
+                $g.DrawImage($img, $dx, $dy, $side, $side)
+                $img.Dispose()
+            } catch {}
+        }
+    }
+
+    $g.Dispose()
     $dir = Split-Path -Parent $OutPath
     if (-not (Test-Path -LiteralPath $dir)) {
         New-Item -ItemType Directory -Path $dir -Force | Out-Null
@@ -764,6 +830,398 @@ function New-FoxOsWallpaper {
     $bmp.Save($OutPath, [System.Drawing.Imaging.ImageFormat]::Bmp)
     $bmp.Dispose()
     return $OutPath
+}
+
+function Publish-FoxOsRealWallpaper {
+    <#
+      Bake FoxOS look into a real Windows wallpaper so peek/Show-Desktop
+      never reveals a different image under the Live overlay.
+    #>
+    param([switch]$Force)
+    $theme = Get-FoxOsThemeName
+    $p = Get-FoxOsPalette
+    $wallDir = Join-Path (Get-FoxOsDir) "walls"
+    $out = Join-Path $wallDir ("desktop-" + $theme + "-fox.bmp")
+    # Rebake only when missing or asked. The else-branch used to repaint a full
+    # desktop bitmap on every sign-in and blocked the shell before Explorer existed.
+    if ($Force -or -not (Test-Path -LiteralPath $out)) {
+        New-FoxOsWallpaper -Theme $theme -OutPath $out -AccentHex $p.accent -Accent2Hex $p.accent2 -WithFox | Out-Null
+    }
+    Set-FoxOsWallpaper $out | Out-Null
+    return $out
+}
+
+function Get-ShewchukRoot {
+    $root = Join-Path $env:USERPROFILE "Shewchuk"
+    if (Test-Path -LiteralPath $root) { return $root }
+    return $null
+}
+
+function Get-ShewchukWallpaperPaths {
+    <#
+      Resolve last Shewchuk photo: wall-photo.txt (screen jpeg) + shewchuk.json (original).
+      If the cached .screen.jpg is missing (DPI/cache rename), rebuild path from the original.
+    #>
+    $orig = ""
+    $screen = ""
+    $photoFile = Join-Path (Get-FoxOsDir) "wall-photo.txt"
+    if (Test-Path -LiteralPath $photoFile) {
+        try {
+            $screen = (Get-Content -LiteralPath $photoFile -Raw -ErrorAction SilentlyContinue).Trim().Trim('"')
+        } catch { $screen = "" }
+        if ($screen -and -not (Test-Path -LiteralPath $screen)) { $screen = "" }
+    }
+    $root = Get-ShewchukRoot
+    if ($root) {
+        $json = Join-Path $root "shewchuk.json"
+        if (Test-Path -LiteralPath $json) {
+            try {
+                $j = Get-Content -LiteralPath $json -Raw -ErrorAction SilentlyContinue | ConvertFrom-Json
+                $orig = [string]$j.wallpaper
+            } catch { $orig = "" }
+            if ($orig -and -not (Test-Path -LiteralPath $orig)) { $orig = "" }
+        }
+        if (-not $screen -and $orig) {
+            $leaf = [System.IO.Path]::GetFileName($orig)
+            $cacheRoot = Join-Path $root "wallpapers\picker\cache"
+            if (Test-Path -LiteralPath $cacheRoot) {
+                $hit = Get-ChildItem -LiteralPath $cacheRoot -Recurse -Filter ($leaf + ".screen.jpg") -File -ErrorAction SilentlyContinue |
+                    Select-Object -First 1
+                if ($hit) { $screen = [string]$hit.FullName }
+            }
+            if (-not $screen) { $screen = $orig }
+        }
+    }
+    return @{
+        Original  = $orig
+        Screen    = $screen
+        PhotoFile = $photoFile
+    }
+}
+
+function Set-FoxOsLockImageSafe([string]$path) {
+    if ([string]::IsNullOrWhiteSpace($path) -or -not (Test-Path -LiteralPath $path)) { return $false }
+    if (-not (Get-Command Set-FoxLookLockImage -ErrorAction SilentlyContinue)) { return $false }
+    try {
+        $cdm = "HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager"
+        if (Get-Command Set-FoxOsRegDword -ErrorAction SilentlyContinue) {
+            Set-FoxOsRegDword $cdm "RotatingLockScreenEnabled" 0
+            Set-FoxOsRegDword $cdm "RotatingLockScreenOverlayEnabled" 0
+        } else {
+            New-Item -Path $cdm -Force -ErrorAction SilentlyContinue | Out-Null
+            Set-ItemProperty -Path $cdm -Name RotatingLockScreenEnabled -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+            Set-ItemProperty -Path $cdm -Name RotatingLockScreenOverlayEnabled -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+        }
+        return [bool](Set-FoxLookLockImage $path)
+    } catch { return $false }
+}
+
+function Disable-SeelenWallpaperOverlay {
+    <#
+      Seelen's wallpaper-manager paints purple glass over the real Windows wallpaper.
+      FoxOS / Shewchuk walls must be SPI wallpapers — keep Seelen's layer off.
+    #>
+    $settingsPath = Join-Path $env:APPDATA "com.seelen.seelen-ui\settings.json"
+    if (-not (Test-Path -LiteralPath $settingsPath)) { return $false }
+    try {
+        $raw = Get-Content -LiteralPath $settingsPath -Raw -Encoding UTF8
+        $j = $raw | ConvertFrom-Json
+        $wm = $null
+        try { $wm = $j.byWidget.'@seelen/wallpaper-manager' } catch { $wm = $null }
+        if ($null -eq $wm) { return $false }
+        if ($wm.enabled -eq $false) { return $true }
+        $wm.enabled = $false
+        $utf8 = New-Object System.Text.UTF8Encoding($false)
+        [System.IO.File]::WriteAllText($settingsPath, ($j | ConvertTo-Json -Depth 30), $utf8)
+        return $true
+    } catch { return $false }
+}
+
+function Get-ShewchukPalettesPath {
+    $root = Get-ShewchukRoot
+    if (-not $root) { return $null }
+    return (Join-Path $root "wallpapers\palettes.json")
+}
+
+function Get-ShewchukWallpaperPalette([string]$imagePath) {
+    if ([string]::IsNullOrWhiteSpace($imagePath)) { return $null }
+    $leaf = [System.IO.Path]::GetFileName($imagePath)
+    # Cache files look like name.jpg.screen.jpg — recover original leaf.
+    if ($leaf -match '^(?<stem>.+\.(jpg|jpeg|png|webp|bmp))\.(screen|card)\.(jpg|jpeg|png)$') {
+        $leaf = $Matches['stem']
+    }
+    $path = Get-ShewchukPalettesPath
+    if (-not $path -or -not (Test-Path -LiteralPath $path)) { return $null }
+    try {
+        $doc = Get-Content -LiteralPath $path -Raw -Encoding UTF8 | ConvertFrom-Json
+        $bag = $doc.wallpapers
+        if (-not $bag) { return $null }
+        $entry = $bag.$leaf
+        if (-not $entry) { return $null }
+        return [pscustomobject]@{
+            Leaf     = $leaf
+            System   = [bool]$entry.system
+            Accent   = [string]$entry.accent
+            Accent2  = [string]$entry.accent2
+            Bg       = [string]$entry.bg
+            Surface  = [string]$entry.surface
+            Ink      = [string]$entry.ink
+            Sw       = [string]$entry.sw
+        }
+    } catch { return $null }
+}
+
+function Update-SeelenThemeAccent([string]$accent, [string]$accent2, [string]$bg, [string]$surface, [string]$ink) {
+    $settingsPath = Join-Path $env:APPDATA "com.seelen.seelen-ui\settings.json"
+    if (-not (Test-Path -LiteralPath $settingsPath)) { return $false }
+    try {
+        $j = Get-Content -LiteralPath $settingsPath -Raw -Encoding UTF8 | ConvertFrom-Json
+        $themeId = "@foxsystem/fox-glass"
+        if (-not $j.byTheme) { $j | Add-Member -NotePropertyName byTheme -NotePropertyValue ([pscustomobject]@{}) -Force }
+        $bag = $j.byTheme.$themeId
+        if (-not $bag) {
+            $bag = [pscustomobject]@{}
+            $j.byTheme | Add-Member -NotePropertyName $themeId -NotePropertyValue $bag -Force
+        }
+        $set = {
+            param($obj, $name, $val)
+            if ($obj.PSObject.Properties.Name -contains $name) { $obj.$name = $val }
+            else { $obj | Add-Member -NotePropertyName $name -NotePropertyValue $val -Force }
+        }
+        & $set $bag "--fox-accent" $accent
+        if ($accent2) { & $set $bag "--fox-accent2" $accent2 }
+        if ($bg) { & $set $bag "--fox-bg" $bg }
+        if ($surface) { & $set $bag "--fox-surface" $surface }
+        if ($ink) { & $set $bag "--fox-ink" $ink }
+        $utf8 = New-Object System.Text.UTF8Encoding($false)
+        [System.IO.File]::WriteAllText($settingsPath, ($j | ConvertTo-Json -Depth 30), $utf8)
+        return $true
+    } catch { return $false }
+}
+
+function Update-ZenBrowserAccent([string]$accent, [string]$accent2, [string]$bg, [string]$ink) {
+    if ([string]::IsNullOrWhiteSpace($accent)) { return $false }
+    if ([string]::IsNullOrWhiteSpace($accent2)) { $accent2 = $accent }
+    if ([string]::IsNullOrWhiteSpace($bg)) { $bg = "#0B0A12" }
+    if ([string]::IsNullOrWhiteSpace($ink)) { $ink = "#E2E0F0" }
+    $profilesRoot = Join-Path $env:APPDATA "zen\Profiles"
+    if (-not (Test-Path -LiteralPath $profilesRoot)) { return $false }
+    $css = @"
+/* FoxTerminal wallpaper accent — regenerated on Win+W commit */
+:root {
+  --fox-accent: $accent !important;
+  --zen-primary: $accent !important;
+  --zen-colors-primary: $accent !important;
+}
+toolbar, #navigator-toolbox, #tabbrowser-tabbox {
+  --toolbar-bgcolor: $bg !important;
+}
+"@
+    $utf8 = New-Object System.Text.UTF8Encoding($false)
+    $n = 0
+    Get-ChildItem -Path $profilesRoot -Directory -ErrorAction SilentlyContinue | ForEach-Object {
+        $chromeDir = Join-Path $_.FullName "chrome"
+        New-Item -ItemType Directory -Force -Path $chromeDir | Out-Null
+        $stamp = Join-Path $chromeDir "fox-wallpaper-accent.css"
+        [System.IO.File]::WriteAllText($stamp, $css, $utf8)
+        $uc = Join-Path $chromeDir "userChrome.css"
+        $import = '@import url("fox-wallpaper-accent.css");'
+        $existing = ""
+        if (Test-Path -LiteralPath $uc) {
+            $existing = Get-Content -LiteralPath $uc -Raw -Encoding UTF8 -ErrorAction SilentlyContinue
+        }
+        if ($existing -notmatch 'fox-wallpaper-accent\.css') {
+            [System.IO.File]::WriteAllText($uc, ($import + "`n" + $existing), $utf8)
+        }
+        $userJs = Join-Path $_.FullName "user.js"
+        $lines = @(
+            'user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);'
+            ('user_pref("zen.theme.accent-color", "{0}");' -f $accent)
+        )
+        [System.IO.File]::WriteAllText($userJs, ($lines -join "`n") + "`n", $utf8)
+        $prefs = Join-Path $_.FullName "prefs.js"
+        if (Test-Path -LiteralPath $prefs) {
+            $raw = Get-Content -LiteralPath $prefs -Raw -ErrorAction SilentlyContinue
+            if ($null -eq $raw) { $raw = "" }
+            if ($raw -match 'user_pref\("zen\.theme\.accent-color"') {
+                $raw = [regex]::Replace($raw, 'user_pref\("zen\.theme\.accent-color",\s*"[^"]*"\);', ('user_pref("zen.theme.accent-color", "{0}");' -f $accent))
+            } else {
+                $raw = $raw.TrimEnd() + "`n" + ('user_pref("zen.theme.accent-color", "{0}");' -f $accent) + "`n"
+            }
+            if ($raw -notmatch 'toolkit\.legacyUserProfileCustomizations\.stylesheets') {
+                $raw += 'user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);' + "`n"
+            }
+            [System.IO.File]::WriteAllText($prefs, $raw, $utf8)
+        }
+        $n++
+    }
+    return ($n -gt 0)
+}
+
+function Apply-ShewchukWallpaperTheme {
+    <#
+      Per-wallpaper accent for Windows + Seelen + Zen.
+      Skips foxterm-fox / system entries — those stay on terminal/FOXSTYLE colors.
+    #>
+    param(
+        [Parameter(Mandatory = $true)][string]$ImagePath,
+        [switch]$SkipBrowser
+    )
+    try { Disable-SeelenWallpaperOverlay | Out-Null } catch {}
+    $pal = Get-ShewchukWallpaperPalette $ImagePath
+    if (-not $pal) { return $false }
+    if ($pal.System) { return $false }
+
+    $accent = $pal.Accent
+    $accent2 = $pal.Accent2
+    $bg = $pal.Bg
+    $surface = $pal.Surface
+    $ink = $pal.Ink
+    $sw = $pal.Sw
+    if ([string]::IsNullOrWhiteSpace($accent)) { return $false }
+
+    $stylePath = Join-Path (Get-FoxOsDir) "style.json"
+    if (Test-Path -LiteralPath $stylePath) {
+        try {
+            $style = Get-Content -LiteralPath $stylePath -Raw -Encoding UTF8 | ConvertFrom-Json
+            if (-not $style.colors) { $style | Add-Member -NotePropertyName colors -NotePropertyValue ([pscustomobject]@{}) -Force }
+            $style.colors.accent = $accent
+            $style.colors.accent2 = $accent2
+            $style.colors.bg = $bg
+            if ($surface) { $style.colors.surface = $surface }
+            if ($ink) { $style.colors.ink = $ink }
+            if ($sw) { $style.colors.sw = $sw }
+            $utf8 = New-Object System.Text.UTF8Encoding($false)
+            [System.IO.File]::WriteAllText($stylePath, ($style | ConvertTo-Json -Depth 30), $utf8)
+        } catch {}
+    }
+
+    try { Set-FoxOsAccent $accent } catch {}
+
+    # Patch live.json accents without forcing a full skin republish over the photo.
+    $livePath = Get-FoxOsLiveStatePath
+    if (Test-Path -LiteralPath $livePath) {
+        try {
+            $live = Get-Content -LiteralPath $livePath -Raw -Encoding UTF8 | ConvertFrom-Json
+            $live.accent = $accent
+            $live.accent2 = $accent2
+            if ($bg) { $live.night = $bg }
+            $utf8 = New-Object System.Text.UTF8Encoding($false)
+            [System.IO.File]::WriteAllText($livePath, ($live | ConvertTo-Json -Depth 20 -Compress), $utf8)
+        } catch {}
+    }
+
+    try { Update-SeelenThemeAccent $accent $accent2 $bg $surface $ink | Out-Null } catch {}
+    # Fast Seelen CSS stamp (no separate foxseelen process).
+    try {
+        $runtime = Get-FoxOsDir
+        $syncCss = Join-Path $runtime "seelen-fox-sync.css"
+        $css = "/* wallpaper accent */`n:root { --fox-accent: $accent; --fox-accent2: $accent2; --fox-bg: $bg; --fox-surface: $surface; --fox-ink: $ink; --fox-motion-ms: 180; }`n"
+        $utf8 = New-Object System.Text.UTF8Encoding($false)
+        [System.IO.File]::WriteAllText($syncCss, $css, $utf8)
+        $shared = Join-Path (Split-Path $PSScriptRoot -Parent) "integrations\seelen\fox-glass\styles\shared.css"
+        if (Test-Path -LiteralPath $shared) {
+            $raw = Get-Content -LiteralPath $shared -Raw -Encoding UTF8
+            if ($raw -match '--fox-accent-sync') {
+                $raw2 = [regex]::Replace($raw,
+                    '(?s)/\* --fox-accent-sync \*/.*?\}',
+                    "/* --fox-accent-sync */`n:root { --fox-accent: $accent; --fox-accent2: $accent2; --fox-bg: $bg; --fox-surface: $surface; --fox-ink: $ink; --fox-motion-ms: 180; }")
+                [System.IO.File]::WriteAllText($shared, $raw2, $utf8)
+            }
+        }
+    } catch {}
+
+    if (-not $SkipBrowser) {
+        try { Update-ZenBrowserAccent $accent $accent2 $bg $ink | Out-Null } catch {}
+    }
+    # Colors follow this wallpaper. Shell and the macOS cursor do not.
+    if (-not (Get-Command Ensure-FoxPinnedChrome -ErrorAction SilentlyContinue)) {
+        $lookLib = Join-Path $PSScriptRoot "foxlook-lib.ps1"
+        if (Test-Path -LiteralPath $lookLib) { . $lookLib }
+    }
+    if (Get-Command Ensure-FoxPinnedChrome -ErrorAction SilentlyContinue) {
+        try { Ensure-FoxPinnedChrome } catch {}
+    }
+    if ((Get-Command Test-FoxLookPart -ErrorAction SilentlyContinue) -and (Test-FoxLookPart "cursors")) {
+        try { Apply-FoxLookCursors -Force | Out-Null } catch {}
+    }
+    return $true
+}
+
+function Enter-FoxOsSystemWallpaper {
+    <#
+      Leave Shewchuk photo mode: FoxOS fox + rain. Fast — no live process restart.
+      Colors stay manual (terminal / FOXSTYLE).
+    #>
+    param([switch]$EnsureRain)
+    try { Disable-SeelenWallpaperOverlay | Out-Null } catch {}
+    $photoFile = Join-Path (Get-FoxOsDir) "wall-photo.txt"
+    Remove-Item -LiteralPath $photoFile -Force -ErrorAction SilentlyContinue
+
+    if ($EnsureRain) {
+        $stylePath = Join-Path (Get-FoxOsDir) "style.json"
+        if (Test-Path -LiteralPath $stylePath) {
+            try {
+                $style = Get-Content -LiteralPath $stylePath -Raw -Encoding UTF8 | ConvertFrom-Json
+                if (-not $style.texture) { $style | Add-Member -NotePropertyName texture -NotePropertyValue ([pscustomobject]@{}) -Force }
+                $rain = 0
+                try { $rain = [int]$style.texture.rain } catch { $rain = 0 }
+                if ($rain -lt 1) { $style.texture.rain = 28 }
+                if (-not $style.texture.kind) { $style.texture.kind = "glass" }
+                $utf8 = New-Object System.Text.UTF8Encoding($false)
+                [System.IO.File]::WriteAllText($stylePath, ($style | ConvertTo-Json -Depth 30), $utf8)
+            } catch {}
+        }
+    }
+
+    # Reuse existing bake when present — Force only if missing (fast wallpaper flips).
+    try {
+        $theme = Get-FoxOsThemeName
+        $baked = Join-Path (Get-FoxOsDir) ("walls\desktop-" + $theme + "-fox.bmp")
+        if (Test-Path -LiteralPath $baked) {
+            Set-FoxOsWallpaper $baked | Out-Null
+        } else {
+            Publish-FoxOsRealWallpaper -Force | Out-Null
+        }
+    } catch {
+        try { Publish-FoxOsRealWallpaper -Force | Out-Null } catch {}
+    }
+    try { Write-FoxOsLiveState } catch {}
+    # Live polls EnsureWallPhoto and re-Attaches fox/rain — no process restart.
+    if (-not (Test-FoxOsLiveRunning)) {
+        try { Start-FoxOsLive | Out-Null } catch {}
+    }
+    return $true
+}
+
+function Apply-ShewchukRememberedWallpaper {
+    <#
+      Re-apply last Shewchuk photo to desktop + lock/logon screen.
+      Source of truth: shewchuk.json + wall-photo.txt.
+    #>
+    param([switch]$LockOnly)
+    try { Disable-SeelenWallpaperOverlay | Out-Null } catch {}
+    $paths = Get-ShewchukWallpaperPaths
+    $orig = [string]$paths.Original
+    $file = [string]$paths.Screen
+    if (-not $file) { return $false }
+
+    $pal = Get-ShewchukWallpaperPalette $(if ($orig) { $orig } else { $file })
+    if ($pal -and $pal.System) {
+        return [bool](Enter-FoxOsSystemWallpaper -EnsureRain)
+    }
+
+    try {
+        Set-Content -LiteralPath $paths.PhotoFile -Value $file -Encoding UTF8
+    } catch {}
+    if (-not $LockOnly) {
+        Set-FoxOsWallpaper $file | Out-Null
+    }
+    Set-FoxOsLockImageSafe $file | Out-Null
+    if ($orig) {
+        try { Apply-ShewchukWallpaperTheme -ImagePath $orig | Out-Null } catch {}
+    }
+    return $true
 }
 
 function Resolve-FoxDockPin([string]$id) {
@@ -868,7 +1326,7 @@ function Write-FoxOsLiveState {
         }
     }
     if ([string]::IsNullOrWhiteSpace($foxUser)) { $foxUser = $env:USERNAME }
-    $obj = @{
+    $obj = [ordered]@{
         night   = (Get-FoxOsNightHex $theme)
         accent  = $p.accent
         accent2 = $p.accent2
@@ -878,7 +1336,8 @@ function Write-FoxOsLiveState {
         fox     = $fox
         cmd     = $PSScriptRoot
         rig     = $(if ((Test-Path variable:script:FoxOsRigOverride) -and $script:FoxOsRigOverride) { $script:FoxOsRigOverride } else { Get-FoxOsRigStyle })
-        wall    = $(if (Get-Command Get-FoxLookWall -ErrorAction SilentlyContinue) { Get-FoxLookWall } else { "overlay" })
+        # "behind" = WorkerW wallpaper layer (true desktop). Overlay was a floating picture on top of real walls.
+        wall    = $(if (Get-Command Get-FoxLookWall -ErrorAction SilentlyContinue) { Get-FoxLookWall } else { "behind" })
         shell   = "off"
         dockStyle = "pill"
         dockPos   = "bottom"
@@ -886,8 +1345,9 @@ function Write-FoxOsLiveState {
         dockHide  = "off"
         dockWins  = "titles"
         dockTray  = "full"
-        dockWidgets = "on"
-        dockHome = "on"
+        # FoxTerminal ShellBar + Home permanently off — Seelen owns the dock.
+        dockWidgets = "off"
+        dockHome = "off"
         pinCursor = (Resolve-FoxDockPin "cursor")
         pinZen    = (Resolve-FoxDockPin "zen")
         pinTerm   = (Resolve-FoxDockPin "term")
@@ -903,10 +1363,9 @@ function Write-FoxOsLiveState {
         $obj.dockHide = $(if ($hideOn) { "on" } else { "off" })
         if ($ls.dockWins) { $obj.dockWins = [string]$ls.dockWins }
         if ($ls.dockTray) { $obj.dockTray = [string]$ls.dockTray }
-        $widOn = if ($null -eq $ls.dockWidgets) { $true } elseif ($ls.dockWidgets -is [bool]) { [bool]$ls.dockWidgets } else { ("$($ls.dockWidgets)".ToLowerInvariant() -in @("on","1","true")) }
-        $obj.dockWidgets = $(if ($widOn) { "on" } else { "off" })
-        $homeOn = if ($null -eq $ls.dockHome) { $true } elseif ($ls.dockHome -is [bool]) { [bool]$ls.dockHome } else { ("$($ls.dockHome)".ToLowerInvariant() -in @("on","1","true")) }
-        $obj.dockHome = $(if ($homeOn) { "on" } else { "off" })
+        # Always force off — do not resurrect Home / Fox dock widgets from older look.json.
+        $obj.dockWidgets = "off"
+        $obj.dockHome = "off"
     } else {
         # foxlook-lib not loaded — still honor look.json shell/dock flags
         $lookPath = Join-Path (Get-FoxOsDir) "look.json"
@@ -999,17 +1458,17 @@ function Write-FoxOsLiveState {
         try {
             $prev = Get-Content -LiteralPath $livePath -Raw -Encoding UTF8 | ConvertFrom-Json
             foreach ($k in @('pinCursor','pinZen','pinTerm','cmd','fox','rig','user')) {
-                if (-not $obj.ContainsKey($k) -and $null -ne $prev.$k -and "$($prev.$k)".Length -gt 0) {
+                if (-not $obj.Contains($k) -and $null -ne $prev.$k -and "$($prev.$k)".Length -gt 0) {
                     $obj[$k] = [string]$prev.$k
                 }
             }
         } catch {}
     }
-    if (-not $obj.ContainsKey('wallRain') -or [string]::IsNullOrWhiteSpace([string]$obj['wallRain'])) {
+    if (-not $obj.Contains('wallRain') -or [string]::IsNullOrWhiteSpace([string]$obj['wallRain'])) {
         $obj['wallRain'] = '30'
-        if (-not $obj.ContainsKey('wallStrength')) { $obj['wallStrength'] = '60' }
-        if (-not $obj.ContainsKey('wallVeil')) { $obj['wallVeil'] = '55' }
-        if (-not $obj.ContainsKey('wallWeight')) { $obj['wallWeight'] = '40' }
+        if (-not $obj.Contains('wallStrength')) { $obj['wallStrength'] = '60' }
+        if (-not $obj.Contains('wallVeil')) { $obj['wallVeil'] = '55' }
+        if (-not $obj.Contains('wallWeight')) { $obj['wallWeight'] = '40' }
     }
     # Keep style-applied wall keys in sync so other readers stay consistent.
     $appliedPath = Join-Path (Get-FoxOsDir) 'style-applied.json'
@@ -1017,15 +1476,29 @@ function Write-FoxOsLiveState {
         try {
             $ap = Get-Content -LiteralPath $appliedPath -Raw -Encoding UTF8 | ConvertFrom-Json
             foreach ($k in @('wallKind','wallRain','wallStrength','wallScale','wallWeight','wallVeil','foxGlow','foxGlowStrength','foxGlowSpeed')) {
-                if ($obj.ContainsKey($k)) {
+                if ($obj.Contains($k)) {
                     $ap | Add-Member -NotePropertyName $k -NotePropertyValue $obj[$k] -Force
                 }
             }
-            [System.IO.File]::WriteAllText($appliedPath, ($ap | ConvertTo-Json -Compress), (New-Object System.Text.UTF8Encoding $false))
+            $newApplied = ($ap | ConvertTo-Json -Compress)
+            $oldApplied = ""
+            try { $oldApplied = [System.IO.File]::ReadAllText($appliedPath) } catch {}
+            if ($oldApplied.Trim() -ne $newApplied.Trim()) {
+                [System.IO.File]::WriteAllText($appliedPath, $newApplied, (New-Object System.Text.UTF8Encoding $false))
+            }
         } catch {}
     }
     $utf8 = New-Object System.Text.UTF8Encoding($false)
-    [System.IO.File]::WriteAllText($livePath, ($obj | ConvertTo-Json -Compress), $utf8)
+    $payload = ($obj | ConvertTo-Json -Compress)
+    # Same bytes must not bump the timestamp. foxos-live treats that as a theme
+    # change and rebuilds the fox on the UI thread until the desktop stops responding.
+    if (Test-Path -LiteralPath $livePath) {
+        try {
+            $prevTxt = [System.IO.File]::ReadAllText($livePath)
+            if ($prevTxt.Trim() -eq $payload.Trim()) { return }
+        } catch {}
+    }
+    [System.IO.File]::WriteAllText($livePath, $payload, $utf8)
 }
 
 function Get-FoxOsRigStyle {
@@ -1087,6 +1560,15 @@ function Stop-FoxOsMediaWatch {
 }
 
 function Start-FoxOsMediaWatch {
+    # Shewchuk: FoxOS top media bar OFF — Nusa owns the music notch.
+    $disableFlag = Join-Path (Get-FoxOsDir) "media.disabled"
+    if (-not (Test-Path -LiteralPath $disableFlag)) {
+        try { "1" | Set-Content -LiteralPath $disableFlag -Encoding ASCII } catch {}
+    }
+    if (Test-Path -LiteralPath $disableFlag) {
+        try { Stop-FoxOsMediaWatch | Out-Null } catch {}
+        return $false
+    }
     if (-not (Test-FoxOsWindows)) { return $false }
     $ps1 = Join-Path $PSScriptRoot "foxos-media.ps1"
     if (-not (Test-Path -LiteralPath $ps1)) { return $false }
@@ -1252,9 +1734,7 @@ function Ensure-FoxOsLiveBuilt {
     if ($sources.Count -eq 0) { return $false }
     $exe = Get-FoxOsLiveExe
     if (-not (Test-FoxOsLiveStale)) { return $true }
-    if (-not (Test-Path -LiteralPath $exe)) {
-        try { Ensure-FoxOsDefenderExclusion | Out-Null } catch {}
-    }
+    # No UAC here. A hidden RunAs -Wait during sign-in left the session with nothing to launch.
     $csc = Join-Path $env:WINDIR "Microsoft.NET\Framework64\v4.0.30319\csc.exe"
     if (-not (Test-Path -LiteralPath $csc)) { return $false }
     $out = Join-Path (Get-FoxOsDir) "foxos-live.build.log"
@@ -1275,7 +1755,6 @@ function Ensure-FoxOsLiveBuilt {
     # Defender sometimes deletes the fresh binary within a second of csc.
     Start-Sleep -Milliseconds 800
     if (-not (Test-Path -LiteralPath $exe)) {
-        try { Ensure-FoxOsDefenderExclusion -Force | Out-Null } catch {}
         $p2 = Start-Process -FilePath $csc -ArgumentList $args -Wait -PassThru -NoNewWindow -RedirectStandardOutput $out -RedirectStandardError ($out + ".err")
         $ok = ((Test-Path -LiteralPath $exe) -and $p2.ExitCode -eq 0)
         if ($ok) {
@@ -1287,23 +1766,31 @@ function Ensure-FoxOsLiveBuilt {
 }
 
 function Start-FoxOsLive {
-    Write-FoxOsLiveState
+    param([switch]$Logon)
+
     $exe = Get-FoxOsLiveExe
-    if ((Test-Path -LiteralPath $exe) -and (Test-FoxOsLiveStale)) {
-        Stop-FoxOsLive
+    # Sign-in path: the exe that is already on disk. Compiling or killing it
+    # here is what froze the desktop before Explorer could start.
+    if ($Logon) {
+        if (-not (Test-Path -LiteralPath $exe)) { return $false }
+        if (Test-FoxOsLiveRunning) { return $true }
+        try { Write-FoxOsLiveState } catch {}
+        Start-Process -FilePath $exe -ArgumentList @((Get-FoxOsLiveStatePath)) -WindowStyle Hidden | Out-Null
+        Start-Sleep -Milliseconds 400
+        return (Test-FoxOsLiveRunning)
     }
+
+    try { Write-FoxOsLiveState } catch {}
+    # Leave a running desktop alone. Stop-and-rebuild on every start was a sign-in loop.
+    if (Test-FoxOsLiveRunning) { return $true }
     if (-not (Ensure-FoxOsLiveBuilt)) { return $false }
     if (Test-FoxOsLiveRunning) { return $true }
     Start-Process -FilePath $exe -ArgumentList @((Get-FoxOsLiveStatePath)) -WindowStyle Hidden | Out-Null
     Start-Sleep -Milliseconds 400
-    # Quarantine race: process never appears / exe vanished after start.
-    if (-not (Test-FoxOsLiveRunning)) {
-        if (-not (Test-Path -LiteralPath $exe)) {
-            try { Ensure-FoxOsDefenderExclusion -Force | Out-Null } catch {}
-            if (Ensure-FoxOsLiveBuilt) {
-                Start-Process -FilePath (Get-FoxOsLiveExe) -ArgumentList @((Get-FoxOsLiveStatePath)) -WindowStyle Hidden | Out-Null
-                Start-Sleep -Milliseconds 500
-            }
+    if (-not (Test-FoxOsLiveRunning) -and -not (Test-Path -LiteralPath $exe)) {
+        if (Ensure-FoxOsLiveBuilt) {
+            Start-Process -FilePath (Get-FoxOsLiveExe) -ArgumentList @((Get-FoxOsLiveStatePath)) -WindowStyle Hidden | Out-Null
+            Start-Sleep -Milliseconds 500
         }
     }
     try { Start-FoxOsMediaWatch | Out-Null } catch {}
@@ -1341,16 +1828,41 @@ function Sync-FoxOsSkin {
     Save-FoxOsBackupIfNeeded
     Merge-FoxOsBackupExtras
     Apply-FoxOsTaskbar
+    try { Disable-WindowsWidgetBoard | Out-Null } catch {}
     Write-FoxOsLiveState
+    try { Disable-SeelenWallpaperOverlay | Out-Null } catch {}
 
-    if ($themeChanged -or $Force) {
-        $wallDir = Join-Path (Get-FoxOsDir) "walls"
-        $wall = Join-Path $wallDir ($key + ".bmp")
-        if ($Force -or -not (Test-Path -LiteralPath $wall)) {
-            New-FoxOsWallpaper -Theme $theme -OutPath $wall | Out-Null
+    # Shewchuk / Win+W photo wallpaper wins over FoxOS generated walls.
+    # Resolve + repair stale wall-photo paths (DPI/cache rename) from shewchuk.json.
+    $resolved = Get-ShewchukWallpaperPaths
+    $userPhoto = [string]$resolved.Screen
+    $keepUserWall = -not [string]::IsNullOrWhiteSpace($userPhoto)
+
+    if ($keepUserWall) {
+        # Always re-SPI + lock on sync so reboot / Shell start restores the last photo.
+        try { Apply-ShewchukRememberedWallpaper | Out-Null } catch {
+            try { Set-FoxOsWallpaper $userPhoto | Out-Null } catch {}
+            try { Set-FoxOsLockImageSafe $userPhoto | Out-Null } catch {}
         }
+        if ($themeChanged -or $Force) {
+            try {
+                $p = Get-FoxOsPalette
+                Set-FoxOsAccent $p.accent
+                Broadcast-FoxOsChange
+            } catch {}
+            if ((Get-Command Test-FoxLookPart -ErrorAction SilentlyContinue) -and (Test-FoxLookEnabled)) {
+                if (Test-FoxLookPart "cursors") { try { Apply-FoxLookCursors | Out-Null } catch {} }
+            }
+        }
+    } elseif ($themeChanged -or $Force) {
         $p = Get-FoxOsPalette
-        Set-FoxOsWallpaper $wall | Out-Null
+        # Real Windows wallpaper (fox + glass), not only the Live overlay picture
+        try { Publish-FoxOsRealWallpaper -Force | Out-Null } catch {
+            $wallDir = Join-Path (Get-FoxOsDir) "walls"
+            $wall = Join-Path $wallDir ($key + ".bmp")
+            New-FoxOsWallpaper -Theme $theme -OutPath $wall -WithFox | Out-Null
+            Set-FoxOsWallpaper $wall | Out-Null
+        }
         Set-FoxOsAccent $p.accent
         Broadcast-FoxOsChange
         $key | Set-Content -LiteralPath $lastPath -Encoding UTF8

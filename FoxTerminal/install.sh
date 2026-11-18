@@ -91,8 +91,6 @@ env = FOXTERM_HOST=ghostty
 
 command = bash --noprofile --rcfile ${BOOT_FILE} -i
 working-directory = ${FOX_ROOT}
-
-config-file = ?foxterminal-shaders.ghostty
 EOF
 printf 'Installed local overlay: %s\n' "${LOCAL_FILE}"
 printf 'Shell: bash -> %s\n\n' "${BOOT_FILE}"

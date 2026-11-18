@@ -32,10 +32,10 @@ function Read-FoxLookJson([string]$path) {
 function Read-FoxLookState {
     $s = @{
         on = $false; parts = @{}; wall = "overlay"; lockKey = ""
-        cursor = "neon"; cursorScale = 2; cursorKey = ""
+        cursor = "macos"; cursorScale = 2; cursorKey = ""
         dockStyle = "pill"; dockPos = "bottom"; dockSize = "normal"
         dockHide = $false; dockWins = "titles"; dockTray = "full"
-        dockWidgets = $true; dockHome = $true
+        dockWidgets = $false; dockHome = $false
     }
     $j = Read-FoxLookJson (Get-FoxLookStatePath)
     if ($j) {
@@ -61,13 +61,14 @@ function Read-FoxLookState {
 }
 
 function Write-FoxLookState($s) {
+    # Hard lock: FoxTerminal Home + desk widgets stay dead (Seelen owns chrome).
     Write-FoxLookJson (Get-FoxLookStatePath) ([ordered]@{
         on          = [bool]$s.on
         parts       = $s.parts
         wall        = $s.wall
         lockKey     = $s.lockKey
-        cursor      = $s.cursor
-        cursorScale = [int]$s.cursorScale
+        cursor      = $(if ($s.cursor) { $s.cursor } else { "macos" })
+        cursorScale = [int]$(if ($s.cursorScale -ge 1) { $s.cursorScale } else { 2 })
         cursorKey   = $s.cursorKey
         dockStyle   = $s.dockStyle
         dockPos     = $s.dockPos
@@ -75,8 +76,8 @@ function Write-FoxLookState($s) {
         dockHide    = [bool]$s.dockHide
         dockWins    = $s.dockWins
         dockTray    = $s.dockTray
-        dockWidgets = [bool]$(if ($null -ne $s.dockWidgets) { $s.dockWidgets } else { $true })
-        dockHome    = [bool]$(if ($null -ne $s.dockHome) { $s.dockHome } else { $true })
+        dockWidgets = $false
+        dockHome    = $false
     })
     if (Get-Command Save-FoxUserWorld -ErrorAction SilentlyContinue) {
         try { Save-FoxUserWorld } catch {}
@@ -440,7 +441,7 @@ function Apply-FoxLookCursors {
 }
 
 function Set-FoxLookCursorStyle([string]$style, [int]$scale) {
-    $allowed = @("inverted") + $(if ($script:FoxCursorStyles) { $script:FoxCursorStyles } else { @("pixel", "chunky", "neon", "fox") })
+    $allowed = @("inverted") + $(if ($script:FoxCursorStyles) { $script:FoxCursorStyles } else { @("pixel", "chunky", "neon", "fox", "macos") })
     if ($style -notin $allowed) { return $false }
     $s = Read-FoxLookState
     $s.cursor = $style
@@ -632,6 +633,26 @@ function Apply-FoxLookLockScreen {
     Save-FoxLookLockOriginal
     Set-FoxOsRegDword $script:FoxLookCdm "RotatingLockScreenEnabled" 0
     Set-FoxOsRegDword $script:FoxLookCdm "RotatingLockScreenOverlayEnabled" 0
+
+    # Prefer the same Shewchuk / desktop photo on the password / lock screen.
+    $userPhoto = ""
+    if (Get-Command Get-ShewchukWallpaperPaths -ErrorAction SilentlyContinue) {
+        try { $userPhoto = [string](Get-ShewchukWallpaperPaths).Screen } catch { $userPhoto = "" }
+    }
+    if (-not $userPhoto) {
+        $photoFile = Join-Path $env:LOCALAPPDATA "FoxTerminal\foxos\wall-photo.txt"
+        if (Test-Path -LiteralPath $photoFile) {
+            try { $userPhoto = (Get-Content -LiteralPath $photoFile -Raw -ErrorAction SilentlyContinue).Trim().Trim('"') } catch {}
+            if ($userPhoto -and -not (Test-Path -LiteralPath $userPhoto)) { $userPhoto = "" }
+        }
+    }
+    if ($userPhoto) {
+        if (-not (Set-FoxLookLockImage $userPhoto)) { return $false }
+        $s.lockKey = "shewchuk-photo"
+        Write-FoxLookState $s
+        return $true
+    }
+
     if (-not $Force -and $s.lockKey -eq $key) { return $true }
     $img = Join-Path (Get-FoxLookDir) ("locks\" + $key + ".png")
     if ($Force -or -not (Test-Path -LiteralPath $img)) {
@@ -809,6 +830,21 @@ function Invoke-FoxLookAdmin([string]$action) {
     }
 }
 
+function Ensure-FoxPinnedChrome {
+    # Shell and the macOS cursor stay on. Switching a wallpaper changes the
+    # picture and its colors, not these two.
+    if (-not (Test-FoxLookPart "cursors")) {
+        Set-FoxLookPart -Part "cursors" -On $true | Out-Null
+    }
+    $s = Read-FoxLookState
+    if ($s.cursor -ne "macos") {
+        Set-FoxLookCursorStyle "macos" $(if ($s.cursorScale -ge 1) { [int]$s.cursorScale } else { 2 }) | Out-Null
+    }
+    if (-not (Test-FoxLookPart "shell")) {
+        Set-FoxLookPart -Part "shell" -On $true | Out-Null
+    }
+}
+
 function Apply-FoxLookOem { return (Invoke-FoxLookAdmin "apply") }
 function Restore-FoxLookOem { Invoke-FoxLookAdmin "restore" | Out-Null }
 
@@ -830,10 +866,11 @@ function Write-FoxLookShellLaunchers {
         "title FoxOS",
         ("if not exist `"" + $ps1 + "`" goto :fallback"),
         ("powershell -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"" + $ps1 + "`""),
+        "if errorlevel 1 start `"`" explorer.exe",
         "goto :eof",
         ":fallback",
-        ("if exist `"" + (Get-FoxOsLiveExe) + "`" start `"`" `"" + (Get-FoxOsLiveExe) + "`" `"" + (Get-FoxOsLiveStatePath) + "`""),
-        "if errorlevel 1 start explorer.exe"
+        "start `"`" explorer.exe",
+        ("if exist `"" + (Get-FoxOsLiveExe) + "`" start `"`" `"" + (Get-FoxOsLiveExe) + "`" `"" + (Get-FoxOsLiveStatePath) + "`"")
     )
     $utf8 = New-Object System.Text.UTF8Encoding($false)
     [System.IO.File]::WriteAllText((Get-FoxLookShellCmdPath), (($cmd -join "`r`n") + "`r`n"), $utf8)

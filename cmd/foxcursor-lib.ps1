@@ -1,10 +1,10 @@
-# FoxOS pixel cursors: every shape is an ASCII pixel map, tinted by the active theme and
+﻿# FoxOS pixel cursors: every shape is an ASCII pixel map, tinted by the active theme and
 # written as a .cur file. A 1px (or 2px) dark outline is grown around each shape automatically.
 #   o  accent   +  highlight   -  shade   n  night (pupils, nose)   w  white   .  transparent
 # Styles: neon (hollow, accent rim; default), pixel (classic thin arrow), chunky (2px outline, bold), fox (fox-head pointer).
 # Loaded after foxos-lib.ps1 (needs Get-FoxOsPalette, Get-FoxOsNightHex, Get-FoxOsThemeName, Get-FoxOsDir).
 
-$script:FoxCursorStyles = @("pixel", "chunky", "neon", "fox")
+$script:FoxCursorStyles = @("pixel", "chunky", "neon", "fox", "macos")
 
 function Ensure-FoxCursorNative {
     if ("FoxCursor" -as [type]) { return $true }
@@ -204,6 +204,28 @@ function Get-FoxCursorArrow([string]$style) {
             "..owwwwwwwo..",
             "...ooooooo...",
             ".....ooo....."
+        )
+    }
+    # Solid macOS-style pointer (Seelen / mac look) — opaque black body, white core.
+    if ($style -eq "macos") {
+        return @(
+            "n...........",
+            "nn..........",
+            "nwn.........",
+            "nwwwn.......",
+            "nwwwwwn.....",
+            "nwwwwwwwn...",
+            "nwwwwwwwwwn.",
+            "nwwwwwwwwwwwn",
+            "nwwwwwwwwwwwn",
+            "nwwwwwwwnnnn.",
+            "nwwwnnwwwn...",
+            "nwwwn.nwwwn..",
+            "nwn...nwwwn..",
+            "nn.....nwwwn.",
+            "n.......nwwwn",
+            ".........nwn.",
+            "..........nn."
         )
     }
     return @(
@@ -440,6 +462,17 @@ function ConvertFrom-FoxCursorHex([string]$hex) {
 }
 
 function Get-FoxCursorInk([string]$theme) {
+    # macOS / Seelen solid pointer: pure black + white, never hollow/tint-transparent.
+    if ($theme -eq "macos" -or $script:FoxCursorForceMacInk) {
+        return @{
+            accent = [System.Drawing.Color]::FromArgb(255, 0, 0, 0)
+            light  = [System.Drawing.Color]::FromArgb(255, 255, 255, 255)
+            shade  = [System.Drawing.Color]::FromArgb(255, 40, 40, 40)
+            night  = [System.Drawing.Color]::FromArgb(255, 0, 0, 0)
+            white  = [System.Drawing.Color]::FromArgb(255, 255, 255, 255)
+            edge   = [System.Drawing.Color]::FromArgb(255, 0, 0, 0)
+        }
+    }
     $saved = $null
     if ($theme -and (Get-Command Get-FoxOsThemeName -ErrorAction SilentlyContinue)) {
         # Get-FoxOsPalette reads theme.txt; swap it in memory for the preview of other themes.
@@ -464,9 +497,45 @@ function Get-FoxCursorInk([string]$theme) {
     }
 }
 
-function Get-FoxCursorOutline([string]$style) { if ($style -eq "chunky") { return 2 } ; return 1 }
+function Get-FoxCursorOutline([string]$style) {
+    if ($style -eq "chunky") { return 2 }
+    if ($style -eq "macos") { return 0 }  # map already has solid black rim
+    return 1
+}
 
 # ---- build ------------------------------------------------------------------
+
+function New-MacOsArrowBitmap([int]$Canvas = 64) {
+    # Smooth macOS-like pointer: white stroke + black fill (not pixelated / not hollow).
+    Add-Type -AssemblyName System.Drawing | Out-Null
+    $bmp = New-Object System.Drawing.Bitmap $Canvas, $Canvas, ([System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
+    $g = [System.Drawing.Graphics]::FromImage($bmp)
+    $g.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
+    $g.PixelOffsetMode = [System.Drawing.Drawing2D.PixelOffsetMode]::HighQuality
+    $g.Clear([System.Drawing.Color]::Transparent)
+    $s = $Canvas / 32.0
+    $path = New-Object System.Drawing.Drawing2D.GraphicsPath
+    # Classic Mac pointer silhouette (tip near 1,1).
+    $pts = @(
+        (New-Object System.Drawing.PointF -ArgumentList @([single](1.2 * $s), [single](1.0 * $s))),
+        (New-Object System.Drawing.PointF -ArgumentList @([single](1.2 * $s), [single](24.0 * $s))),
+        (New-Object System.Drawing.PointF -ArgumentList @([single](6.8 * $s), [single](18.2 * $s))),
+        (New-Object System.Drawing.PointF -ArgumentList @([single](11.2 * $s), [single](29.0 * $s))),
+        (New-Object System.Drawing.PointF -ArgumentList @([single](15.0 * $s), [single](27.2 * $s))),
+        (New-Object System.Drawing.PointF -ArgumentList @([single](9.6 * $s), [single](15.6 * $s))),
+        (New-Object System.Drawing.PointF -ArgumentList @([single](19.5 * $s), [single](15.6 * $s)))
+    )
+    $path.AddPolygon($pts)
+    $pen = New-Object System.Drawing.Pen ([System.Drawing.Color]::FromArgb(255, 255, 255, 255)), ([single](2.4 * $s))
+    $pen.LineJoin = [System.Drawing.Drawing2D.LineJoin]::Round
+    $pen.Alignment = [System.Drawing.Drawing2D.PenAlignment]::Center
+    $g.DrawPath($pen, $path)
+    $brush = New-Object System.Drawing.SolidBrush ([System.Drawing.Color]::FromArgb(255, 0, 0, 0))
+    $g.FillPath($brush, $path)
+    $pen.Dispose(); $brush.Dispose(); $path.Dispose(); $g.Dispose()
+    $hot = [Math]::Max(1, [int][Math]::Round(1.4 * $s))
+    return @{ Bitmap = $bmp; HotX = $hot; HotY = $hot }
+}
 
 function New-FoxCursorBitmap {
     param($shape, [string]$style, [int]$scale, $ink)
@@ -496,18 +565,28 @@ function New-FoxCursorSet {
     if ($Scale -lt 1) { $Scale = 1 }
     if ($Scale -gt 3) { $Scale = 3 }
     if (-not $Theme) { $Theme = Get-FoxOsThemeName }
+    if ($Style -eq "macos") { $Theme = "macos" }
     if (-not $OutDir) { $OutDir = Join-Path (Get-FoxOsDir) ("cursors\" + $Style + "-" + $Theme + "-x" + $Scale) }
     if (-not (Test-Path -LiteralPath $OutDir)) { New-Item -ItemType Directory -Path $OutDir -Force | Out-Null }
-    $ink = Get-FoxCursorInk $Theme
-    $files = [ordered]@{}
-    foreach ($e in (Get-FoxCursorShapes $Style).GetEnumerator()) {
-        $r = New-FoxCursorBitmap $e.Value $Style $Scale $ink
-        $path = Join-Path $OutDir ($e.Key + ".cur")
-        [FoxCursor]::Save($r.Bitmap, $r.HotX, $r.HotY, $path)
-        $r.Bitmap.Dispose()
-        $files[$e.Key] = $path
+    $script:FoxCursorForceMacInk = ($Style -eq "macos")
+    try {
+        $ink = Get-FoxCursorInk $Theme
+        $files = [ordered]@{}
+        foreach ($e in (Get-FoxCursorShapes $Style).GetEnumerator()) {
+            if ($Style -eq "macos" -and $e.Key -eq "Arrow") {
+                $r = New-MacOsArrowBitmap (32 * $Scale)
+            } else {
+                $r = New-FoxCursorBitmap $e.Value $Style $Scale $ink
+            }
+            $path = Join-Path $OutDir ($e.Key + ".cur")
+            [FoxCursor]::Save($r.Bitmap, $r.HotX, $r.HotY, $path)
+            $r.Bitmap.Dispose()
+            $files[$e.Key] = $path
+        }
+        return $files
+    } finally {
+        $script:FoxCursorForceMacInk = $false
     }
-    return $files
 }
 
 # Preview sheet: rows = styles, columns = themes; a handful of shapes each, on the theme's night colour.

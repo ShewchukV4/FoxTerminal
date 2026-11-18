@@ -1,0 +1,12 @@
+id: '@foxsystem/tb-foxstyle-apply'
+target: '@seelen/fancy-toolbar'
+icon: PiPaintBrushBroadDuotone
+metadata:
+  displayName: FOXSTYLE Apply
+  description: Open FOXSTYLE panel / apply Seelen theme to FoxOS
+  tags: [toolbar, foxstyle]
+plugin:
+  template: 'return [icon("PiPaintBrushBroadDuotone")]'
+  tooltip: 'return "FOXSTYLE (Seelen → FoxOS)"'
+  onClickV2: |-
+    trigger("@foxsystem/foxstyle-panel");

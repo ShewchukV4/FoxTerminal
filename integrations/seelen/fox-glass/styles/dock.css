@@ -3,6 +3,10 @@
   transition: transform calc(var(--fox-motion-ms, 180) * 1ms) cubic-bezier(.2,.8,.2,1),
               background-color calc(var(--fox-motion-ms, 180) * 1ms) ease;
 }
-.weg-item:hover { transform: translateY(-3px) scale(1.08); background: rgba(255,255,255,.09); }
+.weg, .weg-bar {
+  background: color-mix(in srgb, var(--fox-bg, #0e1218) 88%, transparent);
+  border: 1px solid color-mix(in srgb, var(--fox-accent, #7d93b0) 42%, transparent);
+}
+.weg-item:hover { transform: translateY(-3px) scale(1.08); background: color-mix(in srgb, var(--fox-accent, #7d93b0) 30%, transparent); }
 .weg-item:active { transform: scale(.96); }
 @media (prefers-reduced-motion: reduce) { .weg-item { transition: none; } .weg-item:hover, .weg-item:active { transform: none; } }

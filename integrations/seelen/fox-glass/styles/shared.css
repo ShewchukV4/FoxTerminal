@@ -1,16 +1,23 @@
-/* No perpetual loops, animated blur, or global transition: all. */
+/* FOX Glass — driven by Seelen theme settings (= FOXSTYLE) */
 .slu-std-popover {
-  background: rgba(20, 23, 30, .96);
-  border: 1px solid rgba(255,255,255,.12);
-  border-radius: 18px;
+  background: color-mix(in srgb, var(--fox-surface, #14171e) 96%, transparent);
+  border: 1px solid color-mix(in srgb, var(--fox-ink, #fff) 12%, transparent);
+  border-radius: calc(var(--fox-win-radius, 16) * 1px);
+  color: var(--fox-ink, #e2e0f0);
   animation: fox-reveal calc(var(--fox-motion-ms, 180) * 1ms) ease-out;
 }
 button[data-skin] {
   transition: background-color calc(var(--fox-motion-ms, 180) * 1ms) ease,
               transform calc(var(--fox-motion-ms, 180) * 1ms) ease;
+  border-radius: calc(var(--fox-win-radius, 16) * 0.5px);
 }
-button[data-skin]:active { transform: scale(.97); }
-button[data-skin]:focus-visible { outline: 2px solid var(--fox-accent, #ed913e); outline-offset: 2px; }
+button[data-skin]:active {
+  transform: scale(calc(var(--fox-btn-press, 97) / 100));
+}
+button[data-skin]:focus-visible {
+  outline: 2px solid var(--fox-accent, #7B5CFF);
+  outline-offset: 2px;
+}
 @keyframes fox-reveal {
   from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: translateY(0); }
@@ -19,3 +26,6 @@ button[data-skin]:focus-visible { outline: 2px solid var(--fox-accent, #ed913e);
   .slu-std-popover { animation: none; }
   button[data-skin] { transition: none; transform: none; }
 }
+
+/* --fox-accent-sync */
+:root { --fox-accent: #9AA3B2; --fox-accent2: #6E7585; --fox-bg: #050508; --fox-surface: #12151C; --fox-ink: #ECEEF2; --fox-motion-ms: 180; }

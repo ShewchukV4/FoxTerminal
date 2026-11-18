@@ -16,15 +16,11 @@
 # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 # First entry wins; the rest are fallbacks, so the config stays portable
 # between machines that have different Nerd Font builds installed.
-font-family = CaskaydiaCove Nerd Font
-font-family = CaskaydiaMono Nerd Font
-font-family = Cascadia Code NF
-font-family = Cascadia Mono NF
-font-family = JetBrainsMono Nerd Font
-font-family = Cascadia Mono
+# Names are the Windows family names that are actually installed.
+# Missing fallbacks were the "5 config problems" banner.
+font-family = CaskaydiaCove NF SemiBold
+font-family = Consolas
 font-size = 13
-font-style = SemiBold
-font-style-bold = Bold
 font-thicken = true
 
 # Programming ligatures (-> => != ...). Remove these two lines for plain glyphs.

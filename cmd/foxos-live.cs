@@ -478,6 +478,7 @@ namespace FoxOsLive {
         const string RainSetDefault = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ$%#@&*+=:.irsX";
         const string RainSetNotebook = "-_=.,'`~|;:/\\ilI ";
         readonly string statePath;
+        string lastStateRaw = "";
         string rainSet = RainSetDefault;
 
 
@@ -500,6 +501,11 @@ namespace FoxOsLive {
         bool fgCovered;
         Bitmap foxBmp;
         string foxKey = "";
+        Bitmap wallPhotoBmp;
+        string wallPhotoPath = "";
+        DateTime wallPhotoStamp = DateTime.MinValue;
+        DateTime wallPhotoMissingSince = DateTime.MinValue;
+        const int WallPhotoMissGraceMs = 600;
         int markX;
         int markW;
         Font font;
@@ -607,6 +613,7 @@ namespace FoxOsLive {
             InitRain();
             RebuildBrushes();
             RebuildFox(true);
+            EnsureWallPhoto();
             foxBoot = 0f;
             morphFromNight = state.Night;
             morphT = 1f;
@@ -641,8 +648,13 @@ namespace FoxOsLive {
                 LoadLockFlag();
                 CheckIdleLock();
                 LoadDesk();
-                // System look (corners / borders / taskbar) must run even when apps cover the desk.
-                PaintChrome(false);
+                // Shewchuk photo walls: no FoxOS chrome/corners spam
+                if (!UserPhotoMode())
+                    PaintChrome(false);
+                if (UserPhotoMode()) {
+                    if (Visible) { try { Visible = false; } catch { } }
+                    return;
+                }
                 if (covered && !animating && !altBusy) {
                     if ((DateTime.UtcNow - lastCoveredPaint).TotalMilliseconds > 1000) {
                         lastCoveredPaint = DateTime.UtcNow;
@@ -652,7 +664,6 @@ namespace FoxOsLive {
                 }
                 Step();
                 rig.Pulse();
-                PaintChrome(false);
                 EnsureDock();
                 if (!behind && !state.Shell && !promptFocus && (DateTime.UtcNow - lastBottom).TotalMilliseconds > 2200) {
                     lastBottom = DateTime.UtcNow;
@@ -667,7 +678,7 @@ namespace FoxOsLive {
             reqTimer.Tick += delegate { PeekHelpRequest(); };
             Shown += delegate {
                 Attach();
-                EnsureMediaStrip();
+                KillMediaStrip();
                 EnsureHeadphonesGuard();
                 EnsureOverviewHost();
                 timer.Start();
@@ -675,14 +686,15 @@ namespace FoxOsLive {
             };
         }
 
+        void KillMediaStrip() {
+            if (mediaStrip == null) return;
+            try { mediaStrip.Dispose(); } catch { }
+            mediaStrip = null;
+        }
+
         void EnsureMediaStrip() {
-            try {
-                string dir = Path.GetDirectoryName(statePath);
-                if (mediaStrip == null || mediaStrip.IsDisposed) {
-                    mediaStrip = new MediaStrip(dir);
-                }
-                mediaStrip.Recolor(state.Night, state.Accent, state.Accent2);
-            } catch (Exception ex) { Log("media strip: " + ex.Message); }
+            // Permanently disabled — floating media/lyrics widget kept breaking the desktop.
+            KillMediaStrip();
         }
 
         void EnsureHeadphonesGuard() {
@@ -889,6 +901,19 @@ namespace FoxOsLive {
             } catch { }
         }
 
+        void HideWinBars() {
+            try {
+                IntPtr t = Native.FindWindow("Shell_TrayWnd", null);
+                if (t != IntPtr.Zero) Native.ShowWindow(t, 0);
+                Native.EnumWindows(delegate(IntPtr h, IntPtr l) {
+                    var cls = new StringBuilder(40);
+                    Native.GetClassName(h, cls, cls.Capacity);
+                    if (cls.ToString() == "Shell_SecondaryTrayWnd") Native.ShowWindow(h, 0);
+                    return true;
+                }, IntPtr.Zero);
+            } catch { }
+        }
+
         bool OverviewSuppressesDock() {
             try {
                 string flag = Path.Combine(Path.GetDirectoryName(statePath) ?? "", "overview-suppress-dock.flag");
@@ -898,58 +923,22 @@ namespace FoxOsLive {
         }
 
         void EnsureDock() {
-            if (OverviewSuppressesDock()) {
-                // Overview mode owns chrome — no edge-reveal Fox dock.
-                if (docks.Count > 0) KillDocks();
-                return;
+            // FoxTerminal taskbar (ShellBar) + Home are permanently removed — Seelen owns the dock.
+            if (docks.Count > 0) KillDocks();
+            KillChrome();
+            if (homeWin != null) {
+                try { homeWin.Dispose(); } catch { }
+                homeWin = null;
             }
+            homeShown = true; // never auto-popup Home on the desktop
             if (!state.Shell) {
-                bool had = hadShell || docks.Count > 0;
-                KillDocks();
-                if (had) ShowWinBars();
+                if (hadShell) ShowWinBars();
                 hadShell = false;
-                // Tear down shell-only chrome, but never dispose AltTab here —
-                // EnsureDock runs every tick and was killing the slide mid-animation.
-                if (widgets != null) {
-                    try { widgets.Dispose(); } catch { }
-                    widgets = null;
-                }
-                if (homeWin != null) {
-                    try { homeWin.Dispose(); } catch { }
-                    homeWin = null;
-                }
                 return;
             }
             hadShell = true;
-            int want = Screen.AllScreens.Length;
-            if (docks.Count == want) {
-                bool ok = true;
-                for (int i = 0; i < docks.Count; i++) {
-                    if (docks[i] == null || docks[i].IsDisposed) { ok = false; break; }
-                }
-                if (ok) {
-                    string pp = PinStore.PathIn(Path.GetDirectoryName(statePath) ?? "");
-                    DateTime st = File.Exists(pp) ? File.GetLastWriteTimeUtc(pp) : DateTime.MinValue;
-                    if (st != pinsStamp) {
-                        pinsStamp = st;
-                        for (int i = 0; i < docks.Count; i++) docks[i].ReloadPins();
-                    }
-                    EnsureChrome();
-                    return;
-                }
-            }
-            KillDocks();
-            string dir = Path.GetDirectoryName(statePath) ?? "";
-            IntPtr self = IntPtr.Zero;
-            try { self = Handle; } catch { }
-            foreach (Screen sc in Screen.AllScreens) {
-                var bar = new ShellBar(state, RunDeskLine, self, dir, sc);
-                bar.Show();
-                docks.Add(bar);
-            }
-            string p2 = PinStore.PathIn(dir);
-            pinsStamp = File.Exists(p2) ? File.GetLastWriteTimeUtc(p2) : DateTime.MinValue;
-            EnsureChrome();
+            // Keep Windows taskbar hard-hidden while FoxOS shell is on (Seelen bar remains).
+            try { HideWinBars(); } catch { }
         }
 
         void KillDocks() {
@@ -961,24 +950,13 @@ namespace FoxOsLive {
         }
 
         void EnsureChrome() {
-            if (!state.Shell) { KillChrome(); return; }
-            string dir = Path.GetDirectoryName(statePath) ?? "";
-            if (state.DockWidgets) {
-                if (widgets == null || widgets.IsDisposed) {
-                    widgets = new DeskWidgets(state, dir, Screen.PrimaryScreen);
-                    widgets.Show();
-                } else widgets.Recolor();
-            } else if (widgets != null) {
-                try { widgets.Dispose(); } catch { }
-                widgets = null;
-            }
-            if (state.DockHome && !homeShown) {
-                homeShown = true;
-                ShowHome();
-            }
+            // FoxTerminal Home + desk widgets permanently removed.
+            KillChrome();
+            homeShown = true;
         }
 
         void KillChrome() {
+            KillMediaStrip();
             if (widgets != null) {
                 try { widgets.Dispose(); } catch { }
                 widgets = null;
@@ -991,39 +969,13 @@ namespace FoxOsLive {
         }
 
         void ShowHome() {
-            ShowHome(null);
+            // permanently disabled
         }
 
         void ShowHome(string focusTab) {
-            try {
-                if (homeWin != null && !homeWin.IsDisposed) {
-                    homeWin.Recolor(state.Night, state.Accent);
-                    if (!string.IsNullOrEmpty(focusTab)) homeWin.FocusTab(focusTab);
-                    try {
-                        homeWin.TopMost = true;
-                        homeWin.Show();
-                        homeWin.Activate();
-                        homeWin.BringToFront();
-                        Native.SetForegroundWindow(homeWin.Handle);
-                    } catch {
-                        try { homeWin.Show(); homeWin.Activate(); } catch { }
-                    }
-                    return;
-                }
-                homeWin = new HomeLaunch(state.Night, state.Accent, state.Accent2, state.FoxPath, state.Theme, RunDeskLine, FillDeskPrompt, state.CmdDir);
-                homeWin.FormClosed += delegate { homeWin = null; };
-                if (!string.IsNullOrEmpty(focusTab)) homeWin.FocusTab(focusTab);
-                homeWin.TopMost = true;
-                homeWin.Show();
-                homeWin.Activate();
-                homeWin.BringToFront();
-                Native.SetForegroundWindow(homeWin.Handle);
-            } catch (Exception ex) {
-                try {
-                    string dir = Path.GetDirectoryName(statePath) ?? "";
-                    File.AppendAllText(Path.Combine(dir, "home.crash.log"),
-                        DateTime.Now.ToString("o") + "\r\n" + ex + "\r\n\r\n");
-                } catch { }
+            // FoxTerminal Home UI removed — Seelen / Win+W own the desktop chrome.
+            if (homeWin != null) {
+                try { homeWin.Dispose(); } catch { }
                 homeWin = null;
             }
         }
@@ -1040,6 +992,17 @@ namespace FoxOsLive {
         }
 
         void Attach() {
+            // Shewchuk photo → real Windows wallpaper only (no Live paint on top).
+            // FoxOS system → Live paints fox + rain/glass; bake still under for peek.
+            if (UserPhotoMode()) {
+                behind = false;
+                try { Visible = false; Opacity = 0; } catch { }
+                lastChrome = DateTime.MinValue;
+                try { PaintChrome(true); } catch { }
+                if (state.Shell) EnsureDock();
+                Log("attach skipped — Shewchuk photo is the real wallpaper");
+                return;
+            }
             if (state.Shell) {
                 behind = false;
                 Rectangle sb = Screen.PrimaryScreen.Bounds;
@@ -1047,7 +1010,7 @@ namespace FoxOsLive {
                 Native.SetWindowPos(Handle, Native.HWND_BOTTOM, sb.X, sb.Y, sb.Width, sb.Height, 0x0010);
                 Visible = true;
                 Opacity = 1;
-                Log("shell " + sb.Width + "x" + sb.Height);
+                Log("shell fox/rain " + sb.Width + "x" + sb.Height);
                 lastChrome = DateTime.MinValue;
                 PaintChrome(false);
                 EnsureDock();
@@ -1061,7 +1024,7 @@ namespace FoxOsLive {
             Opacity = 1;
             BringToFront();
             SendToBack();
-            Log("overlay " + wa.X + "," + wa.Y + " " + wa.Width + "x" + wa.Height);
+            Log("overlay fox/rain " + wa.X + "," + wa.Y + " " + wa.Width + "x" + wa.Height);
             lastChrome = DateTime.MinValue;
             PaintChrome(false);
         }
@@ -1861,14 +1824,108 @@ namespace FoxOsLive {
             return fgCovered;
         }
 
+        bool UserPhotoMode() {
+            return !string.IsNullOrEmpty(wallPhotoPath) && File.Exists(wallPhotoPath);
+        }
+
+        void ApplyUserPhotoMode(bool on) {
+            if (on) {
+                try { PaintChrome(true); } catch { }
+                try { Visible = false; Opacity = 0; } catch { }
+                Log("user photo mode ON (real wallpaper)");
+            } else {
+                lastChrome = DateTime.MinValue;
+                try { Attach(); } catch { }
+                try { PaintChrome(false); } catch { }
+                Log("user photo mode OFF (FoxOS fox/rain)");
+            }
+        }
+
+        void EnsureWallPhoto() {
+            string dir = Path.GetDirectoryName(statePath) ?? ".";
+            string pathFile = Path.Combine(dir, "wall-photo.txt");
+            bool had = UserPhotoMode();
+            if (!File.Exists(pathFile)) {
+                // Atomic replace can briefly miss the file — wait before flipping to FoxOS.
+                if (wallPhotoBmp != null || had) {
+                    if (wallPhotoMissingSince == DateTime.MinValue)
+                        wallPhotoMissingSince = DateTime.UtcNow;
+                    if ((DateTime.UtcNow - wallPhotoMissingSince).TotalMilliseconds < WallPhotoMissGraceMs)
+                        return;
+                    if (wallPhotoBmp != null) { wallPhotoBmp.Dispose(); wallPhotoBmp = null; }
+                    wallPhotoPath = "";
+                    wallPhotoStamp = DateTime.MinValue;
+                    wallPhotoMissingSince = DateTime.MinValue;
+                    ApplyUserPhotoMode(false);
+                    Invalidate();
+                }
+                return;
+            }
+            wallPhotoMissingSince = DateTime.MinValue;
+            DateTime stamp = File.GetLastWriteTimeUtc(pathFile);
+            string path = "";
+            try { path = (File.ReadAllText(pathFile) ?? "").Trim().Trim('"'); } catch { return; }
+            if (stamp == wallPhotoStamp && string.Equals(path, wallPhotoPath, StringComparison.OrdinalIgnoreCase))
+                return;
+            // Same image rewritten (carousel spam): keep bitmap, only refresh stamp.
+            if (!string.IsNullOrEmpty(path)
+                && string.Equals(path, wallPhotoPath, StringComparison.OrdinalIgnoreCase)
+                && wallPhotoBmp != null) {
+                wallPhotoStamp = stamp;
+                return;
+            }
+            wallPhotoStamp = stamp;
+            wallPhotoPath = path ?? "";
+            if (wallPhotoBmp != null) { wallPhotoBmp.Dispose(); wallPhotoBmp = null; }
+            bool on = !string.IsNullOrEmpty(wallPhotoPath) && File.Exists(wallPhotoPath);
+            if (on) {
+                try {
+                    using (Image src = Image.FromFile(wallPhotoPath))
+                        wallPhotoBmp = new Bitmap(src);
+                    Log("wall photo " + wallPhotoPath);
+                } catch (Exception ex) {
+                    Log("wall photo fail " + ex.Message);
+                    wallPhotoPath = "";
+                    on = false;
+                }
+            }
+            ApplyUserPhotoMode(on);
+            Invalidate();
+        }
+
+        void PaintWallPhoto(Graphics g) {
+            if (wallPhotoBmp == null) return;
+            Rectangle rc = ClientRectangle;
+            float sx = (float)rc.Width / wallPhotoBmp.Width;
+            float sy = (float)rc.Height / wallPhotoBmp.Height;
+            float s = sx > sy ? sx : sy;
+            float dw = wallPhotoBmp.Width * s;
+            float dh = wallPhotoBmp.Height * s;
+            float dx = rc.X + (rc.Width - dw) / 2f;
+            float dy = rc.Y + (rc.Height - dh) / 2f;
+            g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+            g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+            g.DrawImage(wallPhotoBmp, dx, dy, dw, dh);
+        }
+
         void Poll() {
             // PeekHelpRequest runs on reqTimer (33ms); keep a backup call here.
             PeekHelpRequest();
             if ((DateTime.UtcNow - lastPoll).TotalMilliseconds < 400) return;
             lastPoll = DateTime.UtcNow;
+            EnsureWallPhoto();
             if (!File.Exists(statePath)) return;
             var stamp = File.GetLastWriteTimeUtc(statePath);
             if (stamp == state.Stamp) return;
+            string raw = "";
+            try { raw = File.ReadAllText(statePath); } catch { return; }
+            // Writers rewrite live.json with the same payload. That used to force
+            // a full fox rebuild on the UI thread every few seconds.
+            if (raw == lastStateRaw) {
+                state.Stamp = stamp;
+                return;
+            }
+            lastStateRaw = raw;
             bool wasShell = state.Shell;
             Color wasNight = state.Night;
             Color wasAccent = state.Accent;
@@ -1887,7 +1944,7 @@ namespace FoxOsLive {
             }
             DropPanels();
             RebuildBrushes();
-            RebuildFox(true);
+            RebuildFox(false);
             if (helpWin != null && !helpWin.IsDisposed) helpWin.Recolor(state.Night, state.Accent);
             for (int i = 0; i < docks.Count; i++) {
                 if (docks[i] != null && !docks[i].IsDisposed) docks[i].Recolor();
@@ -2033,7 +2090,13 @@ namespace FoxOsLive {
 
         protected override void OnPaint(PaintEventArgs e) {
             var g = e.Graphics;
+            bool photo = wallPhotoBmp != null;
             g.CompositingMode = CompositingMode.SourceCopy;
+            if (photo) {
+                // Overlay is hidden in user-photo mode; if we still paint, show photo only
+                PaintWallPhoto(g);
+                return;
+            }
             g.Clear(state.Night);
             g.CompositingMode = CompositingMode.SourceOver;
             g.SmoothingMode = SmoothingMode.AntiAlias;
@@ -2048,7 +2111,7 @@ namespace FoxOsLive {
                         g.FillRectangle(wash, ClientRectangle);
                 }
             }
-            if (RainEnabled() && head != null) {
+            if (!photo && RainEnabled() && head != null) {
                 g.CompositingQuality = CompositingQuality.HighSpeed;
                 g.InterpolationMode = InterpolationMode.NearestNeighbor;
                 g.SmoothingMode = SmoothingMode.None;
@@ -2072,7 +2135,7 @@ namespace FoxOsLive {
                 }
             }
             g.SmoothingMode = SmoothingMode.AntiAlias;
-            PaintWallOverlay(g);
+            if (!photo) PaintWallOverlay(g);
             if (foxBmp != null) {
                 float t = foxBoot < 0f ? 0f : (foxBoot > 1f ? 1f : foxBoot);
                 float ease = 1f - (1f - t) * (1f - t);
@@ -2179,8 +2242,8 @@ namespace FoxOsLive {
                 }
             }
 
-            BlitPanel(g, EnsureDeskCache(), DeskRect());
-            BlitPanel(g, EnsureRigCache(), RigRect());
+            // Desk + Rig HUD panels permanently off — they looked like broken widgets on the wallpaper.
+            // Keep fox + rain only.
         }
 
         void DropPanels() {
@@ -2984,6 +3047,7 @@ namespace FoxOsLive {
                 DropPanels();
                 if (rainBrushes != null) foreach (var b in rainBrushes) if (b != null) b.Dispose();
                 if (foxBmp != null) foxBmp.Dispose();
+                if (wallPhotoBmp != null) wallPhotoBmp.Dispose();
             }
             base.Dispose(disposing);
         }

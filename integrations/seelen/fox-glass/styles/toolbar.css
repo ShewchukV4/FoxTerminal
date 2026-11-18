@@ -1,7 +1,11 @@
-.ft-bar { background: rgba(15,18,24,.94); border-bottom: 1px solid rgba(255,255,255,.08); }
+.ft-bar {
+  background: color-mix(in srgb, var(--fox-bg, #0e1218) 92%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--fox-accent, #7d93b0) 45%, transparent);
+  color: var(--fox-ink, #e6eaf0);
+}
 .ft-bar-item {
   border-radius: 8px;
   transition: background-color calc(var(--fox-motion-ms, 180) * 1ms) ease;
 }
-.ft-bar-item:hover { background: rgba(255,255,255,.09); }
+.ft-bar-item:hover { background: color-mix(in srgb, var(--fox-accent, #7d93b0) 28%, transparent); }
 @media (prefers-reduced-motion: reduce) { .ft-bar-item { transition: none; } }

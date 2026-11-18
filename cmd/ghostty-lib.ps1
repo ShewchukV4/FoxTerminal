@@ -44,7 +44,8 @@ function Get-GhosttyCliPath($ghostty) {
 
 # Returns $null, or a hashtable: Name, Path (GUI), CliPath (console), Flavor.
 function Get-GhosttyCommand {
-    $names = @("ghostty", "winghostty")
+    # noctty = renamed winghostty (Ghostty core on Windows)
+    $names = @("ghostty", "noctty", "winghostty")
 
     foreach ($name in $names) {
         $cmd = Get-Command $name -ErrorAction SilentlyContinue
@@ -69,6 +70,10 @@ function Get-GhosttyCommand {
     }
 
     $winCandidates = @(
+        "$env:ProgramFiles\noctty\noctty.exe",
+        "${env:ProgramFiles(x86)}\noctty\noctty.exe",
+        "$env:LOCALAPPDATA\Programs\noctty\noctty.exe",
+        "$env:LOCALAPPDATA\Microsoft\WinGet\Links\noctty.exe",
         "$env:LOCALAPPDATA\Programs\winghostty\winghostty.exe",
         "$env:LOCALAPPDATA\winghostty\bin\winghostty.exe",
         "$env:ProgramFiles\winghostty\winghostty.exe",
@@ -79,7 +84,8 @@ function Get-GhosttyCommand {
     foreach ($p in $winCandidates) {
         if ([string]::IsNullOrWhiteSpace($p)) { continue }
         if (Test-Path $p) {
-            return (Resolve-GhosttyPair $p "winghostty" "winghostty")
+            $flavor = if ($p -match 'noctty') { "noctty" } else { "winghostty" }
+            return (Resolve-GhosttyPair $p $flavor $flavor)
         }
     }
 
@@ -99,7 +105,9 @@ function Get-GhosttyConfigCandidates {
 
     if (Test-FoxIsWindows) {
         if (-not [string]::IsNullOrWhiteSpace($env:LOCALAPPDATA)) {
-            # Documented winghostty default; written on first launch.
+            # noctty (current) then legacy winghostty
+            $candidates.Add((Join-Path $env:LOCALAPPDATA "noctty\config.ghostty"))
+            $candidates.Add((Join-Path $env:LOCALAPPDATA "noctty\config"))
             $candidates.Add((Join-Path $env:LOCALAPPDATA "winghostty\config.ghostty"))
             $candidates.Add((Join-Path $env:LOCALAPPDATA "winghostty\config"))
         }
@@ -239,6 +247,8 @@ function Write-FoxLogonLauncher {
         "if not errorlevel 1 exit /b 0",
         "tasklist /FI `"IMAGENAME eq ghostty.exe`" | find /I `"ghostty.exe`" >nul 2>nul",
         "if not errorlevel 1 exit /b 0",
+        "tasklist /FI `"IMAGENAME eq noctty.exe`" | find /I `"noctty.exe`" >nul 2>nul",
+        "if not errorlevel 1 exit /b 0",
         "start `"`" /D `"$work`" `"$exe`""
     )
     $utf8 = New-Object System.Text.UTF8Encoding $false
@@ -303,12 +313,9 @@ function Install-FoxGhosttyLogonStart {
         $taskOk = $false
     }
 
+    # The logon task is the one starter. A Run key as well opened a second terminal.
     try {
-        $run = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run"
-        if (-not (Test-Path -LiteralPath $run)) {
-            New-Item -Path $run -Force | Out-Null
-        }
-        New-ItemProperty -Path $run -Name "FoxTerminal" -Value ("`"" + $cmdPath + "`"") -PropertyType String -Force | Out-Null
+        Remove-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" -Name "FoxTerminal" -ErrorAction Stop
     } catch {}
 
     try {
@@ -427,10 +434,9 @@ function Get-GhosttyInstallHint {
     if (Test-FoxIsWindows) {
         return @(
             "Ghostty upstream does not ship a Windows app yet.",
-            "On Windows FoxTerminal uses winghostty - the Ghostty terminal core with a native Win32 runtime.",
-            "  winget install AmanThanvi.winghostty",
-            "  or: scoop bucket add winghostty https://github.com/amanthanvi/scoop-winghostty; scoop install winghostty",
-            "  or download from https://github.com/amanthanvi/winghostty/releases"
+            "On Windows FoxTerminal uses noctty (ex-winghostty) - Ghostty core with a native Win32 runtime.",
+            "  winget install AmanThanvi.noctty",
+            "  or download from https://github.com/amanthanvi/noctty/releases"
         )
     }
     if (Test-FoxIsMacOS) {

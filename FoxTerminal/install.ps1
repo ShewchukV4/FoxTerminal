@@ -217,10 +217,9 @@ if (-not $onlyBloatOrAds) {
         "",
         "# `$env:FOXTERM_BOOT is expanded by PowerShell itself, which keeps this line",
         "# free of nested quotes even when the repo path contains spaces.",
-        ("command = " + $shellExe + " -NoLogo -NoExit -Command . `$env:FOXTERM_BOOT"),
-        ("working-directory = " + $foxRoot),
-        "",
-        "config-file = ?foxterminal-shaders.ghostty"
+        # Bypass so Ghostty's shell starts even when CurrentUser policy is Restricted.
+        ("command = " + $shellExe + " -NoLogo -NoExit -ExecutionPolicy Bypass -Command . `$env:FOXTERM_BOOT"),
+        ("working-directory = " + $foxRoot)
     )
 
     $localPath = Join-Path $targetDir "foxterminal-local.ghostty"

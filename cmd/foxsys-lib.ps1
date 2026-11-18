@@ -41,7 +41,7 @@ function Get-FoxDefaultUserWorld {
         theme       = "orange"
         foxos       = $true
         look        = $false
-        shader      = $true
+        shader      = $false
         lockMinutes = 10
         lastSite    = ""
         lastFriend  = ""
@@ -133,6 +133,9 @@ function Apply-FoxUserWorld {
             if (Get-Command Sync-FoxGhosttyShader -ErrorAction SilentlyContinue) {
                 try { Sync-FoxGhosttyShader | Out-Null } catch {}
             }
+        }
+        if (Get-Command Ensure-FoxPinnedChrome -ErrorAction SilentlyContinue) {
+            try { Ensure-FoxPinnedChrome } catch {}
         }
         Write-FoxIdleLockHint $world.lockMinutes $name
     } finally {

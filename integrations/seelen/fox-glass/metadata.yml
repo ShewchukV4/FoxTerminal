@@ -1,21 +1,244 @@
 id: '@foxsystem/fox-glass'
 metadata:
-  displayName: FOX Glass
-  description: Dark FOX surfaces with short interaction-driven motion.
-  tags: [dark, minimal, toolbar]
+  displayName: FOX Glass + FOXSTYLE
+  description: Full FOXSTYLE studio controls inside Seelen Settings. Apply via foxseelen bridge / toolbar button.
+  tags: [dark, minimal, toolbar, foxstyle, foxui]
 styles:
   '@seelen/fancy-toolbar': !include styles/toolbar.css
   '@seelen/weg': !include styles/dock.css
 sharedStyles: !include styles/shared.css
 settings:
-  - syntax: <color>
-    name: --fox-accent
-    label: FOX accent
-    initialValue: '#ed913e'
-  - syntax: <number>
-    name: --fox-motion-ms
-    label: Transition duration (milliseconds)
-    initialValue: 180
-    min: 0
-    max: 350
-    step: 10
+  - group:
+      header: FOXSTYLE · Modes
+      items:
+        - syntax: <string>
+          name: --fox-preset
+          label: Preset
+          description: dark | light | neon | foxpurple | custom
+          initialValue: dark
+        - syntax: <string>
+          name: --fox-sw
+          label: sw color name
+          description: violet | neon | white | purple …
+          initialValue: violet
+        - syntax: <string>
+          name: --fox-theme
+          label: Theme mode
+          initialValue: dark
+
+  - group:
+      header: FOXSTYLE · Colors
+      items:
+        - syntax: <color>
+          name: --fox-accent
+          label: Accent
+          initialValue: '#7B5CFF'
+        - syntax: <color>
+          name: --fox-accent2
+          label: Accent 2
+          initialValue: '#DC7A14'
+        - syntax: <color>
+          name: --fox-bg
+          label: Background
+          initialValue: '#0B0A12'
+        - syntax: <color>
+          name: --fox-surface
+          label: Surface
+          initialValue: '#161322'
+        - syntax: <color>
+          name: --fox-ink
+          label: Ink / text
+          initialValue: '#E2E0F0'
+        - syntax: <number>
+          name: --fox-glass
+          label: Glass opacity
+          initialValue: 72
+          min: 0
+          max: 100
+          step: 1
+
+  - group:
+      header: FOXSTYLE · Dock / Wall
+      items:
+        - syntax: <string>
+          name: --fox-dock-style
+          label: Dock style
+          description: pill | rail | glass | slim
+          initialValue: pill
+        - syntax: <string>
+          name: --fox-wall-kind
+          label: Wallpaper kind
+          description: glass | neon | fog | solid
+          initialValue: glass
+        - syntax: <number>
+          name: --fox-wall-rain
+          label: Rain density
+          tip: 0 = off
+          initialValue: 30
+          min: 0
+          max: 100
+          step: 1
+        - syntax: <number>
+          name: --fox-wall-strength
+          label: Wall strength
+          initialValue: 60
+          min: 0
+          max: 100
+          step: 1
+        - syntax: <number>
+          name: --fox-wall-scale
+          label: Wall scale
+          initialValue: 50
+          min: 0
+          max: 100
+          step: 1
+        - syntax: <number>
+          name: --fox-wall-veil
+          label: Wall veil
+          initialValue: 55
+          min: 0
+          max: 100
+          step: 1
+        - syntax: <number>
+          name: --fox-dock-alpha
+          label: Dock alpha
+          initialValue: 72
+          min: 0
+          max: 100
+          step: 1
+        - syntax: <number>
+          name: --fox-dock-blur
+          label: Dock blur
+          initialValue: 18
+          min: 0
+          max: 40
+          step: 1
+        - syntax: <number>
+          name: --fox-dock-height
+          label: Dock / chrome height
+          initialValue: 36
+          min: 24
+          max: 64
+          step: 1
+
+  - group:
+      header: FOXSTYLE · Windows
+      items:
+        - syntax: <number>
+          name: --fox-win-radius
+          label: Window radius
+          initialValue: 16
+          min: 0
+          max: 32
+          step: 1
+        - syntax: <number>
+          name: --fox-win-shadow
+          label: Window shadow
+          initialValue: 60
+          min: 0
+          max: 100
+          step: 1
+        - syntax: <string>
+          name: --fox-win-open
+          label: Open animation
+          description: fade | zoom | none
+          initialValue: fade
+
+  - group:
+      header: FOXSTYLE · Buttons
+      items:
+        - syntax: <string>
+          name: --fox-btn-style
+          label: Button style
+          description: rounded | sharp | glass | liquid
+          initialValue: glass
+        - syntax: <number>
+          name: --fox-btn-press
+          label: Press scale %
+          initialValue: 97
+          min: 85
+          max: 100
+          step: 1
+
+  - group:
+      header: FOXSTYLE · Motion
+      items:
+        - syntax: <number>
+          name: --fox-motion-ms
+          label: Transition ms
+          initialValue: 180
+          min: 0
+          max: 350
+          step: 10
+        - syntax: <string>
+          name: --fox-motion-preset
+          label: Motion preset
+          description: off | economy | balanced | smooth | custom
+          initialValue: balanced
+        - syntax: <number>
+          name: --fox-motion-speed
+          label: Speed %
+          initialValue: 100
+          min: 25
+          max: 200
+          step: 5
+        - syntax: <number>
+          name: --fox-motion-intensity
+          label: Intensity %
+          initialValue: 100
+          min: 0
+          max: 100
+          step: 5
+        - syntax: <string>
+          name: --fox-motion-scale
+          label: Motion scale
+          description: full | reduced | off
+          initialValue: full
+        - syntax: <string>
+          name: --fox-motion-fps
+          label: FPS
+          description: 30 | 60 | auto
+          initialValue: auto
+        - syntax: <string>
+          name: --fox-motion-battery
+          label: On battery
+          description: auto | economy | full
+          initialValue: auto
+
+  - group:
+      header: FOXSTYLE · Labs (FoxGlow)
+      items:
+        - syntax: <number>
+          name: --fox-glow-on
+          label: FoxGlow on (0/1)
+          initialValue: 0
+          min: 0
+          max: 1
+          step: 1
+        - syntax: <number>
+          name: --fox-glow-strength
+          label: Glow strength
+          initialValue: 50
+          min: 0
+          max: 100
+          step: 1
+        - syntax: <number>
+          name: --fox-glow-speed
+          label: Glow speed
+          initialValue: 50
+          min: 0
+          max: 100
+          step: 1
+
+  - group:
+      header: Bridge
+      items:
+        - syntax: <number>
+          name: --fox-auto-apply
+          label: Auto-apply to FoxOS (1=on)
+          description: When 1, foxseelen bridge writes style.json and runs Apply
+          tip: Or click FOXSTYLE Apply in the toolbar plugin
+          initialValue: 1
+          min: 0
+          max: 1
+          step: 1

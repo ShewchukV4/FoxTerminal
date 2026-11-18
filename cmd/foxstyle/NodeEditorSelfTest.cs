@@ -96,11 +96,11 @@ namespace FoxOs.Style {
                 } catch { }
             }
 
-            FoxOs.Stt.SttSelfTest.Run();
+            // Desktop voice / STT removed from FoxTerminal — skip SttSelfTest.
 
             File.WriteAllText(Path.Combine(FoxPaths.RuntimeDir(), "foxstyle-selftest.log"),
                 "PASS\r\nvalidate\r\ncycle\r\nunique-ids\r\ndepth=6\r\nimport-export\r\n" +
-                "signal-after-style\r\nmotion-presets\r\nstt-paths\r\napplied-monotonic\r\n");
+                "signal-after-style\r\nmotion-presets\r\napplied-monotonic\r\n");
         }
 
         static void Assert(bool condition, string message) {
